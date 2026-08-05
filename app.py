@@ -316,6 +316,34 @@ div[data-testid="stMultiSelect"] div[role="button"]:focus-within {
     font-size: 11px;
     font-weight: 700;
 }
+
+/* ── Media Queries for Responsive Display on All Screen Sizes ── */
+@media (max-width: 768px) {
+    .main-header {
+        padding: 20px 15px !important;
+        margin-bottom: 20px !important;
+    }
+    .main-header h1 {
+        font-size: 22px !important;
+    }
+    .main-header p {
+        font-size: 13px !important;
+    }
+    .metric-card {
+        padding: 15px !important;
+    }
+    .metric-card .value {
+        font-size: 26px !important;
+    }
+    .occupancy-table th, .occupancy-table td {
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+    }
+    section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
