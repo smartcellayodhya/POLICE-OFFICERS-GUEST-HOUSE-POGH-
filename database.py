@@ -73,7 +73,19 @@ class BookingDatabase:
         if creds is None:
             try:
                 if "gcp_service_account" in st.secrets:
-                    secret_info = dict(st.secrets["gcp_service_account"])
+                    sec = st.secrets["gcp_service_account"]
+                    if "json_text" in sec:
+                        import json
+                        secret_info = json.loads(sec["json_text"])
+                    else:
+                        secret_info = dict(sec)
+                    
+                    # Robust handling of private key newline characters
+                    if "private_key" in secret_info:
+                        raw_key = secret_info["private_key"]
+                        raw_key = raw_key.replace("\\n", "\n")
+                        secret_info["private_key"] = raw_key.strip()
+                        
                     creds = ServiceAccountCredentials.from_json_keyfile_dict(secret_info, scope)
                     print("Using Streamlit Secrets for Google Sheets auth.")
             except Exception as e:
