@@ -169,14 +169,18 @@ def generate_hindi_letter_pdf(details: dict) -> bytes:
     pdf.ln(2)
     
     # Table layout
-    pdf.set_fill_color(243, 244, 246)  # Light gray table header
+    pdf.set_fill_color(30, 58, 138)  # Police Navy Blue table header
+    pdf.set_text_color(255, 255, 255) # White text for header
     pdf.set_draw_color(209, 213, 219)
     pdf.set_line_width(0.1)
     
     # Left padding
-    pdf.cell(10, 6, "", ln=False)
+    pdf.cell(10, 8, "", ln=False)
     pdf.cell(60, 8, " विवरण", border=1, fill=True, ln=False)
-    pdf.cell(100, 8, " सूचना / मान", border=1, fill=True, ln=True)
+    pdf.cell(100, 8, " सूचना", border=1, fill=True, ln=True)
+    
+    # Restore text color for table row contents
+    pdf.set_text_color(31, 41, 55)
     
     # Row list — Hindi dates for proper Devanagari rendering
     check_in_out_time = f"{cin_h} ({details.get('check_in_time', '12:00 PM')}) / {cout_h} ({details.get('check_out_time', '12:00 PM')})"
