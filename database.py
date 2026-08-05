@@ -76,8 +76,10 @@ class BookingDatabase:
                     secret_info = dict(st.secrets["gcp_service_account"])
                     creds = ServiceAccountCredentials.from_json_keyfile_dict(secret_info, scope)
                     print("Using Streamlit Secrets for Google Sheets auth.")
-            except Exception:
-                # No secrets.toml present — silently skip
+            except Exception as e:
+                print(f"Streamlit Secrets load error: {e}")
+                import traceback
+                traceback.print_exc()
                 creds = None
 
         if creds is None:
