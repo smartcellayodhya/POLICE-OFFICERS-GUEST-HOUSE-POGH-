@@ -76,7 +76,22 @@ class BookingDatabase:
                     sec = st.secrets["gcp_service_account"]
                     if "json_text" in sec:
                         import json
-                        secret_info = json.loads(sec["json_text"])
+                        import re
+                        raw_json_str = sec["json_text"]
+                        try:
+                            secret_info = json.loads(raw_json_str)
+                        except Exception:
+                            # Fallback: Extract fields using regex to survive literal newlines in strings
+                            secret_info = {}
+                            keys = [
+                                "type", "project_id", "private_key_id", "private_key",
+                                "client_email", "client_id", "auth_uri", "token_uri",
+                                "auth_provider_x509_cert_url", "client_x509_cert_url", "universe_domain"
+                            ]
+                            for k in keys:
+                                match = re.search(rf'"{k}"\s*:\s*"(.*?)"', raw_json_str, re.DOTALL)
+                                if match:
+                                    secret_info[k] = match.group(1)
                     else:
                         secret_info = dict(sec)
                     
