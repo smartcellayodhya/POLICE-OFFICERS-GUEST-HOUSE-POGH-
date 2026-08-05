@@ -34,6 +34,14 @@ html, body, [class*="css"] {
     background-color: #F8FAFC !important;
 }
 
+/* Hide Streamlit branding, main menu, header decorations, and footer watermarks */
+#MainMenu {visibility: hidden !important;}
+footer {visibility: hidden !important;}
+header {visibility: hidden !important;}
+div[data-testid="stDecoration"] {display: none !important;}
+div[data-testid="stStatusWidget"] {visibility: hidden !important;}
+.stAppHeader {background: transparent !important; display: none !important;}
+
 /* ── Main Header ── */
 .main-header {
     background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
