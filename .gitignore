@@ -1,0 +1,17 @@
+# Sensitive API credentials
+credentials.json
+token.json
+.streamlit/secrets.toml
+
+# Local database CSV and assets
+pogh_bookings.csv
+fonts/
+*.pdf
+*.xlsx
+
+# Python and environment cache
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.gemini/
