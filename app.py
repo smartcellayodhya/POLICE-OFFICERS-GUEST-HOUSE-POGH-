@@ -618,10 +618,11 @@ with st.sidebar:
 # ═══════════════════════════════════════════════════════════════════════════
 #  MAIN TABS
 # ═══════════════════════════════════════════════════════════════════════════
-tab_grid, tab_database, tab_letter = st.tabs([
+tab_grid, tab_database, tab_letter, tab_revenue = st.tabs([
     "📅  Room Occupancy Grid",
     "📁  Bookings Database",
-    "✍️  Confirmation Letter"
+    "✍️  Confirmation Letter",
+    "📊  Monthly Revenue Tracker"
 ])
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -990,3 +991,139 @@ with tab_letter:
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ───────────────────────────────────────────────────────────────────────────
+#  TAB 4 — MONTHLY REVENUE TRACKER
+# ───────────────────────────────────────────────────────────────────────────
+with tab_revenue:
+    st.markdown("### 📊 Monthly Revenue Tracker (मासिक राजस्व विश्लेषण)")
+    
+    if len(raw_df) == 0:
+        st.info("No bookings found in database yet to generate analytics.")
+    else:
+        # Create a working copy of raw_df with parsed dates
+        df_rev = raw_df.copy()
+        
+        # Helper to safely parse dates for grouping
+        def safe_parse_year_month(d_str):
+            try:
+                dt = parse_str_to_date(d_str)
+                return dt.year, dt.month, dt.strftime("%B")
+            except Exception:
+                return None, None, None
+                
+        parsed_cols = df_rev["Date"].apply(safe_parse_year_month)
+        df_rev["Year"] = [p[0] for p in parsed_cols]
+        df_rev["MonthNum"] = [p[1] for p in parsed_cols]
+        df_rev["MonthName"] = [p[2] for p in parsed_cols]
+        
+        # Filter out unparsed dates
+        df_rev = df_rev[df_rev["Year"].notna()]
+        
+        if len(df_rev) == 0:
+            st.info("No bookings with valid dates found.")
+        else:
+            # Year selector
+            available_years = sorted(list(df_rev["Year"].unique()), reverse=True)
+            selected_year = st.selectbox("Select Year (वर्ष चुनें)", available_years, key="rev_year_select")
+            
+            # Filter data for selected year
+            df_year = df_rev[df_rev["Year"] == selected_year]
+            
+            # Group by MonthNum and MonthName to sum up revenue
+            monthly_grp = df_year.groupby(["MonthNum", "MonthName"]).agg(
+                total_revenue=("TOTAL AMOUNT", lambda x: pd.to_numeric(x, errors='coerce').sum()),
+                total_bookings=("Date", "count")
+            ).reset_index()
+            
+            # Sort chronologically by month number
+            monthly_grp = monthly_grp.sort_values("MonthNum")
+            
+            # Fill in missing months with zero revenue so the chart is continuous and beautiful!
+            all_months = pd.DataFrame([
+                (1, "January"), (2, "February"), (3, "March"), (4, "April"),
+                (5, "May"), (6, "June"), (7, "July"), (8, "August"),
+                (9, "September"), (10, "October"), (11, "November"), (12, "December")
+            ], columns=["MonthNum", "MonthName"])
+            
+            monthly_grp = pd.merge(all_months, monthly_grp, on=["MonthNum", "MonthName"], how="left")
+            monthly_grp["total_revenue"] = monthly_grp["total_revenue"].fillna(0.0)
+            monthly_grp["total_bookings"] = monthly_grp["total_bookings"].fillna(0).astype(int)
+            
+            # Sum up annual stats
+            annual_revenue = monthly_grp["total_revenue"].sum()
+            active_months = len(monthly_grp[monthly_grp["total_revenue"] > 0])
+            avg_monthly_rev = annual_revenue / max(active_months, 1)
+            
+            # Highest month details
+            if annual_revenue > 0:
+                max_idx = monthly_grp["total_revenue"].idxmax()
+                max_row = monthly_grp.loc[max_idx]
+                highest_month_str = f"{max_row['MonthName']} (₹{max_row['total_revenue']:,.0f})"
+            else:
+                highest_month_str = "N/A"
+                
+            # Display metrics cards
+            st.markdown(f"""
+            <div class="metric-container" style="margin-top: 15px;">
+                <div class="metric-card" style="border-left-color: #2563eb;">
+                    <div class="value">₹{annual_revenue:,.0f}</div>
+                    <div class="label">Annual Revenue ({selected_year})</div>
+                </div>
+                <div class="metric-card" style="border-left-color: #10B981;">
+                    <div class="value">₹{avg_monthly_rev:,.0f}</div>
+                    <div class="label">Monthly Average</div>
+                </div>
+                <div class="metric-card" style="border-left-color: #D97706;">
+                    <div class="value">{highest_month_str}</div>
+                    <div class="label">Highest Earning Month</div>
+                </div>
+                <div class="metric-card" style="border-left-color: #64748B;">
+                    <div class="value">{monthly_grp['total_bookings'].sum()}</div>
+                    <div class="label">Total Room Nights Booked</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            # ── Graphical Chart ──
+            st.markdown("#### 📈 Monthly Revenue Chart")
+            chart_data = pd.DataFrame({
+                "Month": monthly_grp["MonthName"],
+                "Revenue (₹)": monthly_grp["total_revenue"]
+            }).set_index("Month")
+            st.bar_chart(chart_data, color="#2563eb")
+            
+            st.markdown("---")
+            
+            # ── Detailed Breakdown Table ──
+            st.markdown("#### 📋 Detailed Monthly Summary Table")
+            
+            table_rows = ""
+            for _, r in monthly_grp.iterrows():
+                rev_val = r['total_revenue']
+                table_rows += f"""
+                <tr>
+                    <td><b>{r['MonthName']}</b></td>
+                    <td><span style="font-weight:700; color:{'#1E40AF' if rev_val > 0 else '#64748B'};">₹{rev_val:,.0f}</span></td>
+                    <td>{r['total_bookings']}</td>
+                </tr>
+                """
+                
+            st.markdown(f"""
+            <div class="occupancy-table-container">
+                <table class="occupancy-table">
+                    <thead>
+                        <tr>
+                            <th>Month (महीना)</th>
+                            <th>Total Revenue (कुल राजस्व)</th>
+                            <th>Booked Days (कुल बुकिंग दिवस)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {table_rows}
+                    </tbody>
+                </table>
+            </div>
+            """, unsafe_allow_html=True)
