@@ -203,9 +203,10 @@ class BookingDatabase:
             df = df.fillna("")
             return df[COLUMNS]
 
-    def check_conflicts(self, dates_list, requested_suits, exclude_guest_name=None, exclude_mobile=None) -> list:
+    def check_conflicts(self, dates_list, requested_suits, target_mobile=None, exclude_guest_name=None, exclude_mobile=None) -> list:
         """
-        Checks if any of the requested suits are already booked on the specified dates.
+        Checks if any of the requested suits are already booked on the specified dates,
+        or if the same mobile number already has a booking on those dates.
         Returns a list of conflict messages if conflicts exist, otherwise empty list.
         """
         df = self.load_data()
@@ -221,6 +222,14 @@ class BookingDatabase:
                    str(row["Mobile Number"]).strip() == str(exclude_mobile).strip():
                     continue
             
+            # Check 1: Duplicate mobile number on same day
+            if target_mobile and str(row["Mobile Number"]).strip() == str(target_mobile).strip():
+                conflicts.append(
+                    f"Mobile number {target_mobile} already has a booking on {row['Date']} (Guest: {row['Guest Name']})"
+                )
+                continue # Avoid double adding for suits if mobile conflict already triggered
+            
+            # Check 2: Suite overlapping conflict
             for suit in requested_suits:
                 val = row.get(suit, 0)
                 # If there's a non-zero price or booked status in that cell, it is booked

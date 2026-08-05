@@ -371,6 +371,44 @@ db = st.session_state.db
 def cached_load_data():
     return db.load_data()
 
+def get_mobile_booking_history(df, mobile_str):
+    if df.empty or not mobile_str or len(mobile_str) != 10:
+        return []
+    matched = df[df["Mobile Number"].astype(str).str.strip() == mobile_str.strip()]
+    if matched.empty:
+        return []
+    
+    bookings = []
+    # Group rows by Guest Name and Reference to aggregate dates
+    guest_groups = matched.groupby(["Guest Name", "Reference"])
+    for (guest, ref), g_rows in guest_groups:
+        g_dates = []
+        for d_str in g_rows["Date"]:
+            try:
+                g_dates.append(parse_str_to_date(d_str))
+            except Exception:
+                pass
+        g_dates = sorted(g_dates)
+        if not g_dates:
+            continue
+        
+        check_in = g_dates[0]
+        check_out = g_dates[-1] + timedelta(days=1)
+        
+        suits_booked = []
+        for s in SUITS:
+            vals = g_rows[s].astype(float)
+            if (vals != 0.0).any():
+                suits_booked.append(s.replace("Suit", "Suite"))
+                
+        bookings.append({
+            "guest_name": guest,
+            "reference": ref,
+            "range_str": f"{format_date_to_str(check_in)} → {format_date_to_str(check_out)}",
+            "suits": ", ".join(suits_booked)
+        })
+    return bookings
+
 # ─── Header ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="main-header">
@@ -473,6 +511,21 @@ with st.sidebar:
         else:
             form_ref = form_ref_select
 
+        # Previous history alert block inside the guest details card
+        history = get_mobile_booking_history(raw_df, form_mobile)
+        if history:
+            st.markdown('<hr style="margin:10px 0; border:none; border-top:1px dashed #CBD5E1;">', unsafe_allow_html=True)
+            st.markdown('<div style="font-size: 11px; color: #1E3A8A; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">ℹ️ Prior History (पूर्व बुकिंग इतिहास):</div>', unsafe_allow_html=True)
+            for h in history:
+                st.markdown(
+                    f'<div style="background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 12px; color: #1E3A8A;">'
+                    f'👤 <b>{h["guest_name"]}</b> ({h["reference"]})<br>'
+                    f'📅 {h["range_str"]}<br>'
+                    f'🛏️ {h["suits"]}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
     # ── CONTAINER CARD 2: Stay Dates & Suites ──
     with st.container(border=True):
         st.markdown('<div class="section-label">📅 Stay & Room Selection</div>', unsafe_allow_html=True)
@@ -553,6 +606,7 @@ with st.sidebar:
             conflict_messages = db.check_conflicts(
                 dates_list=dates_to_book,
                 requested_suits=selected_suits,
+                target_mobile=form_mobile,
                 exclude_guest_name=exc_name,
                 exclude_mobile=exc_mobile
             )
