@@ -1,3 +1,14 @@
+---
+title: Police Officers Guest House Pogh
+emoji: 👮
+colorFrom: blue
+colorTo: navy
+sdk: streamlit
+sdk_version: 1.35.0
+app_file: app.py
+pinned: false
+---
+
 # Police Officers Guest House (POGH) Booking & Letter Generator Management System
 
 A production-ready Web Application for managing bookings at the Police Officers Guest House (POGH) in Ayodhya. Built using Python (Streamlit), with integrated live synchronization to **Google Sheets API** (and automatic local CSV fallback).

@@ -69,42 +69,50 @@ class BookingDatabase:
                 print(f"credentials.json load error: {e}")
                 creds = None
 
-        # ── Priority 2: Streamlit Secrets (for cloud deployment) ──
+        # ── Priority 2: Streamlit Secrets or Environment Variables (for cloud deployment) ──
         if creds is None:
             try:
+                secret_info = None
+                raw_json_str = None
+                
+                # Check Streamlit Secrets first
                 if "gcp_service_account" in st.secrets:
                     sec = st.secrets["gcp_service_account"]
                     if "json_text" in sec:
-                        import json
-                        import re
                         raw_json_str = sec["json_text"]
-                        try:
-                            secret_info = json.loads(raw_json_str)
-                        except Exception:
-                            # Fallback: Extract fields using regex to survive literal newlines in strings
-                            secret_info = {}
-                            keys = [
-                                "type", "project_id", "private_key_id", "private_key",
-                                "client_email", "client_id", "auth_uri", "token_uri",
-                                "auth_provider_x509_cert_url", "client_x509_cert_url", "universe_domain"
-                            ]
-                            for k in keys:
-                                match = re.search(rf'"{k}"\s*:\s*"(.*?)"', raw_json_str, re.DOTALL)
-                                if match:
-                                    secret_info[k] = match.group(1)
                     else:
                         secret_info = dict(sec)
-                    
-                    # Robust handling of private key newline characters
+                # Check environment variables fallback
+                elif "json_text" in os.environ:
+                    raw_json_str = os.environ["json_text"]
+                
+                if raw_json_str:
+                    import json
+                    import re
+                    try:
+                        secret_info = json.loads(raw_json_str)
+                    except Exception:
+                        secret_info = {}
+                        keys = [
+                            "type", "project_id", "private_key_id", "private_key",
+                            "client_email", "client_id", "auth_uri", "token_uri",
+                            "auth_provider_x509_cert_url", "client_x509_cert_url", "universe_domain"
+                        ]
+                        for k in keys:
+                            match = re.search(rf'"{k}"\s*:\s*"(.*?)"', raw_json_str, re.DOTALL)
+                            if match:
+                                secret_info[k] = match.group(1)
+                                
+                if secret_info:
                     if "private_key" in secret_info:
                         raw_key = secret_info["private_key"]
                         raw_key = raw_key.replace("\\n", "\n")
                         secret_info["private_key"] = raw_key.strip()
                         
                     creds = ServiceAccountCredentials.from_json_keyfile_dict(secret_info, scope)
-                    print("Using Streamlit Secrets for Google Sheets auth.")
+                    print("Using GCP Service Account Credentials from environment.")
             except Exception as e:
-                print(f"Streamlit Secrets load error: {e}")
+                print(f"GCP credentials load error: {e}")
                 import traceback
                 traceback.print_exc()
                 creds = None
