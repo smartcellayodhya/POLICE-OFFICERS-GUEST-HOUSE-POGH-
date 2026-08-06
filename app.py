@@ -1170,7 +1170,7 @@ with tab_revenue:
             
             # Group by MonthNum and MonthName to sum up revenue
             monthly_grp = df_year.groupby(["MonthNum", "MonthName"]).agg(
-                total_revenue=("TOTAL AMOUNT", lambda x: pd.to_numeric(x, errors='coerce').sum()),
+                total_revenue=("TOTAL AMOUNT", lambda x: pd.to_numeric(x, errors='coerce').apply(lambda v: max(v, 0.0)).sum()),
                 total_bookings=("Date", "count")
             ).reset_index()
             
@@ -1227,11 +1227,28 @@ with tab_revenue:
             
             # ── Graphical Chart ──
             st.markdown("#### 📈 Monthly Revenue Chart")
-            chart_data = pd.DataFrame({
+            
+            import altair as alt
+            
+            chart_df = pd.DataFrame({
                 "Month": monthly_grp["MonthName"],
-                "Revenue (₹)": monthly_grp["total_revenue"]
-            }).set_index("Month")
-            st.bar_chart(chart_data, color="#2563eb")
+                "Revenue (₹)": monthly_grp["total_revenue"],
+                "MonthNum": monthly_grp["MonthNum"]
+            })
+            
+            chart = alt.Chart(chart_df).mark_bar(
+                color="#2563eb", 
+                cornerRadiusTopLeft=4, 
+                cornerRadiusTopRight=4
+            ).encode(
+                x=alt.X("Month:N", sort=alt.EncodingSortField(field="MonthNum", order="ascending"), title="Month (महीना)", axis=alt.Axis(labelAngle=-45)),
+                y=alt.Y("Revenue (₹):Q", title="Revenue (₹) (राजस्व)"),
+                tooltip=["Month", "Revenue (₹)"]
+            ).properties(
+                height=350
+            )
+            
+            st.altair_chart(chart, use_container_width=True)
             
             st.markdown("---")
             
