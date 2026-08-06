@@ -107,6 +107,19 @@ def generate_hindi_letter_pdf(details: dict) -> bytes:
     
     # ── Header Logo & Title ──
     logo_path = "up_police_logo.png"
+    
+    # Download the logo dynamically from GitHub if it's missing (helps deploy cleanly on Hugging Face Spaces!)
+    if not os.path.exists(logo_path):
+        try:
+            url = "https://raw.githubusercontent.com/smartcellayodhya/POLICE-OFFICERS-GUEST-HOUSE-POGH-/main/up_police_logo.png"
+            response = requests.get(url, timeout=15)
+            if response.status_code == 200:
+                with open(logo_path, "wb") as f:
+                     f.write(response.content)
+                print("UP Police logo downloaded successfully from GitHub.")
+        except Exception as e:
+            print(f"Error downloading UP Police logo from GitHub: {e}")
+            
     has_logo = os.path.exists(logo_path)
     
     if has_logo:
