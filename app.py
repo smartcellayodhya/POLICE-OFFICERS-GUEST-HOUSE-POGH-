@@ -355,6 +355,46 @@ div[data-testid="stMultiSelect"] div[role="button"]:focus-within {
 </style>
 """, unsafe_allow_html=True)
 
+# ─── Authentication Gate (PIN Security Lock) ──────────────────────────────────
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+# Fetch PIN from secrets or fall back to default
+correct_pin = "POGH@2026"
+try:
+    if "access_pin" in st.secrets:
+        correct_pin = str(st.secrets["access_pin"]).strip()
+except Exception:
+    pass
+
+if not st.session_state.authenticated:
+    # Render a premium login container in the center
+    _, login_col, _ = st.columns([1, 1.8, 1])
+    with login_col:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+                    border-radius: 16px; padding: 40px; text-align: center;
+                    border: 1px solid #D97706; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                    margin-top: 80px; color: white; font-family: 'Inter', sans-serif;">
+            <div style="font-size: 50px; margin-bottom: 15px;">👮</div>
+            <h2 style="color: #FFFFFF; font-weight: 700; margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.5px;">POLICE OFFICERS GUEST HOUSE</h2>
+            <p style="color: #94A3B8; font-size: 14px; margin: 0 0 24px 0;">POGH Booking & Letter Management System · Ayodhya</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Center form inputs
+        pin_input = st.text_input("Enter Access PIN (गुप्त पिन दर्ज करें)", type="password", placeholder="••••••••")
+        
+        if st.button("🔓 Unlock Application", type="primary", use_container_width=True):
+            if pin_input.strip() == correct_pin:
+                st.session_state.authenticated = True
+                st.success("Access Granted! Unlocking...")
+                st.rerun()
+            else:
+                st.error("❌ Invalid Access PIN. Please try again.")
+                
+    st.stop()
+
 # ─── DB Init ────────────────────────────────────────────────────────────────
 # Re-initialize DB if not present or if currently in Local mode to auto-pickup credentials.json
 if "db" not in st.session_state:
@@ -594,8 +634,8 @@ with st.sidebar:
                 submit_enabled = False; validation_msg = "Mobile number must be exactly 10 digits."
             elif len(selected_suits) == 0:
                 submit_enabled = False; validation_msg = "Select at least one suite."
-            elif form_check_out < form_check_in:
-                submit_enabled = False; validation_msg = "Check-out must be after check-in."
+            elif form_check_out <= form_check_in:
+                submit_enabled = False; validation_msg = "Check-out must be at least 1 day after check-in."
 
         if submit_enabled:
             dates_to_book = get_dates_in_range(form_check_in, form_check_out)
@@ -676,6 +716,12 @@ with st.sidebar:
                 st.success("🎉 Confirmed!")
                 st.cache_data.clear()
                 st.rerun()
+
+        # ── Logout Button ──
+        st.markdown('<div style="margin-top: 30px;"></div>', unsafe_allow_html=True)
+        if st.button("🔓 Log Out (लॉग आउट)", use_container_width=True):
+            st.session_state.authenticated = False
+            st.rerun()
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  MAIN TABS
