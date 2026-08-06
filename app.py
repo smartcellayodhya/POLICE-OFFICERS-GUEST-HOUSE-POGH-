@@ -1241,27 +1241,6 @@ with tab_revenue:
             table_rows = ""
             for _, r in monthly_grp.iterrows():
                 rev_val = r['total_revenue']
-                table_rows += f"""
-                <tr>
-                    <td><b>{r['MonthName']}</b></td>
-                    <td><span style="font-weight:700; color:{'#1E40AF' if rev_val > 0 else '#64748B'};">₹{rev_val:,.0f}</span></td>
-                    <td>{r['total_bookings']}</td>
-                </tr>
-                """
+                table_rows += f"<tr><td><b>{r['MonthName']}</b></td><td><span style='font-weight:700; color:{'#1E40AF' if rev_val > 0 else '#64748B'};'>₹{rev_val:,.0f}</span></td><td>{r['total_bookings']}</td></tr>"
                 
-            st.markdown(f"""
-            <div class="occupancy-table-container">
-                <table class="occupancy-table">
-                    <thead>
-                        <tr>
-                            <th>Month (महीना)</th>
-                            <th>Total Revenue (कुल राजस्व)</th>
-                            <th>Booked Days (कुल बुकिंग दिवस)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {table_rows}
-                    </tbody>
-                </table>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="occupancy-table-container"><table class="occupancy-table"><thead><tr><th>Month (महीना)</th><th>Total Revenue (कुल राजस्व)</th><th>Booked Days (कुल बुकिंग दिवस)</th></tr></thead><tbody>{table_rows}</tbody></table></div>', unsafe_allow_html=True)
