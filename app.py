@@ -368,32 +368,45 @@ except Exception:
     pass
 
 if not st.session_state.authenticated:
-    # Render a premium login container in the center
+    # Custom CSS to hide sidebar on login page
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Render a premium login container card in the center
     _, login_col, _ = st.columns([1, 1.8, 1])
     with login_col:
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-                    border-radius: 16px; padding: 40px; text-align: center;
-                    border: 1px solid #D97706; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-                    margin-top: 80px; color: white; font-family: 'Inter', sans-serif;">
-            <div style="font-size: 50px; margin-bottom: 15px;">👮</div>
-            <h2 style="color: #FFFFFF; font-weight: 700; margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.5px;">POLICE OFFICERS GUEST HOUSE</h2>
-            <p style="color: #94A3B8; font-size: 14px; margin: 0 0 24px 0;">POGH Booking & Letter Management System · Ayodhya</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Center form inputs
-        pin_input = st.text_input("Enter Access PIN (गुप्त पिन दर्ज करें)", type="password", placeholder="••••••••")
-        
-        if st.button("🔓 Unlock Application", type="primary", use_container_width=True):
-            if pin_input.strip() == correct_pin:
-                st.session_state.authenticated = True
-                st.success("Access Granted! Unlocking...")
-                st.rerun()
-            else:
-                st.error("❌ Invalid Access PIN. Please try again.")
+        with st.container(border=True):
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+                        margin: -16px -16px 24px -16px; padding: 40px 20px; text-align: center;
+                        border-bottom: 4px solid #D97706; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <div style="font-size: 55px; margin-bottom: 12px;">👮</div>
+                <h2 style="color: #FFFFFF; font-weight: 700; margin: 0 0 6px 0; font-size: 24px; letter-spacing: 0.5px; line-height: 1.3;">POLICE OFFICERS GUEST HOUSE</h2>
+                <p style="color: #94A3B8; font-size: 13px; margin: 0;">POGH Booking & Letter Management System · Ayodhya</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown('<div style="padding: 0 10px 10px 10px;">', unsafe_allow_html=True)
+            pin_input = st.text_input("Enter Access PIN (गुप्त पिन दर्ज करें)", type="password", placeholder="••••••••")
+            st.markdown('<div style="margin-top: 15px;"></div>', unsafe_allow_html=True)
+            submit_login = st.button("🔓 Unlock Application", type="primary", use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            if submit_login:
+                if pin_input.strip() == correct_pin:
+                    st.session_state.authenticated = True
+                    st.success("Access Granted! Unlocking...")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid Access PIN. Please try again.")
                 
     st.stop()
+
 
 # ─── DB Init ────────────────────────────────────────────────────────────────
 # Re-initialize DB if not present or if currently in Local mode to auto-pickup credentials.json
@@ -448,6 +461,13 @@ def get_mobile_booking_history(df, mobile_str):
             "suits": ", ".join(suits_booked)
         })
     return bookings
+
+# ─── Top Utility Bar (Log Out) ──────────────────────────────────────────────
+col_top_l, col_top_r = st.columns([5.2, 1])
+with col_top_r:
+    if st.button("🔒 Log Out (लॉग आउट)", use_container_width=True):
+        st.session_state.authenticated = False
+        st.rerun()
 
 # ─── Header ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -716,12 +736,6 @@ with st.sidebar:
                 st.success("🎉 Confirmed!")
                 st.cache_data.clear()
                 st.rerun()
-
-        # ── Logout Button ──
-        st.markdown('<div style="margin-top: 30px;"></div>', unsafe_allow_html=True)
-        if st.button("🔓 Log Out (लॉग आउट)", use_container_width=True):
-            st.session_state.authenticated = False
-            st.rerun()
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  MAIN TABS
