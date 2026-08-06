@@ -105,7 +105,14 @@ def generate_hindi_letter_pdf(details: dict) -> bytes:
     pdf.set_margins(15, 20, 15)
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Header Title
+    # ── Header Logo & Title ──
+    logo_path = "up_police_logo.png"
+    has_logo = os.path.exists(logo_path)
+    
+    if has_logo:
+        pdf.image(logo_path, x=96, y=14, w=18)
+        pdf.set_y(35)
+        
     pdf.set_font(font_name, "B", 16)
     pdf.set_text_color(30, 58, 138)  # Police Navy Blue
     pdf.cell(0, 10, "कार्यालय वरिष्ठ पुलिस अधीक्षक, अयोध्या", ln=True, align="C")
@@ -115,10 +122,14 @@ def generate_hindi_letter_pdf(details: dict) -> bytes:
     pdf.cell(0, 5, "पुलिस ऑफिसर्स गेस्ट हाउस, अयोध्या", ln=True, align="C")
     
     # Line divider
+    divider_y = 53 if has_logo else 38
     pdf.set_draw_color(209, 213, 219)
     pdf.set_line_width(0.2)
-    pdf.line(15, 38, 195, 38)
-    pdf.ln(10)
+    pdf.line(15, divider_y, 195, divider_y)
+    
+    # Position cursor below divider
+    start_y = 57 if has_logo else 42
+    pdf.set_y(start_y)
     
     # Dispatch Ref and Date row
     pdf.set_font(font_name, "", 10)

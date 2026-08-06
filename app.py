@@ -768,6 +768,59 @@ tab_grid, tab_database, tab_letter, tab_revenue = st.tabs([
 # ───────────────────────────────────────────────────────────────────────────
 with tab_grid:
     st.markdown("### 🛏️ Live Room Occupancy Grid")
+    
+    # ── Today's Live Room Map ──
+    st.markdown('<div style="font-size: 14px; font-weight: 700; color: #1E3A8A; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">📍 TODAY\'S LIVE ROOM MAP (आज के कमरों की स्थिति)</div>', unsafe_allow_html=True)
+    map_cols = st.columns(4)
+    
+    for idx, suit in enumerate(SUITS):
+        suit_num_str = f"Suite {idx+1}"
+        suit_booking = today_rows[today_rows[suit].astype(float) != 0.0] if len(today_rows) > 0 else pd.DataFrame()
+        
+        with map_cols[idx]:
+            if len(suit_booking) > 0:
+                row = suit_booking.iloc[0]
+                guest_name = row["Guest Name"]
+                mobile = row["Mobile Number"]
+                ref = row["Reference"]
+                
+                # Fetch full stay dates
+                guest_bookings = raw_df[(raw_df["Guest Name"] == guest_name) & (raw_df["Mobile Number"] == mobile)]
+                g_dates = []
+                for d_str in guest_bookings["Date"]:
+                    try:
+                        g_dates.append(parse_str_to_date(d_str))
+                    except Exception:
+                        pass
+                g_dates = sorted(g_dates)
+                if g_dates:
+                    check_in = g_dates[0]
+                    check_out = g_dates[-1] + timedelta(days=1)
+                    stay_range_str = f"{format_date_to_str(check_in)} → {format_date_to_str(check_out)}"
+                else:
+                    stay_range_str = "N/A"
+                    
+                st.markdown(f"""
+                <div style="background-color: #FEF2F2; border: 2px solid #EF4444; border-radius: 12px; padding: 16px; min-height: 140px; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.05);">
+                    <div style="font-size: 13px; font-weight: 700; color: #991B1B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">🛏️ {suit_num_str}</div>
+                    <div style="font-size: 12px; font-weight: 600; color: #DC2626; margin-bottom: 8px;">🔴 OCCUPIED (आरक्षित)</div>
+                    <div style="font-size: 13px; font-weight: 700; color: #1E293B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{guest_name}">👤 {guest_name}</div>
+                    <div style="font-size: 11px; color: #475569; margin-top: 4px;">📅 {stay_range_str}</div>
+                    <div style="font-size: 11px; font-weight: 600; color: #1E3A8A; margin-top: 2px;">Ref: {ref}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="background-color: #ECFDF5; border: 2px solid #10B981; border-radius: 12px; padding: 16px; min-height: 140px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 700; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">🛏️ {suit_num_str}</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #059669; margin-bottom: 8px;">🟢 VACANT (खाली है)</div>
+                    </div>
+                    <div style="font-size: 12px; color: #065F46; font-weight: 500;">Ready for booking</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+    st.markdown('<div style="margin-top: 25px;"></div>', unsafe_allow_html=True)
 
     col_gs, col_ge, _ = st.columns([1, 1, 2])
     sel_grid_start = col_gs.date_input("From Date", value=date.today() - timedelta(days=3), key="gs")
@@ -1168,10 +1221,26 @@ with tab_revenue:
             # Filter data for selected year
             df_year = df_rev[df_rev["Year"] == selected_year]
             
-            # Group by MonthNum and MonthName to sum up revenue
-            monthly_grp = df_year.groupby(["MonthNum", "MonthName"]).agg(
+            # Group by MonthNum and MonthName to sum up revenue and occupancy stats
+            import calendar
+            
+            def get_days_in_month(yr, mo):
+                try:
+                    return calendar.monthrange(int(yr), int(mo))[1]
+                except Exception:
+                    return 30
+                    
+            df_year_calc = df_year.copy()
+            # Count occupied suites in each row (a suite is occupied if its rate is non-zero)
+            df_year_calc["occupied_suites"] = df_year_calc.apply(
+                lambda row: sum(1 for s in SUITS if float(row.get(s, 0.0)) != 0.0), 
+                axis=1
+            )
+            
+            monthly_grp = df_year_calc.groupby(["MonthNum", "MonthName"]).agg(
                 total_revenue=("TOTAL AMOUNT", lambda x: pd.to_numeric(x, errors='coerce').apply(lambda v: max(v, 0.0)).sum()),
-                total_bookings=("Date", "count")
+                total_bookings=("Date", "count"),
+                occupied_room_nights=("occupied_suites", "sum")
             ).reset_index()
             
             # Sort chronologically by month number
@@ -1187,11 +1256,28 @@ with tab_revenue:
             monthly_grp = pd.merge(all_months, monthly_grp, on=["MonthNum", "MonthName"], how="left")
             monthly_grp["total_revenue"] = monthly_grp["total_revenue"].fillna(0.0)
             monthly_grp["total_bookings"] = monthly_grp["total_bookings"].fillna(0).astype(int)
+            monthly_grp["occupied_room_nights"] = monthly_grp["occupied_room_nights"].fillna(0).astype(int)
+            
+            # Calculate occupancy rate for each month
+            def calc_occ_rate(row):
+                m_num = int(row["MonthNum"])
+                days = get_days_in_month(selected_year, m_num)
+                capacity = 4 * days
+                occupied = row["occupied_room_nights"]
+                return (occupied / capacity) * 100
+                
+            monthly_grp["occupancy_rate"] = monthly_grp.apply(calc_occ_rate, axis=1)
             
             # Sum up annual stats
             annual_revenue = monthly_grp["total_revenue"].sum()
             active_months = len(monthly_grp[monthly_grp["total_revenue"] > 0])
             avg_monthly_rev = annual_revenue / max(active_months, 1)
+            
+            # Calculate overall year occupancy
+            total_days_year = sum(get_days_in_month(selected_year, m) for m in range(1, 13))
+            total_capacity_year = 4 * total_days_year
+            total_occupied_year = monthly_grp["occupied_room_nights"].sum()
+            annual_occ_rate = (total_occupied_year / total_capacity_year) * 100
             
             # Highest month details
             if annual_revenue > 0:
@@ -1217,8 +1303,8 @@ with tab_revenue:
                     <div class="label">Highest Earning Month</div>
                 </div>
                 <div class="metric-card" style="border-left-color: #64748B;">
-                    <div class="value">{monthly_grp['total_bookings'].sum()}</div>
-                    <div class="label">Total Room Nights Booked</div>
+                    <div class="value">{annual_occ_rate:.1f}%</div>
+                    <div class="label">Average Occupancy Rate</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1258,6 +1344,7 @@ with tab_revenue:
             table_rows = ""
             for _, r in monthly_grp.iterrows():
                 rev_val = r['total_revenue']
-                table_rows += f"<tr><td><b>{r['MonthName']}</b></td><td><span style='font-weight:700; color:{'#1E40AF' if rev_val > 0 else '#64748B'};'>₹{rev_val:,.0f}</span></td><td>{r['total_bookings']}</td></tr>"
+                occ_rate_val = r['occupancy_rate']
+                table_rows += f"<tr><td><b>{r['MonthName']}</b></td><td><span style='font-weight:700; color:{'#1E40AF' if rev_val > 0 else '#64748B'};'>₹{rev_val:,.0f}</span></td><td>{r['total_bookings']}</td><td><span style='font-weight:600; color:{'#10B981' if occ_rate_val > 15.0 else '#64748B'};'>{occ_rate_val:.1f}%</span></td></tr>"
                 
-            st.markdown(f'<div class="occupancy-table-container"><table class="occupancy-table"><thead><tr><th>Month (महीना)</th><th>Total Revenue (कुल राजस्व)</th><th>Booked Days (कुल बुकिंग दिवस)</th></tr></thead><tbody>{table_rows}</tbody></table></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="occupancy-table-container"><table class="occupancy-table"><thead><tr><th>Month (महीना)</th><th>Total Revenue (कुल राजस्व)</th><th>Booked Days (कुल बुकिंग दिवस)</th><th>Occupancy Rate (कमरा उपयोग दर)</th></tr></thead><tbody>{table_rows}</tbody></table></div>', unsafe_allow_html=True)
