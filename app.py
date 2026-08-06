@@ -34,6 +34,15 @@ html, body, [class*="css"] {
     background-color: #F8FAFC !important;
 }
 
+/* Reduce top white space and hide default empty header */
+.block-container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 2rem !important;
+}
+div[data-testid="stHeader"] {
+    display: none !important;
+}
+
 /* Hide Streamlit branding, main menu, header decorations, and footer watermarks */
 #MainMenu {visibility: hidden !important;}
 footer {visibility: hidden !important;}
@@ -462,12 +471,40 @@ def get_mobile_booking_history(df, mobile_str):
         })
     return bookings
 
-# ─── Top Utility Bar (Log Out) ──────────────────────────────────────────────
-col_top_l, col_top_r = st.columns([5.2, 1])
-with col_top_r:
-    if st.button("🔒 Log Out (लॉग आउट)", use_container_width=True):
-        st.session_state.authenticated = False
-        st.rerun()
+# ─── Top Utility Bar (Status Banner & Log Out) ──────────────────────────────
+if db.mode == "GoogleSheets":
+    col_top_l, col_top_r = st.columns([5.2, 1.2])
+    with col_top_l:
+        st.markdown(
+            f'<div class="banner-green" style="margin-bottom: 0; padding: 8px 16px; font-size: 13px;">🟢 &nbsp;Live Sheets Connected &nbsp;→&nbsp; <b>{db.sheet_title}</b></div>',
+            unsafe_allow_html=True
+        )
+    with col_top_r:
+        if st.button("🔒 Log Out", use_container_width=True):
+            st.session_state.authenticated = False
+            st.rerun()
+else:
+    col_top_l, col_top_mid, col_top_r = st.columns([4, 1.3, 1.2])
+    with col_top_l:
+        err_msg = ""
+        conn_err = getattr(db, "connection_error", None)
+        if conn_err:
+            err_msg = f" (Error: {conn_err[:30]}...)"
+        st.markdown(
+            f'<div class="banner-yellow" style="margin-bottom: 0; padding: 8px 16px; font-size: 13px;">⚠️ &nbsp;Local CSV Mode{err_msg}</div>',
+            unsafe_allow_html=True
+        )
+    with col_top_mid:
+        if st.button("🔄 Connect Sheets", use_container_width=True):
+            st.session_state.db = BookingDatabase()
+            st.cache_data.clear()
+            st.rerun()
+    with col_top_r:
+        if st.button("🔒 Log Out", use_container_width=True):
+            st.session_state.authenticated = False
+            st.rerun()
+
+st.markdown('<div style="margin-top: 15px;"></div>', unsafe_allow_html=True)
 
 # ─── Header ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -476,27 +513,6 @@ st.markdown("""
     <p>Booking & Letter Generator Management System &nbsp;•&nbsp; Ayodhya</p>
 </div>
 """, unsafe_allow_html=True)
-
-# ─── Connection Banner ───────────────────────────────────────────────────────
-if db.mode == "GoogleSheets":
-    st.markdown(
-        f'<div class="banner-green">🟢 &nbsp;Live Google Sheets Connected &nbsp;→&nbsp; <b>{db.sheet_title}</b></div>',
-        unsafe_allow_html=True
-    )
-else:
-    ban_col1, ban_col2 = st.columns([4, 1])
-    err_msg = ""
-    conn_err = getattr(db, "connection_error", None)
-    if conn_err:
-        err_msg = f" <br><span style='font-size:12px; color:#DC2626;'>Error detail: {conn_err}</span>"
-    ban_col1.markdown(
-        f'<div class="banner-yellow">⚠️ &nbsp;Running in Local CSV Mode. Make sure <b>credentials.json</b> is present in project folder.{err_msg}</div>',
-        unsafe_allow_html=True
-    )
-    if ban_col2.button("🔄 Connect Sheets", use_container_width=True):
-        st.session_state.db = BookingDatabase()
-        st.cache_data.clear()
-        st.rerun()
 
 # ─── Load Data ───────────────────────────────────────────────────────────────
 raw_df = cached_load_data()
