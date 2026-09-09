@@ -31,31 +31,12 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const [contactPerson, setContactPerson] = useState<string>('उ0नि0 यदुनाथ मो0न0-8317041684');
   const [isEditingContact, setIsEditingContact] = useState(false);
 
-  // Dynamic Room Rent (Single Room Rate per day entered by user, not multiplied by days)
-  const [customRent, setCustomRent] = useState<string>('');
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('pogh_contact_person');
       if (saved) setContactPerson(saved);
     }
   }, []);
-
-  useEffect(() => {
-    if (booking) {
-      const amt = Number(booking.total_amount);
-      if (!isNaN(amt) && amt > 0) {
-        setCustomRent(String(amt));
-      } else {
-        const found = relatedBookings.find((b) => Number(b.total_amount) > 0);
-        if (found && Number(found.total_amount) > 0) {
-          setCustomRent(String(found.total_amount));
-        } else {
-          setCustomRent('');
-        }
-      }
-    }
-  }, [booking, relatedBookings]);
 
   if (!isOpen || !booking) return null;
 
@@ -101,10 +82,10 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const suitsDisplay = suitNames.length > 0 ? suitNames.join(', ') : 'Suit 1';
   const numRooms = suitNames.length || 1;
   
-  // Single room rent per day (what the user typed in booking, not multiplied by total days)
-  const numericRent = customRent.trim() ? parseFloat(customRent.replace(/[^0-9.]/g, '')) : NaN;
-  const hasRentAmount = !isNaN(numericRent) && numericRent > 0;
-  const rentDisplay = hasRentAmount ? `₹${numericRent.toLocaleString('en-IN')}/-` : 'As Per Applicable';
+  // Single room rent per day directly from booking data (entered in New Booking modal)
+  const bookingRent = Number(booking.total_amount);
+  const hasRentAmount = !isNaN(bookingRent) && bookingRent > 0;
+  const rentDisplay = hasRentAmount ? `₹${bookingRent.toLocaleString('en-IN')}/-` : 'As Per Applicable';
 
   const todayHindi = formatToHindiDate(new Date());
   const cinHindi = formatToHindiDate(checkInDate);
@@ -122,7 +103,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     check_out_time: '12:00 PM',
     suits: suitNames,
     total_days: totalDays,
-    total_amount: hasRentAmount ? numericRent : 0,
+    total_amount: hasRentAmount ? bookingRent : 0,
     meal_type_status: booking.meal_type_status || 'PAID',
     contact_person: contactPerson,
     dates: sortedDates,
@@ -214,18 +195,6 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
               />
             </div>
 
-            {/* Room Rent (प्रति रूम प्रति दिन किराया) Editor (No-Print) */}
-            <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
-              <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">किराया:</span>
-              <input
-                type="text"
-                value={customRent}
-                onChange={(e) => setCustomRent(e.target.value)}
-                placeholder="उदा. 800"
-                className="bg-slate-950 text-amber-300 text-xs px-2 py-0.5 rounded border border-slate-700 focus:border-amber-400 outline-none w-20 sm:w-24 font-sans font-semibold"
-                title="पत्र में छपने वाला प्रति रूम प्रति दिन किराया (खाली छोड़ने पर 'As Per Applicable' छपेगा)"
-              />
-            </div>
 
             <button
               onClick={handleWhatsApp}
