@@ -24,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onExportExcel,
   onLogout,
 }) => {
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <header className="sticky top-0 z-30 bg-slate-900 border-b-2 border-amber-500 shadow-xl backdrop-blur-md bg-opacity-95">
