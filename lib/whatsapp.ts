@@ -5,13 +5,15 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
   const cin_h = formatToHindiDate(details.check_in_date);
   const cout_h = formatToHindiDate(details.check_out_date);
   const suitsList = details.suits.join(', ');
+  const dispLine = details.dispatch_no ? `पत्रांक: पी.ओ.जी.एच. / 2026 / ${details.dispatch_no}\n` : '';
+  const refLine = details.booking_ref_no ? `बुकिंग संदर्भ: ${details.booking_ref_no}\n` : '';
 
   return (
 `सेवा में,
 श्री ${details.guest_name || '___________'}
 मो0नं0- ${details.mobile_number || '___________'}
 
-विषय: पुलिस ऑफिसर्स गेस्ट हाउस में सूट आरक्षित किये जाने की पुष्टि के संबंध में।
+${dispLine}${refLine}विषय: पुलिस ऑफिसर्स गेस्ट हाउस में सूट आरक्षित किये जाने की पुष्टि के संबंध में।
 
 महोदय,
   अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक ${cin_h} से ${cout_h} तक आपके प्रवास हेतु ${details.suits.length} रूम आरक्षित कर दिया गया है।

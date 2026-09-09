@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Booking } from '@/lib/types';
 import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
+import { extractGroupIdFromNotes, extractDispatchNoFromNotes } from '@/lib/bookingUtils';
 import { X, Printer, Download, Share2, Copy, Check } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -13,7 +14,7 @@ interface HindiLetterModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: Booking | null;
-  relatedBookings?: Booking[]; // If multi-day stay
+  relatedBookings?: Booking[];
 }
 
 export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
@@ -28,12 +29,24 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
   if (!isOpen || !booking) return null;
 
-  // Determine full date range if multiple dates exist for this guest
+  // Determine full date range
   const allGuestBookings = relatedBookings.length > 0 ? relatedBookings : [booking];
   const sortedDates = allGuestBookings.map((b) => b.booking_date).sort();
   const checkInDate = sortedDates[0];
   const checkOutDate = sortedDates[sortedDates.length - 1];
   const totalDays = sortedDates.length;
+
+  // Reference and dispatch number
+  const bookingRef =
+    booking.group_id ||
+    extractGroupIdFromNotes(booking.notes) ||
+    `POGH-2026-${String(booking.id).slice(0, 4).toUpperCase()}`;
+
+  const dispatchNo =
+    booking.dispatch_no ||
+    extractDispatchNoFromNotes(booking.notes) ||
+    bookingRef.replace('POGH-2026-', '') ||
+    '001';
 
   // Identify suits booked
   const suitNames: string[] = [];
@@ -67,6 +80,8 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     guest_name: booking.guest_name,
     mobile_number: booking.mobile_number,
     reference: booking.reference,
+    booking_ref_no: bookingRef,
+    dispatch_no: dispatchNo,
     check_in_date: checkInDate,
     check_out_date: checkOutDate,
     check_in_time: '12:00 PM',
@@ -106,7 +121,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
-      pdf.save(`POGH_Letter_${booking.guest_name.replace(/\s+/g, '_')}.pdf`);
+      pdf.save(`POGH_Letter_${bookingRef}_${booking.guest_name.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error('Failed to generate PDF', err);
       alert('Error downloading PDF. You can also use the Print button to Save as PDF.');
@@ -121,7 +136,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   };
 
   const handleCopyText = () => {
-    const text = `सेवा में, श्री ${booking.guest_name} (मो०नं०- ${booking.mobile_number})\nपुलिस ऑफिसर्स गेस्ट हाउस, अयोध्या में आपका सूट आरक्षित कर दिया गया है।\nदिनांक: ${cinHindi} से ${coutHindi} तक (${suitsDisplay}).\nसंपर्क: 8317041684`;
+    const text = `सेवा में, श्री ${booking.guest_name} (मो०नं०- ${booking.mobile_number})\nपत्रांक: पी.ओ.जी.एच. / 2026 / ${dispatchNo}\nबुकिंग संदर्भ: ${bookingRef}\nपुलिस ऑफिसर्स गेस्ट हाउस, अयोध्या में आपका सूट आरक्षित कर दिया गया है।\nदिनांक: ${cinHindi} से ${coutHindi} तक (${suitsDisplay}).\nसंपर्क: 8317041684`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -134,14 +149,14 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         {/* Modal Action Bar */}
         <div className="px-5 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-amber-500 no-print">
           <div>
-            <h3 className="text-base font-bold flex items-center gap-2">
-              <span>Official Hindi Booking Letter</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold">
-                पत्र प्रारूप
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold">Official Hindi Booking Letter</h3>
+              <span className="text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold font-mono">
+                {bookingRef}
               </span>
-            </h3>
+            </div>
             <p className="text-xs text-slate-300 font-hindi">
-              वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या - आधिकारिक आवंटन पत्र
+              वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या - आधिकारिक आवंटन पत्र (पत्रांक: {dispatchNo})
             </p>
           </div>
 
@@ -198,13 +213,13 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
             {/* Emblem and Official Header */}
             <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-2 relative flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-2 relative flex items-center justify-center">
                 <Image
                   src="/up_police_logo.png"
                   alt="UP Police Emblem"
-                  width={64}
-                  height={64}
-                  className="object-contain"
+                  width={80}
+                  height={80}
+                  className="object-contain drop-shadow-sm"
                   priority
                 />
               </div>
@@ -218,30 +233,32 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
             <div className="border-b border-slate-300 mb-5" />
 
-            {/* Dispatch Number & Hindi Date */}
+            {/* Auto Dispatch Number & Hindi Date */}
             <div className="flex justify-between items-center text-xs font-semibold text-slate-800 mb-6">
-              <div>पत्रांक: पी.ओ.जी.एच. / बुकिंग / 2026 / ______</div>
+              <div>
+                पत्रांक: <span className="font-bold text-blue-900">पी.ओ.जी.एच. / 2026 / {dispatchNo}</span>
+              </div>
               <div>दिनांक: {todayHindi}</div>
             </div>
 
             {/* Recipient */}
             <div className="mb-5 space-y-1">
               <div className="font-bold text-slate-900">सेवा में,</div>
-              <div className="pl-6 font-semibold text-slate-800">
+              <div className="pl-6 font-semibold text-slate-800 text-base">
                 श्री {booking.guest_name}
               </div>
               <div className="pl-6 text-xs text-slate-600 font-mono">
                 मो०नं०- {booking.mobile_number}
               </div>
-              {booking.reference && (
-                <div className="pl-6 text-xs text-slate-600">
-                  संदर्भ: {booking.reference}
-                </div>
-              )}
+              <div className="pl-6 text-xs text-slate-600 flex items-center gap-3">
+                {booking.reference && <span>संदर्भ: <strong>{booking.reference}</strong></span>}
+                <span>•</span>
+                <span>बुकिंग संदर्भ संख्या: <strong className="font-mono">{bookingRef}</strong></span>
+              </div>
             </div>
 
             {/* Subject */}
-            <div className="mb-5 p-2 bg-slate-50 border-l-4 border-blue-900 text-slate-900 font-bold text-xs sm:text-sm">
+            <div className="mb-5 p-2.5 bg-slate-50 border-l-4 border-blue-900 text-slate-900 font-bold text-xs sm:text-sm">
               विषय: पुलिस ऑफिसर्स गेस्ट हाउस में सूट आरक्षित किये जाने की पुष्टि के संबंध में।
             </div>
 
@@ -331,15 +348,13 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
         {/* Modal Bottom Footer */}
         <div className="px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 no-print">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCopyText}
-              className="flex items-center gap-1 text-slate-600 hover:text-slate-900 underline transition"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied to Clipboard!' : 'Copy Summary'}</span>
-            </button>
-          </div>
+          <button
+            onClick={handleCopyText}
+            className="flex items-center gap-1 text-slate-600 hover:text-slate-900 underline transition"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copied ? 'Copied to Clipboard!' : 'Copy Summary'}</span>
+          </button>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition"
