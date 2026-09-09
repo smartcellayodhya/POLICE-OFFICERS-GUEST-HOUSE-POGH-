@@ -13,25 +13,28 @@ import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
 import { AuthUser, getLoggedInUser, logoutUser } from '@/lib/auth';
 
 import { LoginPage } from '@/components/LoginPage';
-import { Navbar } from '@/components/Navbar';
+import { Sidebar, NavTab } from '@/components/Sidebar';
+import { TopHeader } from '@/components/TopHeader';
 import { StatsCards } from '@/components/StatsCards';
 import { RoomMatrix } from '@/components/RoomMatrix';
 import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
 import { SupabaseConfigModal } from '@/components/SupabaseConfigModal';
-import { Phone, Shield, ExternalLink, RefreshCw } from 'lucide-react';
+import { Phone, Shield } from 'lucide-react';
 
 export default function HomePage() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Data & Dashboard State
+  // Navigation Tab State
+  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Data State
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
-  const [isConfigured, setIsConfigured] = useState(false);
 
   // Modals state
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -60,7 +63,6 @@ export default function HomePage() {
   // Load Bookings
   const fetchBookings = useCallback(async () => {
     const configured = isSupabaseConfigured();
-    setIsConfigured(configured);
 
     if (configured) {
       const client = getSupabaseClient();
@@ -88,7 +90,7 @@ export default function HomePage() {
     setLoading(false);
   }, []);
 
-  // Setup Realtime or Polling
+  // Realtime Sync Listener
   useEffect(() => {
     if (!currentUser) return;
 
@@ -105,13 +107,7 @@ export default function HomePage() {
             fetchBookings();
           }
         )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            setIsRealtimeActive(true);
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            setIsRealtimeActive(false);
-          }
-        });
+        .subscribe();
 
       return () => {
         client.removeChannel(channel);
@@ -122,7 +118,7 @@ export default function HomePage() {
   // Handle New Bookings Save (Admin Only)
   const handleSaveBookings = async (newBookings: Booking[]) => {
     if (currentUser?.role !== 'admin') {
-      alert('Only Admin has permissions to create bookings.');
+      alert('केवल प्रशासक (Admin) को नई बुकिंग करने की अनुमति है।');
       return;
     }
 
@@ -162,7 +158,7 @@ export default function HomePage() {
   // Handle Delete Booking (Admin Only)
   const handleDeleteBooking = async (id: string, groupId?: string) => {
     if (currentUser?.role !== 'admin') {
-      alert('Only Admin has permissions to delete bookings.');
+      alert('केवल प्रशासक (Admin) को रिकॉर्ड हटाने की अनुमति है।');
       return;
     }
 
@@ -171,14 +167,14 @@ export default function HomePage() {
       if (client) {
         if (groupId) {
           const confirmAll = window.confirm(
-            `Delete all dates for this booking group (${groupId})? Click OK for All dates, Cancel for this single date.`
+            `क्या आप इस बुकिंग समूह (${groupId}) के सभी दिवस रिकॉर्ड हटाना चाहते हैं?`
           );
           if (confirmAll) {
             const { error } = await client
               .from('pogh_bookings')
               .delete()
               .ilike('notes', `%${groupId}%`);
-            if (error) alert('Delete error: ' + error.message);
+            if (error) alert('त्रुटि: ' + error.message);
             await fetchBookings();
             return;
           }
@@ -186,7 +182,7 @@ export default function HomePage() {
 
         const { error } = await client.from('pogh_bookings').delete().eq('id', id);
         if (error) {
-          alert('Could not delete from Supabase: ' + error.message);
+          alert('त्रुटि: ' + error.message);
           return;
         }
         await fetchBookings();
@@ -206,7 +202,7 @@ export default function HomePage() {
     updateAllDates: boolean = false
   ) => {
     if (currentUser?.role !== 'admin') {
-      alert('Only Admin has permissions to update booking status.');
+      alert('केवल प्रशासक (Admin) को स्थिति अद्यतन करने की अनुमति है।');
       return;
     }
 
@@ -221,7 +217,7 @@ export default function HomePage() {
             .update({ status: newStatus })
             .ilike('notes', `%${refCode}%`);
           if (error) {
-            alert('Update error: ' + error.message);
+            alert('त्रुटि: ' + error.message);
             return;
           }
         } else {
@@ -230,7 +226,7 @@ export default function HomePage() {
             .update({ status: newStatus })
             .eq('id', booking.id);
           if (error) {
-            alert('Update error: ' + error.message);
+            alert('त्रुटि: ' + error.message);
             return;
           }
         }
@@ -239,7 +235,6 @@ export default function HomePage() {
       }
     }
 
-    // Local state fallback
     const updated = bookings.map((b) => {
       if (updateAllDates && refCode) {
         const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
@@ -262,7 +257,7 @@ export default function HomePage() {
     setIsBookingModalOpen(true);
   };
 
-  // Open Letter Modal (Both Admin and Officer)
+  // Open Letter Modal
   const handleOpenLetter = (booking: Booking) => {
     setSelectedLetterBooking(booking);
     setIsLetterModalOpen(true);
@@ -285,12 +280,8 @@ export default function HomePage() {
       })
     : [];
 
-  // Wait for client storage check
-  if (!authChecked) {
-    return null;
-  }
+  if (!authChecked) return null;
 
-  // Show login page if not authenticated
   if (!currentUser) {
     return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
   }
@@ -298,12 +289,15 @@ export default function HomePage() {
   const isAdmin = currentUser.role === 'admin';
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Navbar */}
-      <Navbar
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
+      
+      {/* 1. Side Navigation Menu */}
+      <Sidebar
         currentUser={currentUser}
-        isRealtimeActive={isRealtimeActive}
-        isSupabaseConfigured={isConfigured}
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
         onOpenBookingModal={() => {
           if (!isAdmin) return;
           setInitialBookingDate(undefined);
@@ -315,73 +309,112 @@ export default function HomePage() {
         onLogout={handleLogout}
       />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* 2. Main Content Layout (Padded for Desktop Sidebar) */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all duration-300">
         
-        {/* Officer Mode Banner */}
-        {!isAdmin && (
-          <div className="mb-5 p-3.5 rounded-xl bg-blue-900/90 text-blue-100 border-l-4 border-blue-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-            <div className="flex items-center gap-2.5">
+        {/* Top Header */}
+        <TopHeader
+          currentUser={currentUser}
+          activeTab={activeTab}
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+          onOpenBookingModal={() => {
+            if (!isAdmin) return;
+            setInitialBookingDate(undefined);
+            setInitialBookingSuit(undefined);
+            setIsBookingModalOpen(true);
+          }}
+        />
+
+        {/* Dynamic Main Body Content */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          
+          {/* Officer Notification */}
+          {!isAdmin && (
+            <div className="mb-5 p-3 rounded-2xl bg-blue-900 text-blue-100 border-l-4 border-blue-400 flex items-center gap-3 shadow-xs">
               <Shield className="w-5 h-5 text-blue-400 flex-shrink-0" />
               <div className="text-xs">
-                <span className="font-bold text-white text-sm">Duty Officer Portal (अधिकारी दृश्य): </span>
+                <span className="font-bold text-white">ड्यूटी अधिकारी दृश्य (Officer Mode): </span>
                 <span className="text-blue-200">
-                  You have full access to view Room Occupancy, Booking History, and download official Hindi Letters and Excel Reports. Creation and modifications are managed by Admin.
+                  आप कमरों की उपलब्धता स्थिति, बुकिंग पंजिका एवं आधिकारिक आवंटन पत्र देख सकते हैं। नई बुकिंग एवं संशोधन प्रशासक (Admin) द्वारा प्रबंधित हैं।
                 </span>
               </div>
             </div>
-            <span className="text-[11px] px-2.5 py-1 rounded bg-blue-800 text-blue-200 font-mono font-semibold whitespace-nowrap">
-              Duty Officer Active
-            </span>
-          </div>
-        )}
+          )}
 
-        {/* Operational Metric Cards */}
-        <StatsCards bookings={bookings} />
-
-        {/* Room Occupancy Matrix */}
-        <RoomMatrix
-          bookings={bookings}
-          isAdmin={isAdmin}
-          onQuickBook={handleQuickBook}
-          onSelectBooking={(b) => handleOpenLetter(b)}
-        />
-
-        {/* Bookings Directory Table */}
-        <BookingsTable
-          bookings={bookings}
-          isAdmin={isAdmin}
-          onOpenLetter={handleOpenLetter}
-          onDeleteBooking={handleDeleteBooking}
-          onUpdateStatus={handleUpdateStatus}
-        />
-
-      </main>
-
-      {/* Official UP Police Footer */}
-      <footer className="bg-slate-900 text-slate-400 border-t border-slate-800 text-xs py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-center sm:text-left">
-            <p className="font-bold text-slate-200 tracking-wide">
-              पुलिस ऑफिसर्स गेस्ट हाउस (POGH) • अयोध्या पुलिस
-            </p>
-            <p className="text-[11px] text-slate-500 font-hindi mt-0.5">
-              कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या (उ0प्र0)
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-slate-400 text-xs">
-            <div className="flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-amber-400" />
-              <span>हेल्पलाइन: उ0नि0 यदुनाथ मो0न0-8317041684</span>
+          {/* Tab 1: Dashboard Overview */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              <StatsCards bookings={bookings} />
+              <RoomMatrix
+                bookings={bookings}
+                isAdmin={isAdmin}
+                onQuickBook={handleQuickBook}
+                onSelectBooking={handleOpenLetter}
+              />
+              <BookingsTable
+                bookings={bookings}
+                isAdmin={isAdmin}
+                onOpenLetter={handleOpenLetter}
+                onDeleteBooking={handleDeleteBooking}
+                onUpdateStatus={handleUpdateStatus}
+              />
             </div>
-            <span>•</span>
-            <span className="text-slate-500">
-              Logged in as: <strong className="text-slate-300">{currentUser.displayName}</strong>
-            </span>
+          )}
+
+          {/* Tab 2: Room Occupancy Matrix Focus */}
+          {activeTab === 'matrix' && (
+            <div className="space-y-6">
+              <StatsCards bookings={bookings} />
+              <RoomMatrix
+                bookings={bookings}
+                isAdmin={isAdmin}
+                onQuickBook={handleQuickBook}
+                onSelectBooking={handleOpenLetter}
+              />
+            </div>
+          )}
+
+          {/* Tab 3: Bookings Directory Focus */}
+          {activeTab === 'bookings' && (
+            <div className="space-y-6">
+              <BookingsTable
+                bookings={bookings}
+                isAdmin={isAdmin}
+                onOpenLetter={handleOpenLetter}
+                onDeleteBooking={handleDeleteBooking}
+                onUpdateStatus={handleUpdateStatus}
+              />
+            </div>
+          )}
+
+        </main>
+
+        {/* Clean Official Footer */}
+        <footer className="bg-slate-900 text-slate-400 border-t border-slate-800 text-xs py-5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-center sm:text-left">
+              <p className="font-bold text-slate-200">
+                पुलिस ऑफिसर्स गेस्ट हाउस (POGH) • अयोध्या पुलिस
+              </p>
+              <p className="text-[11px] text-slate-500 font-hindi mt-0.5">
+                कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या (उ0प्र0)
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 text-slate-400 text-xs">
+              <div className="flex items-center gap-1.5 font-hindi">
+                <Phone className="w-3.5 h-3.5 text-amber-400" />
+                <span>संपर्क सूत्र: उ0नि0 यदुनाथ मो0न0-8317041684</span>
+              </div>
+              <span>•</span>
+              <span className="text-slate-400 font-medium">
+                {currentUser.displayName}
+              </span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+
+      </div>
 
       {/* Modals */}
       {isAdmin && (

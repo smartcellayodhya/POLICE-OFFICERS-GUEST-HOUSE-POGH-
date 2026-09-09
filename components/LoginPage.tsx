@@ -26,7 +26,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       if (user) {
         onLoginSuccess(user);
       } else {
-        setError('अमान्य उपयोगकर्ता नाम या पासवर्ड (Invalid Username or Password). Please try again.');
+        setError('अमान्य उपयोगकर्ता नाम या पासवर्ड (Invalid Username or Password).');
         setLoading(false);
       }
     }, 400);
@@ -42,14 +42,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden font-sans">
       
       {/* Background Decorative Rings */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Login Card */}
-      <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Top Header with Crest */}
         <div className="p-8 pb-6 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
@@ -64,7 +64,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
           </div>
           
-          <h1 className="text-xl font-extrabold text-white tracking-wide">
+          <h1 className="text-xl font-black text-white tracking-wide">
             POLICE OFFICERS GUEST HOUSE
           </h1>
           <p className="text-amber-400 font-bold text-xs tracking-widest mt-0.5">
@@ -75,10 +75,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </p>
         </div>
 
-        {/* Role Fast Switcher Buttons */}
+        {/* Role Fast Switcher */}
         <div className="px-8 pt-6 pb-2">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 text-center">
-            Select Role to Login (लॉगिन प्रकार चुनें)
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">
+            लॉगिन पदनाम चुनें (Select Portal Role)
           </p>
           <div className="grid grid-cols-2 gap-2.5">
             <button
@@ -91,13 +91,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs flex items-center gap-1">
+                <span className="font-bold text-xs flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5 text-amber-400" />
-                  Admin
+                  प्रशासक (Admin)
                 </span>
                 {username === 'admin' && <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />}
               </div>
-              <span className="text-[10px] opacity-80 mt-1">Full Control</span>
+              <span className="text-[10px] opacity-80 mt-1">पूर्ण प्रशासनिक नियंत्रण</span>
             </button>
 
             <button
@@ -110,13 +110,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs flex items-center gap-1">
+                <span className="font-bold text-xs flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-blue-400" />
-                  Officer
+                  ड्यूटी अधिकारी
                 </span>
                 {username === 'officer' && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />}
               </div>
-              <span className="text-[10px] opacity-80 mt-1">Report & Occupancy</span>
+              <span className="text-[10px] opacity-80 mt-1">उपलब्धता एवं रिपोर्ट दृश्य</span>
             </button>
           </div>
         </div>
@@ -124,11 +124,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="p-8 pt-4 space-y-4">
           
-          {/* Username Input */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-slate-400" />
-              Username (उपयोगकर्ता नाम)
+              उपयोगकर्ता नाम (Username)
             </label>
             <input
               type="text"
@@ -136,15 +135,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
-              className="w-full px-4 py-2.5 text-sm bg-slate-950/80 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
+              className="w-full px-4 py-2.5 text-sm bg-slate-950/90 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
             />
           </div>
 
-          {/* Password Input */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Lock className="w-3.5 h-3.5 text-slate-400" />
-              Password (पासवर्ड)
+              पासवर्ड (Password)
             </label>
             <div className="relative">
               <input
@@ -153,7 +151,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/80 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
+                className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/90 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
               />
               <button
                 type="button"
@@ -165,7 +163,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-800/80 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in duration-150">
               <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
@@ -173,37 +170,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </div>
           )}
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 mt-2 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-500/20 transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? (
-              <span>Authenticating...</span>
+              <span>सत्यापित किया जा रहा है...</span>
             ) : (
               <>
-                <span>सुरक्षित लॉगिन करें (Sign In)</span>
+                <span>सुरक्षित प्रवेश करें (Sign In)</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
-
-          {/* Preset Credentials Help */}
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 text-center space-y-1">
-            <p>
-              Admin: <span className="text-amber-400 font-mono">admin</span> / <span className="text-amber-400 font-mono">admin@pogh2026</span>
-            </p>
-            <p>
-              Officer: <span className="text-blue-400 font-mono">officer</span> / <span className="text-blue-400 font-mono">officer@2026</span>
-            </p>
-          </div>
         </form>
 
-        {/* Footer */}
-        <div className="px-8 py-3.5 bg-slate-950/60 border-t border-slate-800/80 text-center">
-          <p className="text-[10px] text-slate-500 tracking-wide">
-            Official Portal • Police Officers Guest House, Ayodhya
+        <div className="px-8 py-3 bg-slate-950/80 border-t border-slate-800/80 text-center">
+          <p className="text-[11px] text-slate-400">
+            उत्तर प्रदेश पुलिस आधिकारिक आंतरिक पोर्टल • अनधिकृत प्रवेश वर्जित है
           </p>
         </div>
 
