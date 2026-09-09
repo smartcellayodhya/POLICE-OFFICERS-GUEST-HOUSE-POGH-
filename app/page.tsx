@@ -10,7 +10,9 @@ import {
 } from '@/lib/supabase';
 import { exportBookingsToExcel } from '@/lib/excel';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
+import { AuthUser, getLoggedInUser, logoutUser } from '@/lib/auth';
 
+import { LoginPage } from '@/components/LoginPage';
 import { Navbar } from '@/components/Navbar';
 import { StatsCards } from '@/components/StatsCards';
 import { RoomMatrix } from '@/components/RoomMatrix';
@@ -18,19 +20,18 @@ import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
 import { SupabaseConfigModal } from '@/components/SupabaseConfigModal';
-import { StaffPinModal } from '@/components/StaffPinModal';
 import { Phone, Shield, ExternalLink, RefreshCw } from 'lucide-react';
 
 export default function HomePage() {
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Data & Dashboard State
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
-
-  // Staff Security PIN State
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   // Modals state
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -42,42 +43,18 @@ export default function HomePage() {
 
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
-  // Check saved admin status
+  // Check login on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedAuth = sessionStorage.getItem('pogh_admin_auth');
-      if (savedAuth === 'true') {
-        setIsAdminUnlocked(true);
-      }
+    const user = getLoggedInUser();
+    if (user) {
+      setCurrentUser(user);
     }
+    setAuthChecked(true);
   }, []);
 
-  // Request auth helper
-  const requestAuth = (action?: () => void) => {
-    if (action) setPendingAction(() => action);
-    setIsPinModalOpen(true);
-  };
-
-  const handleAuthSuccess = () => {
-    setIsAdminUnlocked(true);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('pogh_admin_auth', 'true');
-    }
-    if (pendingAction) {
-      pendingAction();
-      setPendingAction(null);
-    }
-  };
-
-  const handleToggleAdminLock = () => {
-    if (isAdminUnlocked) {
-      setIsAdminUnlocked(false);
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('pogh_admin_auth');
-      }
-    } else {
-      setIsPinModalOpen(true);
-    }
+  const handleLogout = () => {
+    logoutUser();
+    setCurrentUser(null);
   };
 
   // Load Bookings
@@ -113,6 +90,8 @@ export default function HomePage() {
 
   // Setup Realtime or Polling
   useEffect(() => {
+    if (!currentUser) return;
+
     fetchBookings();
 
     const client = getSupabaseClient();
@@ -138,10 +117,15 @@ export default function HomePage() {
         client.removeChannel(channel);
       };
     }
-  }, [fetchBookings]);
+  }, [currentUser, fetchBookings]);
 
-  // Handle New Bookings Save
+  // Handle New Bookings Save (Admin Only)
   const handleSaveBookings = async (newBookings: Booking[]) => {
+    if (currentUser?.role !== 'admin') {
+      alert('Only Admin has permissions to create bookings.');
+      return;
+    }
+
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
       if (client) {
@@ -175,13 +159,17 @@ export default function HomePage() {
     saveLocalBookings(updated);
   };
 
-  // Handle Delete Booking (Single or Group)
+  // Handle Delete Booking (Admin Only)
   const handleDeleteBooking = async (id: string, groupId?: string) => {
+    if (currentUser?.role !== 'admin') {
+      alert('Only Admin has permissions to delete bookings.');
+      return;
+    }
+
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
       if (client) {
         if (groupId) {
-          // Check if user wants to delete all with this groupId
           const confirmAll = window.confirm(
             `Delete all dates for this booking group (${groupId})? Click OK for All dates, Cancel for this single date.`
           );
@@ -211,19 +199,23 @@ export default function HomePage() {
     saveLocalBookings(filtered);
   };
 
-  // Handle Lifecycle Status Change (CONFIRMED -> CHECKED_IN -> CHECKED_OUT -> CANCELLED)
+  // Handle Lifecycle Status Change (Admin Only)
   const handleUpdateStatus = async (
     booking: Booking,
     newStatus: BookingStatus,
     updateAllDates: boolean = false
   ) => {
+    if (currentUser?.role !== 'admin') {
+      alert('Only Admin has permissions to update booking status.');
+      return;
+    }
+
     const refCode = booking.group_id || extractGroupIdFromNotes(booking.notes);
 
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
       if (client) {
         if (updateAllDates && refCode) {
-          // Update all matching rows in notes
           const { error } = await client
             .from('pogh_bookings')
             .update({ status: newStatus })
@@ -262,28 +254,21 @@ export default function HomePage() {
     saveLocalBookings(updated);
   };
 
-  // Quick Book from Matrix
+  // Quick Book from Matrix (Admin only)
   const handleQuickBook = (dateStr: string, suitKey: string) => {
-    if (!isAdminUnlocked) {
-      requestAuth(() => {
-        setInitialBookingDate(dateStr);
-        setInitialBookingSuit(suitKey);
-        setIsBookingModalOpen(true);
-      });
-      return;
-    }
+    if (currentUser?.role !== 'admin') return;
     setInitialBookingDate(dateStr);
     setInitialBookingSuit(suitKey);
     setIsBookingModalOpen(true);
   };
 
-  // Open Letter Modal
+  // Open Letter Modal (Both Admin and Officer)
   const handleOpenLetter = (booking: Booking) => {
     setSelectedLetterBooking(booking);
     setIsLetterModalOpen(true);
   };
 
-  // Find related bookings (matching groupId or guest name + phone)
+  // Related bookings for letter
   const refCode = selectedLetterBooking
     ? selectedLetterBooking.group_id || extractGroupIdFromNotes(selectedLetterBooking.notes)
     : '';
@@ -300,50 +285,54 @@ export default function HomePage() {
       })
     : [];
 
+  // Wait for client storage check
+  if (!authChecked) {
+    return null;
+  }
+
+  // Show login page if not authenticated
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
+  }
+
+  const isAdmin = currentUser.role === 'admin';
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       {/* Navbar */}
       <Navbar
+        currentUser={currentUser}
         isRealtimeActive={isRealtimeActive}
         isSupabaseConfigured={isConfigured}
-        isAdminUnlocked={isAdminUnlocked}
         onOpenBookingModal={() => {
-          if (!isAdminUnlocked) {
-            requestAuth(() => {
-              setInitialBookingDate(undefined);
-              setInitialBookingSuit(undefined);
-              setIsBookingModalOpen(true);
-            });
-            return;
-          }
+          if (!isAdmin) return;
           setInitialBookingDate(undefined);
           setInitialBookingSuit(undefined);
           setIsBookingModalOpen(true);
         }}
         onOpenConfigModal={() => setIsConfigModalOpen(true)}
         onExportExcel={() => exportBookingsToExcel(bookings)}
-        onToggleAdminLock={handleToggleAdminLock}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Security Banner if Locked */}
-        {!isAdminUnlocked && (
-          <div className="mb-5 p-3 rounded-xl bg-slate-900 text-slate-200 border-l-4 border-amber-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+        {/* Officer Mode Banner */}
+        {!isAdmin && (
+          <div className="mb-5 p-3.5 rounded-xl bg-blue-900/90 text-blue-100 border-l-4 border-blue-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
             <div className="flex items-center gap-2.5">
-              <Shield className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <Shield className="w-5 h-5 text-blue-400 flex-shrink-0" />
               <div className="text-xs">
-                <span className="font-bold text-white">View Only Mode: </span>
-                <span>You can view room occupancy and letters. Staff authorization (PIN: 1122) is required to add or modify bookings.</span>
+                <span className="font-bold text-white text-sm">Duty Officer Portal (अधिकारी दृश्य): </span>
+                <span className="text-blue-200">
+                  You have full access to view Room Occupancy, Booking History, and download official Hindi Letters and Excel Reports. Creation and modifications are managed by Admin.
+                </span>
               </div>
             </div>
-            <button
-              onClick={() => setIsPinModalOpen(true)}
-              className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs whitespace-nowrap transition"
-            >
-              Enter Staff PIN
-            </button>
+            <span className="text-[11px] px-2.5 py-1 rounded bg-blue-800 text-blue-200 font-mono font-semibold whitespace-nowrap">
+              Duty Officer Active
+            </span>
           </div>
         )}
 
@@ -353,6 +342,7 @@ export default function HomePage() {
         {/* Room Occupancy Matrix */}
         <RoomMatrix
           bookings={bookings}
+          isAdmin={isAdmin}
           onQuickBook={handleQuickBook}
           onSelectBooking={(b) => handleOpenLetter(b)}
         />
@@ -360,8 +350,7 @@ export default function HomePage() {
         {/* Bookings Directory Table */}
         <BookingsTable
           bookings={bookings}
-          isAdminUnlocked={isAdminUnlocked}
-          onRequestAuth={() => setIsPinModalOpen(true)}
+          isAdmin={isAdmin}
           onOpenLetter={handleOpenLetter}
           onDeleteBooking={handleDeleteBooking}
           onUpdateStatus={handleUpdateStatus}
@@ -387,20 +376,24 @@ export default function HomePage() {
               <span>हेल्पलाइन: उ0नि0 यदुनाथ मो0न0-8317041684</span>
             </div>
             <span>•</span>
-            <span className="text-slate-500">Security Protected & Realtime Active</span>
+            <span className="text-slate-500">
+              Logged in as: <strong className="text-slate-300">{currentUser.displayName}</strong>
+            </span>
           </div>
         </div>
       </footer>
 
       {/* Modals */}
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        onSave={handleSaveBookings}
-        existingBookings={bookings}
-        initialDate={initialBookingDate}
-        initialSuit={initialBookingSuit}
-      />
+      {isAdmin && (
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          onSave={handleSaveBookings}
+          existingBookings={bookings}
+          initialDate={initialBookingDate}
+          initialSuit={initialBookingSuit}
+        />
+      )}
 
       <HindiLetterModal
         isOpen={isLetterModalOpen}
@@ -412,20 +405,13 @@ export default function HomePage() {
         relatedBookings={relatedBookings}
       />
 
-      <SupabaseConfigModal
-        isOpen={isConfigModalOpen}
-        onClose={() => setIsConfigModalOpen(false)}
-        onConfigSaved={() => fetchBookings()}
-      />
-
-      <StaffPinModal
-        isOpen={isPinModalOpen}
-        onClose={() => {
-          setIsPinModalOpen(false);
-          setPendingAction(null);
-        }}
-        onSuccess={handleAuthSuccess}
-      />
+      {isAdmin && (
+        <SupabaseConfigModal
+          isOpen={isConfigModalOpen}
+          onClose={() => setIsConfigModalOpen(false)}
+          onConfigSaved={() => fetchBookings()}
+        />
+      )}
     </div>
   );
 }

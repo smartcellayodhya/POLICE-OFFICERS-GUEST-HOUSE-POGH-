@@ -5,16 +5,18 @@ import { Booking } from '@/lib/types';
 import { SUITS } from '@/lib/constants';
 import { formatToISODate } from '@/lib/dateUtils';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
-import { ChevronLeft, ChevronRight, Calendar, PlusCircle, CheckCircle2, UserCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, PlusCircle, CheckCircle2, UserCheck, ShieldAlert } from 'lucide-react';
 
 interface RoomMatrixProps {
   bookings: Booking[];
+  isAdmin: boolean;
   onQuickBook: (dateStr: string, suitKey: string) => void;
   onSelectBooking: (booking: Booking) => void;
 }
 
 export const RoomMatrix: React.FC<RoomMatrixProps> = ({
   bookings,
+  isAdmin,
   onQuickBook,
   onSelectBooking,
 }) => {
@@ -69,7 +71,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-amber-600" />
           <h2 className="text-base font-bold text-slate-800">
-            Room Occupancy Matrix (कमरों की लाइव उपलब्धता स्थिति)
+            Room Occupancy & Live Status (कमरों की उपलब्धता स्थिति)
           </h2>
         </div>
 
@@ -214,17 +216,30 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       isToday ? 'bg-amber-50/30' : ''
                     }`}
                   >
-                    <button
-                      onClick={() => onQuickBook(iso, suit.id)}
-                      className="w-full h-full min-h-[58px] rounded-lg border border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/80 text-emerald-700 flex flex-col items-center justify-center gap-0.5 transition group-hover:scale-98 shadow-xs"
-                      title={`Click to book ${suit.name} on ${iso}`}
-                    >
-                      <span className="text-[11px] font-semibold flex items-center gap-1">
-                        <PlusCircle className="w-3 h-3 text-emerald-600" />
-                        Available
-                      </span>
-                      <span className="text-[9px] text-emerald-600/80">Book Now</span>
-                    </button>
+                    {isAdmin ? (
+                      <button
+                        onClick={() => onQuickBook(iso, suit.id)}
+                        className="w-full h-full min-h-[58px] rounded-lg border border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/80 text-emerald-700 flex flex-col items-center justify-center gap-0.5 transition group-hover:scale-98 shadow-xs"
+                        title={`Click to book ${suit.name} on ${iso}`}
+                      >
+                        <span className="text-[11px] font-semibold flex items-center gap-1">
+                          <PlusCircle className="w-3 h-3 text-emerald-600" />
+                          Available
+                        </span>
+                        <span className="text-[9px] text-emerald-600/80">Book Now</span>
+                      </button>
+                    ) : (
+                      <div
+                        className="w-full h-full min-h-[58px] rounded-lg border border-emerald-200 bg-emerald-50/30 text-emerald-700 flex flex-col items-center justify-center gap-0.5 select-none"
+                        title="Available for booking (Contact Admin to book)"
+                      >
+                        <span className="text-[11px] font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Available
+                        </span>
+                        <span className="text-[9px] text-slate-400">खाली है</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

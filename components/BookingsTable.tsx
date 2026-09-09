@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Booking, BookingStatus } from '@/lib/types';
 import { formatToDisplayDate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
-import { extractGroupIdFromNotes, extractDispatchNoFromNotes, cleanNotesText } from '@/lib/bookingUtils';
+import { extractGroupIdFromNotes, extractDispatchNoFromNotes } from '@/lib/bookingUtils';
 import {
   Search,
   Filter,
@@ -13,19 +13,17 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  UserCheck,
   LogOut,
   LogIn,
   Phone,
   User,
-  Hash,
-  Lock
+  Shield,
+  Eye
 } from 'lucide-react';
 
 interface BookingsTableProps {
   bookings: Booking[];
-  isAdminUnlocked: boolean;
-  onRequestAuth: () => void;
+  isAdmin: boolean;
   onOpenLetter: (booking: Booking) => void;
   onDeleteBooking: (id: string, groupId?: string) => Promise<void>;
   onUpdateStatus: (booking: Booking, newStatus: BookingStatus, updateAllDates?: boolean) => Promise<void>;
@@ -33,8 +31,7 @@ interface BookingsTableProps {
 
 export const BookingsTable: React.FC<BookingsTableProps> = ({
   bookings,
-  isAdminUnlocked,
-  onRequestAuth,
+  isAdmin,
   onOpenLetter,
   onDeleteBooking,
   onUpdateStatus,
@@ -71,10 +68,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   };
 
   const handleLifecycleClick = (b: Booking) => {
-    if (!isAdminUnlocked) {
-      onRequestAuth();
-      return;
-    }
+    if (!isAdmin) return;
 
     const current = b.status;
     let nextStatus: BookingStatus = 'CONFIRMED';
@@ -91,10 +85,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   };
 
   const handleCancelClick = (b: Booking) => {
-    if (!isAdminUnlocked) {
-      onRequestAuth();
-      return;
-    }
+    if (!isAdmin) return;
 
     const isCurrentlyCancelled = b.status === 'CANCELLED';
     const newStatus: BookingStatus = isCurrentlyCancelled ? 'CONFIRMED' : 'CANCELLED';
@@ -113,10 +104,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   };
 
   const handleDeleteClick = (b: Booking) => {
-    if (!isAdminUnlocked) {
-      onRequestAuth();
-      return;
-    }
+    if (!isAdmin) return;
 
     const refCode = b.group_id || extractGroupIdFromNotes(b.notes);
     if (window.confirm(`Delete booking record for ${b.guest_name}? This cannot be undone.`)) {
@@ -129,16 +117,19 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       {/* Table Header Controls */}
       <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-bold text-slate-900">
-            Booking Records & Lifecycle Directory (बुकिंग एवं आवागमन पंजिका)
-          </h3>
-          <p className="text-xs text-slate-500">
-            Showing {filteredBookings.length} of {bookings.length} bookings
-            {!isAdminUnlocked && (
-              <span className="ml-2 text-amber-700 bg-amber-100 px-2 py-0.5 rounded text-[10px] font-semibold">
-                View Only (Staff Login to edit)
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-900">
+              Booking Records & History Report (बुकिंग इतिहास एवं आवागमन रिपोर्ट)
+            </h3>
+            {!isAdmin && (
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                <Eye className="w-3 h-3" />
+                Officer Report View (Read-Only)
               </span>
             )}
+          </div>
+          <p className="text-xs text-slate-500">
+            Showing {filteredBookings.length} of {bookings.length} records
           </p>
         </div>
 
@@ -150,7 +141,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search name, phone, ref, POGH-xxx..."
+              placeholder="Search name, phone, POGH-xxx..."
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:border-amber-500 outline-none transition bg-white"
             />
           </div>
@@ -193,8 +184,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
               <th className="py-3 px-4">Reference</th>
               <th className="py-3 px-4">Suits</th>
               <th className="py-3 px-4">Amount</th>
-              <th className="py-3 px-4">Status & Lifecycle</th>
-              <th className="py-3 px-4 text-center">Actions</th>
+              <th className="py-3 px-4">Status & Occupancy</th>
+              <th className="py-3 px-4 text-center">Reports & Letters</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -271,7 +262,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       ₹{Number(b.total_amount || 0).toLocaleString('en-IN')}
                     </td>
 
-                    {/* Lifecycle Status & Caretaker Toggle */}
+                    {/* Status & Lifecycle Toggle (Admin only can toggle) */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5">
                         <span
@@ -294,15 +285,15 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                             : 'CONFIRMED'}
                         </span>
 
-                        {/* Quick Lifecycle Action for Staff */}
-                        {!isCancelled && (
+                        {/* Lifecycle Toggle: Admin Only */}
+                        {isAdmin && !isCancelled && (
                           <button
                             onClick={() => handleLifecycleClick(b)}
                             className="p-1 rounded text-[10px] font-semibold border hover:bg-slate-100 transition flex items-center gap-1 text-slate-600"
                             title={
                               isInHouse
-                                ? 'Click to Mark as Checked-Out (प्रस्थान)'
-                                : 'Click to Mark as Checked-In (आगमन)'
+                                ? 'Click to Mark as Checked-Out'
+                                : 'Click to Mark as Checked-In'
                             }
                           >
                             {isInHouse ? (
@@ -321,13 +312,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Actions */}
+                    {/* Actions: View Letter & WhatsApp (Both), Edit/Delete (Admin only) */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        {/* Open Hindi Letter */}
+                        {/* Open Hindi Letter (Both Admin and Officer can view/print) */}
                         <button
                           onClick={() => onOpenLetter(b)}
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold transition"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold transition"
                           title="Generate official Hindi letter"
                         >
                           <FileText className="w-3.5 h-3.5" />
@@ -358,27 +349,30 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           <Share2 className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Toggle Cancel / Restore */}
-                        <button
-                          onClick={() => handleCancelClick(b)}
-                          className="p-1 rounded hover:bg-slate-100 text-slate-500 transition"
-                          title={isCancelled ? 'Restore Booking' : 'Cancel Booking'}
-                        >
-                          {isCancelled ? (
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : (
-                            <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                          )}
-                        </button>
+                        {/* Admin Exclusive: Cancel & Delete */}
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => handleCancelClick(b)}
+                              className="p-1 rounded hover:bg-slate-100 text-slate-500 transition"
+                              title={isCancelled ? 'Restore Booking' : 'Cancel Booking'}
+                            >
+                              {isCancelled ? (
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                              )}
+                            </button>
 
-                        {/* Delete Row (Admin only) */}
-                        <button
-                          onClick={() => handleDeleteClick(b)}
-                          className="p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition"
-                          title="Delete Record"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                            <button
+                              onClick={() => handleDeleteClick(b)}
+                              className="p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition"
+                              title="Delete Record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
