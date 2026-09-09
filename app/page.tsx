@@ -11,6 +11,7 @@ import {
 import { exportBookingsToExcel } from '@/lib/excel';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
 import { AuthUser, getLoggedInUser, logoutUser } from '@/lib/auth';
+import { formatToISODate } from '@/lib/dateUtils';
 
 import { LoginPage } from '@/components/LoginPage';
 import { Sidebar, NavTab } from '@/components/Sidebar';
@@ -30,6 +31,9 @@ export default function HomePage() {
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Date Selection State (Default: Today)
+  const [selectedDate, setSelectedDate] = useState<string>(() => formatToISODate(new Date()));
 
   // Data State
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -246,8 +250,8 @@ export default function HomePage() {
     saveLocalBookings(updated);
   };
 
-  // Quick Book from Matrix (Admin only)
-  const handleQuickBook = (dateStr: string, suitKey: string) => {
+  // Open Booking Modal for a specific date & suit
+  const handleOpenBookingForDate = (dateStr: string, suitKey?: string) => {
     if (currentUser?.role !== 'admin') return;
     setInitialBookingDate(dateStr);
     setInitialBookingSuit(suitKey);
@@ -297,7 +301,7 @@ export default function HomePage() {
         onCloseMobile={() => setIsMobileMenuOpen(false)}
         onOpenBookingModal={() => {
           if (!isAdmin) return;
-          setInitialBookingDate(undefined);
+          setInitialBookingDate(selectedDate);
           setInitialBookingSuit(undefined);
           setIsBookingModalOpen(true);
         }}
@@ -315,7 +319,7 @@ export default function HomePage() {
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onOpenBookingModal={() => {
             if (!isAdmin) return;
-            setInitialBookingDate(undefined);
+            setInitialBookingDate(selectedDate);
             setInitialBookingSuit(undefined);
             setIsBookingModalOpen(true);
           }}
@@ -324,32 +328,39 @@ export default function HomePage() {
         {/* Dynamic Main Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           
-          {/* Officer Notification */}
+          {/* Officer Notification Banner */}
           {!isAdmin && (
             <div className="mb-5 p-3 rounded-2xl bg-blue-900 text-blue-100 border-l-4 border-blue-400 flex items-center gap-3 shadow-xs">
               <Shield className="w-5 h-5 text-blue-400 flex-shrink-0" />
               <div className="text-xs">
                 <span className="font-bold text-white">ड्यूटी अधिकारी दृश्य (Officer Mode): </span>
                 <span className="text-blue-200">
-                  आप कमरों की उपलब्धता स्थिति, बुकिंग पंजिका एवं आधिकारिक आवंटन पत्र देख सकते हैं। नई बुकिंग एवं संशोधन प्रशासक (Admin) द्वारा प्रबंधित हैं।
+                  आप तिथि का चयन करके कमरों की स्थिति, अतिथि विवरण एवं आवंटन पत्र देख सकते हैं। नई बुकिंग एवं संपादन प्रशासक (Admin) द्वारा प्रबंधित हैं।
                 </span>
               </div>
             </div>
           )}
 
-          {/* Tab 1: Dashboard Overview */}
+          {/* Tab 1: Dashboard (Stats + Matrix + Date Inspector) */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               <StatsCards bookings={bookings} />
+              
               <RoomMatrix
                 bookings={bookings}
                 isAdmin={isAdmin}
-                onQuickBook={handleQuickBook}
+                selectedDate={selectedDate}
+                onSelectDate={(d) => setSelectedDate(d)}
+                onQuickBook={(d, s) => handleOpenBookingForDate(d, s)}
                 onSelectBooking={handleOpenLetter}
               />
+
               <BookingsTable
                 bookings={bookings}
                 isAdmin={isAdmin}
+                selectedDate={selectedDate}
+                onSelectDate={(d) => setSelectedDate(d)}
+                onOpenBookingModalForDate={handleOpenBookingForDate}
                 onOpenLetter={handleOpenLetter}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
@@ -364,18 +375,23 @@ export default function HomePage() {
               <RoomMatrix
                 bookings={bookings}
                 isAdmin={isAdmin}
-                onQuickBook={handleQuickBook}
+                selectedDate={selectedDate}
+                onSelectDate={(d) => setSelectedDate(d)}
+                onQuickBook={(d, s) => handleOpenBookingForDate(d, s)}
                 onSelectBooking={handleOpenLetter}
               />
             </div>
           )}
 
-          {/* Tab 3: Bookings Directory Focus */}
+          {/* Tab 3: Date-Wise Booking Directory Focus */}
           {activeTab === 'bookings' && (
             <div className="space-y-6">
               <BookingsTable
                 bookings={bookings}
                 isAdmin={isAdmin}
+                selectedDate={selectedDate}
+                onSelectDate={(d) => setSelectedDate(d)}
+                onOpenBookingModalForDate={handleOpenBookingForDate}
                 onOpenLetter={handleOpenLetter}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
@@ -419,7 +435,7 @@ export default function HomePage() {
           onClose={() => setIsBookingModalOpen(false)}
           onSave={handleSaveBookings}
           existingBookings={bookings}
-          initialDate={initialBookingDate}
+          initialDate={initialBookingDate || selectedDate}
           initialSuit={initialBookingSuit}
         />
       )}
