@@ -20,7 +20,6 @@ import { RoomMatrix } from '@/components/RoomMatrix';
 import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
-import { SupabaseConfigModal } from '@/components/SupabaseConfigModal';
 import { Phone, Shield } from 'lucide-react';
 
 export default function HomePage() {
@@ -43,8 +42,6 @@ export default function HomePage() {
 
   const [selectedLetterBooking, setSelectedLetterBooking] = useState<Booking | null>(null);
   const [isLetterModalOpen, setIsLetterModalOpen] = useState(false);
-
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   // Check login on mount
   useEffect(() => {
@@ -304,7 +301,6 @@ export default function HomePage() {
           setInitialBookingSuit(undefined);
           setIsBookingModalOpen(true);
         }}
-        onOpenConfigModal={() => setIsConfigModalOpen(true)}
         onExportExcel={() => exportBookingsToExcel(bookings)}
         onLogout={handleLogout}
       />
@@ -437,14 +433,6 @@ export default function HomePage() {
         booking={selectedLetterBooking}
         relatedBookings={relatedBookings}
       />
-
-      {isAdmin && (
-        <SupabaseConfigModal
-          isOpen={isConfigModalOpen}
-          onClose={() => setIsConfigModalOpen(false)}
-          onConfigSaved={() => fetchBookings()}
-        />
-      )}
     </div>
   );
 }

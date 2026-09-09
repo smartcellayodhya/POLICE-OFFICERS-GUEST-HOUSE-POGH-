@@ -9,7 +9,6 @@ import {
   BookOpenCheck,
   PlusCircle,
   FileSpreadsheet,
-  Settings,
   LogOut,
   Shield,
   User,
@@ -26,7 +25,6 @@ interface SidebarProps {
   isOpenMobile: boolean;
   onCloseMobile: () => void;
   onOpenBookingModal: () => void;
-  onOpenConfigModal: () => void;
   onExportExcel: () => void;
   onLogout: () => void;
 }
@@ -38,7 +36,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile,
   onCloseMobile,
   onOpenBookingModal,
-  onOpenConfigModal,
   onExportExcel,
   onLogout,
 }) => {
@@ -162,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Extra Menu Actions */}
             <div className="pt-3">
               <p className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                रिपोर्ट्स व सेटिंग्स
+                रिपोर्ट्स
               </p>
 
               {/* Export Excel */}
@@ -176,20 +173,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                 <span>एक्सेल रिपोर्ट डाउनलोड</span>
               </button>
-
-              {/* Database Settings (Admin only) */}
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    onOpenConfigModal();
-                    onCloseMobile();
-                  }}
-                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800/80 hover:text-white transition text-left"
-                >
-                  <Settings className="w-4 h-4 text-amber-400" />
-                  <span>डेटाबेस सेटिंग्स</span>
-                </button>
-              )}
             </div>
           </nav>
         </div>
