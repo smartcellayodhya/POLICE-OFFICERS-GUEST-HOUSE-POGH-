@@ -70,7 +70,11 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
   const suitsDisplay = suitNames.length > 0 ? suitNames.join(', ') : 'Suit 1';
   const numRooms = suitNames.length || 1;
-  const totalAmount = allGuestBookings.reduce((sum, b) => sum + (Number(b.total_amount) || dailyRate), 0);
+  const totalAmount = allGuestBookings.reduce((sum, b) => {
+    const amt = Number(b.total_amount);
+    return sum + (!isNaN(amt) && amt > 0 ? amt : 0);
+  }, 0);
+  const hasRentAmount = totalAmount > 0;
 
   const todayHindi = formatToHindiDate(new Date());
   const cinHindi = formatToHindiDate(checkInDate);
@@ -306,12 +310,14 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                   <span className="font-semibold text-slate-700">भोजन व्यवस्था स्थिति</span>
                   <span className="col-span-2 font-semibold text-emerald-700">{booking.meal_type_status || 'PAID'}</span>
                 </div>
-                <div className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900">
-                  <span className="font-semibold text-amber-900">कुल देय धनराशि</span>
-                  <span className="col-span-2 text-amber-950 font-sans text-sm">
-                    ₹{totalAmount.toLocaleString('en-IN')}/-
-                  </span>
-                </div>
+                {hasRentAmount && (
+                  <div className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900">
+                    <span className="font-semibold text-amber-900">कुल देय धनराशि</span>
+                    <span className="col-span-2 text-amber-950 font-sans text-sm">
+                      ₹{totalAmount.toLocaleString('en-IN')}/-
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

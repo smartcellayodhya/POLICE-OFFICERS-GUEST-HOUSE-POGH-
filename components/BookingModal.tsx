@@ -43,7 +43,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     suit_4: initialSuit === 'suit_4',
   });
 
-  const [rates, setRates] = useState({ ...DEFAULT_RATES });
+  // Manual amount input (not auto-linked to suits)
+  const [manualAmount, setManualAmount] = useState<string>('');
   const [mealStatus, setMealStatus] = useState<string>('PAID');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -81,15 +82,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   // Calculate dates list
   const bookingDates = getDatesInRange(checkInDate, checkOutDate);
   const totalDays = bookingDates.length;
-
-  // Calculate daily room rent for selected suits
-  let dailyRateSum = 0;
-  if (selectedSuits.suit_1) dailyRateSum += Number(rates.suit_1) || 0;
-  if (selectedSuits.suit_2) dailyRateSum += Number(rates.suit_2) || 0;
-  if (selectedSuits.suit_3) dailyRateSum += Number(rates.suit_3) || 0;
-  if (selectedSuits.suit_4) dailyRateSum += Number(rates.suit_4) || 0;
-
-  const totalAmount = dailyRateSum * totalDays;
 
   // Check conflicts
   const checkConflicts = () => {
@@ -143,6 +135,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setSubmitting(true);
     try {
       const finalNotes = encodeNotesWithMeta(notes, autoRef, autoDispatch);
+      const finalAmount = manualAmount.trim() ? Number(manualAmount) : 0;
 
       // Build individual date booking records all tied with autoRef
       const recordsToCreate: Booking[] = bookingDates.map((dateStr) => ({
@@ -153,11 +146,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         guest_name: guestName.trim(),
         mobile_number: mobileNumber.trim(),
         reference: reference.trim(),
-        suit_1: selectedSuits.suit_1 ? Number(rates.suit_1) || 0 : 0,
-        suit_2: selectedSuits.suit_2 ? Number(rates.suit_2) || 0 : 0,
-        suit_3: selectedSuits.suit_3 ? Number(rates.suit_3) || 0 : 0,
-        suit_4: selectedSuits.suit_4 ? Number(rates.suit_4) || 0 : 0,
-        total_amount: dailyRateSum,
+        suit_1: selectedSuits.suit_1 ? 1 : 0,
+        suit_2: selectedSuits.suit_2 ? 1 : 0,
+        suit_3: selectedSuits.suit_3 ? 1 : 0,
+        suit_4: selectedSuits.suit_4 ? 1 : 0,
+        total_amount: finalAmount,
         meal_type_status: mealStatus,
         status: 'CONFIRMED',
         notes: finalNotes,
@@ -325,7 +318,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           </div>
 
-          {/* Suit Selection */}
+          {/* Suit Selection (Not linked to any automatic calculation) */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-2">
               Select Suit(s) to Allocate (कमरे का चयन करें):
@@ -333,6 +326,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {SUITS.map((suit) => {
                 const isSelected = selectedSuits[suit.id];
+                const floorLabel = suit.id === 'suit_1' || suit.id === 'suit_2' ? 'भू-तल' : 'प्रथम तल';
                 return (
                   <div
                     key={suit.id}
@@ -347,8 +341,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />}
                       {suit.name}
                     </div>
-                    <div className="text-xs text-slate-500">
-                      ₹{rates[suit.id as keyof typeof rates]}/day
+                    <div className="text-[11px] text-slate-500">
+                      {floorLabel}
                     </div>
                   </div>
                 );
@@ -356,20 +350,30 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           </div>
 
-          {/* Summary Banner */}
-          <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between">
-            <div>
-              <span className="text-xs font-medium text-amber-900">Total Calculated Rent:</span>
-              <div className="text-lg font-bold text-amber-950">
-                ₹{totalAmount.toLocaleString('en-IN')}{' '}
-                <span className="text-xs font-normal text-amber-800">
-                  (₹{dailyRateSum}/day × {totalDays} days)
-                </span>
-              </div>
+          {/* Manual Booking Amount Field (वैकल्पिक - यदि पत्र में प्रिंट करना हो) */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800">
+                बुकिंग धनराशि / किराया (₹) (वैकल्पिक)
+              </label>
+              <span className="text-[11px] text-slate-500 font-medium">
+                {Object.values(selectedSuits).filter(Boolean).length} सूट चयनित
+              </span>
             </div>
-            <div className="text-xs text-right text-amber-800 font-medium">
-              {Object.values(selectedSuits).filter(Boolean).length} Suit(s) Selected
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
+              <input
+                type="number"
+                min="0"
+                value={manualAmount}
+                onChange={(e) => setManualAmount(e.target.value)}
+                placeholder="उदा. 800 (यदि पत्र में किराया नहीं छापना हो तो खाली छोड़ें)"
+                className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white"
+              />
             </div>
+            <p className="text-[11px] text-slate-500">
+              * यदि आप यहाँ राशि लिखेंगे तो ही वह आवंटन पत्र में छपेगी। यदि खाली छोड़ेंगे तो पत्र में किराया नहीं छपेगा।
+            </p>
           </div>
 
           {/* Optional Notes */}

@@ -280,7 +280,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                   {/* Footer with Amount, Official Letter & Actions */}
                   <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-bold text-slate-900">
-                      ₹{Number(b.total_amount || 0).toLocaleString('en-IN')}{' '}
+                      {Number(b.total_amount) > 0 ? (
+                        <>₹{Number(b.total_amount).toLocaleString('en-IN')} </>
+                      ) : null}
                       <span className="text-[10px] font-normal text-slate-500">
                         ({b.meal_type_status || 'PAID'})
                       </span>

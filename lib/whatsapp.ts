@@ -8,6 +8,10 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
   const dispLine = details.dispatch_no ? `पत्रांक: पी.ओ.जी.एच. / 2026 / ${details.dispatch_no}\n` : '';
   const refLine = details.booking_ref_no ? `बुकिंग संदर्भ: ${details.booking_ref_no}\n` : '';
 
+  const rentLine = details.total_amount && details.total_amount > 0
+    ? `- कुल किराया: ₹${details.total_amount}/-\n`
+    : '';
+
   return (
 `सेवा में,
 श्री ${details.guest_name || '___________'}
@@ -25,8 +29,7 @@ ${dispLine}${refLine}विषय: पुलिस ऑफिसर्स गे�
 - सूट नम्बर: ${suitsList}
 - कुल दिन: ${details.total_days} दिन
 - भोजन व्यवस्था: ${details.meal_type_status}
-- कुल किराया: ₹${details.total_amount}/-
-
+${rentLine}
 संपर्क सूत्र ऑफिसर्स गेस्ट हाउस- उ0नि0 यदुनाथ मो0न0-8317041684
 
 हम आपके स्वागत के लिए उत्सुक हैं और आशा करते हैं कि आपका प्रवास सुखद रहेगा।`
