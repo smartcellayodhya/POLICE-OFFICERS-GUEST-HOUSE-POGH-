@@ -38,22 +38,55 @@ body {
 
 /* Print Specific Rules for Hindi Booking Letter */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 12mm 8mm 12mm;
+  }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* Hide everything on page by default */
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
-  #printable-letter, #printable-letter * {
-    visibility: visible;
+
+  /* Only make printable-letter and its content visible */
+  #printable-letter, 
+  #printable-letter * {
+    visibility: visible !important;
   }
+
   #printable-letter {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 20mm;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
     box-shadow: none !important;
     border: none !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
   }
+
   .no-print {
     display: none !important;
   }

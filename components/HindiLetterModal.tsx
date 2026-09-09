@@ -241,19 +241,22 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             id="printable-letter"
             ref={printRef}
             className="w-full max-w-[210mm] bg-white p-6 sm:p-10 shadow-lg border border-slate-200 text-slate-900 font-hindi leading-relaxed text-sm select-text"
-            style={{ minHeight: '297mm' }}
+            style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
           >
             {/* Top Police Decorative Double Border */}
-            <div className="border-t-2 border-b border-blue-900 pb-0.5 mb-6" />
+            <div
+              className="border-t-2 border-b border-blue-900 pb-0.5 mb-5"
+              style={{ borderColor: '#1e3a8a', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+            />
 
             {/* Emblem and Official Header */}
-            <div className="text-center mb-6">
-              <div className="w-20 h-20 mx-auto mb-2 relative flex items-center justify-center">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1.5 relative flex items-center justify-center">
                 <Image
                   src="/up_police_logo.png"
                   alt="UP Police Emblem"
-                  width={80}
-                  height={80}
+                  width={76}
+                  height={76}
                   className="object-contain drop-shadow-sm"
                   priority
                 />
@@ -261,15 +264,15 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
               <h1 className="text-xl sm:text-2xl font-bold text-blue-900 tracking-wide">
                 कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
               </h1>
-              <h2 className="text-sm font-semibold text-slate-700 mt-1">
+              <h2 className="text-sm font-semibold text-slate-700 mt-0.5">
                 पुलिस ऑफिसर्स गेस्ट हाउस, जनपद अयोध्या (उ0प्र0)
               </h2>
             </div>
 
-            <div className="border-b border-slate-300 mb-5" />
+            <div className="border-b border-slate-300 mb-4" />
 
             {/* Auto Dispatch Number & Hindi Date */}
-            <div className="flex justify-between items-center text-xs font-semibold text-slate-800 mb-6">
+            <div className="flex justify-between items-center text-xs font-semibold text-slate-800 mb-4">
               <div>
                 पत्रांक: <span className="font-bold text-blue-900">पी.ओ.जी.एच. / 2026 / {dispatchNo}</span>
               </div>
@@ -277,7 +280,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             </div>
 
             {/* Recipient */}
-            <div className="mb-5 space-y-1">
+            <div className="mb-4 space-y-0.5">
               <div className="font-bold text-slate-900">सेवा में,</div>
               <div className="pl-6 font-semibold text-slate-800 text-base">
                 {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
@@ -288,12 +291,15 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             </div>
 
             {/* Subject */}
-            <div className="mb-5 p-2.5 bg-slate-50 border-l-4 border-blue-900 text-slate-900 font-bold text-xs sm:text-sm">
+            <div
+              className="mb-4 p-2 bg-slate-50 border-l-4 border-blue-900 text-slate-900 font-bold text-xs sm:text-sm"
+              style={{ borderLeftColor: '#1e3a8a', backgroundColor: '#f8fafc', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+            >
               विषय: पुलिस ऑफिसर्स गेस्ट हाउस में सूट आरक्षित किये जाने की पुष्टि के संबंध में।
             </div>
 
             {/* Salutation and Body */}
-            <div className="mb-6 space-y-3 text-slate-800">
+            <div className="mb-4 space-y-2 text-slate-800">
               <p className="font-semibold">महोदय,</p>
               <p className="indent-8 text-justify leading-relaxed">
                 अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक <strong>{cinHindi}</strong> से{' '}
@@ -302,10 +308,13 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             </div>
 
             {/* Structured Booking Details Table */}
-            <div className="mb-6 overflow-hidden rounded-lg border border-slate-300 shadow-xs">
-              <div className="bg-blue-900 text-white font-bold text-xs grid grid-cols-3 p-2.5">
-                <span className="col-span-1">विवरण</span>
-                <span className="col-span-2">सूचना</span>
+            <div className="mb-4 overflow-hidden rounded-lg border border-slate-300 shadow-xs">
+              <div
+                className="bg-blue-900 text-white font-bold text-xs grid grid-cols-3 p-2.5"
+                style={{ backgroundColor: '#1e3a8a', color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+              >
+                <span className="col-span-1 text-white">विवरण</span>
+                <span className="col-span-2 text-white">सूचना</span>
               </div>
               <div className="divide-y divide-slate-200 text-xs text-slate-800 bg-white">
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
@@ -338,7 +347,10 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                   <span className="font-semibold text-slate-700">भोजन व्यवस्था स्थिति</span>
                   <span className="col-span-2 font-semibold text-emerald-700">{booking.meal_type_status || 'PAID'}</span>
                 </div>
-                <div className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900">
+                <div
+                  className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900"
+                  style={{ backgroundColor: '#fef3c7', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                >
                   <span className="font-semibold text-amber-900">प्रति रूम प्रति दिन किराया</span>
                   <span className="col-span-2 text-amber-950 font-sans text-sm font-bold">
                     {rentDisplay}
@@ -348,16 +360,16 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             </div>
 
             {/* Contact Person (Clean text without any buttons inside letter) */}
-            <div className="mb-4 p-2.5 bg-slate-50 rounded border border-slate-200 text-xs font-bold text-slate-900 leading-normal">
+            <div className="mb-3.5 p-2 bg-slate-50 rounded border border-slate-200 text-xs font-bold text-slate-900 leading-normal">
               संपर्क सूत्र ऑफिसर्स गेस्ट हाउस- {contactPerson}
             </div>
 
             {/* Closing Salutation */}
-            <p className="mb-4 text-xs text-slate-700 italic">
+            <p className="mb-3.5 text-xs text-slate-700 italic">
               हम आपके स्वागत के लिए उत्सुक हैं और आशा करते हैं कि आपका प्रवास सुखद रहेगा।
             </p>
 
-            {/* Bottom Row: Left has प्रतिलिपि (Jaha red line lagayi hai), Right has आज्ञा से / वरिष्ठ पुलिस अधीक्षक */}
+            {/* Bottom Row: Left has प्रतिलिपि, Right has आज्ञा से / वरिष्ठ पुलिस अधीक्षक */}
             <div className="flex items-start justify-between gap-6 pt-1">
               {/* Left Side: प्रतिलिपि */}
               <div className="flex-1 text-xs text-slate-800 space-y-1">
@@ -371,7 +383,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
               <div className="text-center text-xs font-bold text-slate-900 flex-shrink-0 min-w-[140px]">
                 <div className="space-y-0.5">
                   <div>आज्ञा से</div>
-                  <div className="h-8" />
+                  <div className="h-6" />
                   <div>वरिष्ठ पुलिस अधीक्षक</div>
                   <div>जनपद अयोध्या</div>
                 </div>
