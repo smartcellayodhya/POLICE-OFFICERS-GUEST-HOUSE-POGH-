@@ -15,3 +15,11 @@ __pycache__/
 .idea/
 .vscode/
 .gemini/
+
+# Node.js and Next.js
+node_modules/
+.next/
+out/
+.env*.local
+*.log
+
