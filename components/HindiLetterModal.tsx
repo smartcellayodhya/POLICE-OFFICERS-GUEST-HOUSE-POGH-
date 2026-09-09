@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Booking } from '@/lib/types';
 import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
@@ -26,6 +26,36 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const printRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Dynamic In-Charge / Contact Person (Editable and persists in localStorage)
+  const [contactPerson, setContactPerson] = useState<string>('उ0नि0 यदुनाथ मो0न0-8317041684');
+  const [isEditingContact, setIsEditingContact] = useState(false);
+
+  // Dynamic Room Rent (Single Room Rate per day entered by user, not multiplied by days)
+  const [customRent, setCustomRent] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pogh_contact_person');
+      if (saved) setContactPerson(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (booking) {
+      const amt = Number(booking.total_amount);
+      if (!isNaN(amt) && amt > 0) {
+        setCustomRent(String(amt));
+      } else {
+        const found = relatedBookings.find((b) => Number(b.total_amount) > 0);
+        if (found && Number(found.total_amount) > 0) {
+          setCustomRent(String(found.total_amount));
+        } else {
+          setCustomRent('');
+        }
+      }
+    }
+  }, [booking, relatedBookings]);
 
   if (!isOpen || !booking) return null;
 
@@ -70,11 +100,11 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
   const suitsDisplay = suitNames.length > 0 ? suitNames.join(', ') : 'Suit 1';
   const numRooms = suitNames.length || 1;
-  const totalAmount = allGuestBookings.reduce((sum, b) => {
-    const amt = Number(b.total_amount);
-    return sum + (!isNaN(amt) && amt > 0 ? amt : 0);
-  }, 0);
-  const hasRentAmount = totalAmount > 0;
+  
+  // Single room rent per day (what the user typed in booking, not multiplied by total days)
+  const numericRent = customRent.trim() ? parseFloat(customRent.replace(/[^0-9.]/g, '')) : NaN;
+  const hasRentAmount = !isNaN(numericRent) && numericRent > 0;
+  const rentDisplay = hasRentAmount ? `₹${numericRent.toLocaleString('en-IN')}/-` : 'As Per Applicable';
 
   const todayHindi = formatToHindiDate(new Date());
   const cinHindi = formatToHindiDate(checkInDate);
@@ -92,8 +122,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     check_out_time: '12:00 PM',
     suits: suitNames,
     total_days: totalDays,
-    total_amount: totalAmount,
+    total_amount: hasRentAmount ? numericRent : 0,
     meal_type_status: booking.meal_type_status || 'PAID',
+    contact_person: contactPerson,
     dates: sortedDates,
   };
 
@@ -140,7 +171,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   };
 
   const handleCopyText = () => {
-    const text = `सेवा में, श्री ${booking.guest_name} (मो०नं०- ${booking.mobile_number})\nपत्रांक: पी.ओ.जी.एच. / 2026 / ${dispatchNo}\nबुकिंग संदर्भ: ${bookingRef}\nपुलिस ऑफिसर्स गेस्ट हाउस, अयोध्या में आपका सूट आरक्षित कर दिया गया है।\nदिनांक: ${cinHindi} से ${coutHindi} तक (${suitsDisplay}).\nसंपर्क: 8317041684`;
+    const text = `सेवा में, श्री ${booking.guest_name} (मो०नं०- ${booking.mobile_number})\nपत्रांक: पी.ओ.जी.एच. / 2026 / ${dispatchNo}\nबुकिंग संदर्भ: ${bookingRef}\nपुलिस ऑफिसर्स गेस्ट हाउस, अयोध्या में आपका सूट आरक्षित कर दिया गया है।\nदिनांक: ${cinHindi} से ${coutHindi} तक (${suitsDisplay}).\nसंपर्क: ${contactPerson}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -164,7 +195,38 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* In-Charge / Contact Person Editor (No-Print) */}
+            <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+              <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">प्रभारी:</span>
+              <input
+                type="text"
+                value={contactPerson}
+                onChange={(e) => {
+                  setContactPerson(e.target.value);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('pogh_contact_person', e.target.value);
+                  }
+                }}
+                placeholder="उदा. उ0नि0 यदुनाथ मो0न0-8317041684"
+                className="bg-slate-950 text-amber-300 text-xs px-2 py-0.5 rounded border border-slate-700 focus:border-amber-400 outline-none w-48 sm:w-56 font-sans font-semibold"
+                title="आवंटन पत्र पर छपने वाले प्रभारी का नाम व नंबर यहाँ बदलें"
+              />
+            </div>
+
+            {/* Room Rent (प्रति रूम प्रति दिन किराया) Editor (No-Print) */}
+            <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+              <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">किराया:</span>
+              <input
+                type="text"
+                value={customRent}
+                onChange={(e) => setCustomRent(e.target.value)}
+                placeholder="उदा. 800"
+                className="bg-slate-950 text-amber-300 text-xs px-2 py-0.5 rounded border border-slate-700 focus:border-amber-400 outline-none w-20 sm:w-24 font-sans font-semibold"
+                title="पत्र में छपने वाला प्रति रूम प्रति दिन किराया (खाली छोड़ने पर 'As Per Applicable' छपेगा)"
+              />
+            </div>
+
             <button
               onClick={handleWhatsApp}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm"
@@ -209,7 +271,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
           <div
             id="printable-letter"
             ref={printRef}
-            className="w-full max-w-[210mm] bg-white p-8 sm:p-12 shadow-lg border border-slate-200 text-slate-900 font-hindi leading-relaxed text-sm select-text"
+            className="w-full max-w-[210mm] bg-white p-6 sm:p-10 shadow-lg border border-slate-200 text-slate-900 font-hindi leading-relaxed text-sm select-text"
             style={{ minHeight: '297mm' }}
           >
             {/* Top Police Decorative Double Border */}
@@ -249,15 +311,10 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             <div className="mb-5 space-y-1">
               <div className="font-bold text-slate-900">सेवा में,</div>
               <div className="pl-6 font-semibold text-slate-800 text-base">
-                श्री {booking.guest_name}
+                {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
               </div>
-              <div className="pl-6 text-xs text-slate-600 font-mono">
+              <div className="pl-6 text-sm text-slate-950 font-black font-mono">
                 मो०नं०- {booking.mobile_number}
-              </div>
-              <div className="pl-6 text-xs text-slate-600 flex items-center gap-3">
-                {booking.reference && <span>संदर्भ: <strong>{booking.reference}</strong></span>}
-                <span>•</span>
-                <span>बुकिंग संदर्भ संख्या: <strong className="font-mono">{bookingRef}</strong></span>
               </div>
             </div>
 
@@ -284,7 +341,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
               <div className="divide-y divide-slate-200 text-xs text-slate-800 bg-white">
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">गेस्ट का नाम</span>
-                  <span className="col-span-2 font-bold text-slate-900">{booking.guest_name}</span>
+                  <span className="col-span-2 font-bold text-slate-900">
+                    {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">कब से कब तक</span>
@@ -310,43 +369,44 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                   <span className="font-semibold text-slate-700">भोजन व्यवस्था स्थिति</span>
                   <span className="col-span-2 font-semibold text-emerald-700">{booking.meal_type_status || 'PAID'}</span>
                 </div>
-                {hasRentAmount && (
-                  <div className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900">
-                    <span className="font-semibold text-amber-900">कुल देय धनराशि</span>
-                    <span className="col-span-2 text-amber-950 font-sans text-sm">
-                      ₹{totalAmount.toLocaleString('en-IN')}/-
-                    </span>
-                  </div>
-                )}
+                <div className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900">
+                  <span className="font-semibold text-amber-900">प्रति रूम प्रति दिन किराया</span>
+                  <span className="col-span-2 text-amber-950 font-sans text-sm font-bold">
+                    {rentDisplay}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Contact Person */}
-            <div className="mb-6 p-3 bg-slate-50 rounded border border-slate-200 text-xs font-bold text-slate-800">
-              संपर्क सूत्र ऑफिसर्स गेस्ट हाउस- उ0नि0 यदुनाथ मो0न0-8317041684
+            {/* Contact Person (Clean text without any buttons inside letter) */}
+            <div className="mb-4 p-2.5 bg-slate-50 rounded border border-slate-200 text-xs font-bold text-slate-900 leading-normal">
+              संपर्क सूत्र ऑफिसर्स गेस्ट हाउस- {contactPerson}
             </div>
 
             {/* Closing Salutation */}
-            <p className="mb-10 text-xs text-slate-700 italic">
+            <p className="mb-4 text-xs text-slate-700 italic">
               हम आपके स्वागत के लिए उत्सुक हैं और आशा करते हैं कि आपका प्रवास सुखद रहेगा।
             </p>
 
-            {/* Signatory Seal */}
-            <div className="flex justify-end mb-8 text-center text-xs font-bold text-slate-900">
-              <div className="space-y-1">
-                <div>आज्ञा से</div>
-                <div className="h-10" />
-                <div>वरिष्ठ पुलिस अधीक्षक</div>
-                <div>जनपद अयोध्या</div>
+            {/* Bottom Row: Left has प्रतिलिपि (Jaha red line lagayi hai), Right has आज्ञा से / वरिष्ठ पुलिस अधीक्षक */}
+            <div className="flex items-start justify-between gap-6 pt-1">
+              {/* Left Side: प्रतिलिपि */}
+              <div className="flex-1 text-xs text-slate-800 space-y-1">
+                <div className="font-bold text-slate-900">प्रतिलिपि:</div>
+                <p className="pl-3 leading-relaxed text-[11px] text-slate-700">
+                  प्रभारी पुलिस ऑफिसर्स गेस्ट हाउस, पुलिस लाइन, अयोध्या को संबंधित से समन्वय स्थापित करते हुए आवश्यक कार्यवाही हेतु प्रेषित।
+                </p>
               </div>
-            </div>
 
-            {/* Copy To / प्रतिलिपि */}
-            <div className="pt-4 border-t border-slate-300 text-[11px] text-slate-600 space-y-1">
-              <div className="font-bold text-slate-700">प्रतिलिपि:</div>
-              <p className="pl-4">
-                प्रभारी पुलिस ऑफिसर्स गेस्ट हाउस, पुलिस लाइन, अयोध्या को संबंधित से समन्वय स्थापित करते हुए आवश्यक कार्यवाही हेतु प्रेषित।
-              </p>
+              {/* Right Side: आज्ञा से / वरिष्ठ पुलिस अधीक्षक */}
+              <div className="text-center text-xs font-bold text-slate-900 flex-shrink-0 min-w-[140px]">
+                <div className="space-y-0.5">
+                  <div>आज्ञा से</div>
+                  <div className="h-8" />
+                  <div>वरिष्ठ पुलिस अधीक्षक</div>
+                  <div>जनपद अयोध्या</div>
+                </div>
+              </div>
             </div>
           </div>
 

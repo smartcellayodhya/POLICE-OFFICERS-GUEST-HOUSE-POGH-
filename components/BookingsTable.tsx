@@ -230,7 +230,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                     {/* Guest Name & Mobile */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="text-base font-bold text-slate-900">{b.guest_name}</div>
+                        <div className="text-base font-bold text-slate-900">
+                          {b.guest_name.startsWith('श्री') ? b.guest_name : `श्री ${b.guest_name}`}
+                        </div>
                         <div className="text-xs text-slate-500 font-mono mt-0.5 flex items-center gap-1">
                           <Phone className="w-3 h-3 text-slate-400" />
                           <span>{b.mobile_number}</span>
@@ -281,8 +283,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                   <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-bold text-slate-900">
                       {Number(b.total_amount) > 0 ? (
-                        <>₹{Number(b.total_amount).toLocaleString('en-IN')} </>
-                      ) : null}
+                        <>₹{Number(b.total_amount).toLocaleString('en-IN')}/- </>
+                      ) : (
+                        <span className="text-slate-500 font-medium text-[11px]">As Per Applicable </span>
+                      )}
                       <span className="text-[10px] font-normal text-slate-500">
                         ({b.meal_type_status || 'PAID'})
                       </span>
