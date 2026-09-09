@@ -5,6 +5,7 @@ import { Booking, BookingStatus } from '@/lib/types';
 import { formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
+import { exportBookingsToCSV } from '@/lib/exportUtils';
 import {
   Search,
   FileText,
@@ -21,13 +22,17 @@ import {
   AlertCircle,
   RotateCcw,
   CheckCircle2,
-  Filter
+  Filter,
+  Edit3,
+  Download,
+  Calendar
 } from 'lucide-react';
 
 interface BookingsTableProps {
   bookings: Booking[];
   isAdmin: boolean;
   onOpenLetter: (booking: Booking) => void;
+  onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (id: string, groupId?: string) => Promise<void>;
   onUpdateStatus: (booking: Booking, newStatus: BookingStatus, updateAllDates?: boolean) => Promise<void>;
 }
@@ -38,13 +43,16 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   bookings,
   isAdmin,
   onOpenLetter,
+  onEditBooking,
   onDeleteBooking,
   onUpdateStatus,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
-  // Filter bookings by search term and status tab
+  // Filter bookings by search term, date range, and status tab
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       // Status filter
@@ -52,6 +60,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         const bStatus = b.status || 'CONFIRMED';
         if (bStatus !== statusFilter) return false;
       }
+
+      // Date range filter
+      if (fromDate && b.booking_date < fromDate) return false;
+      if (toDate && b.booking_date > toDate) return false;
 
       // Search term filter
       if (!searchTerm.trim()) return true;
@@ -66,14 +78,38 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         b.booking_date.includes(q)
       );
     });
-  }, [bookings, searchTerm, statusFilter]);
+  }, [bookings, searchTerm, statusFilter, fromDate, toDate]);
+
+  const setThisMonth = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    setFromDate(`${y}-${m}-01`);
+    setToDate(`${y}-${m}-${lastDay}`);
+  };
+
+  const setLastMonth = () => {
+    const now = new Date();
+    const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const y = prevMonthDate.getFullYear();
+    const m = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(y, prevMonthDate.getMonth() + 1, 0).getDate();
+    setFromDate(`${y}-${m}-01`);
+    setToDate(`${y}-${m}-${lastDay}`);
+  };
+
+  const clearDateFilter = () => {
+    setFromDate('');
+    setToDate('');
+  };
 
   const getSuitsBookedList = (b: Booking) => {
     const suits: string[] = [];
-    if (b.suit_1 > 0) suits.push('Suit 1 (₹800)');
-    if (b.suit_2 > 0) suits.push('Suit 2 (₹800)');
-    if (b.suit_3 > 0) suits.push('Suit 3 (₹1200)');
-    if (b.suit_4 > 0) suits.push('Suit 4 (₹1200)');
+    if (b.suit_1 > 0) suits.push('Suit 1 (भू-तल)');
+    if (b.suit_2 > 0) suits.push('Suit 2 (भू-तल)');
+    if (b.suit_3 > 0) suits.push('Suit 3 (प्रथम तल)');
+    if (b.suit_4 > 0) suits.push('Suit 4 (प्रथम तल)');
     return suits;
   };
 
@@ -136,54 +172,109 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
           </div>
         </div>
 
-        {/* Search Bar in Header */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="नाम, मोबाइल, संदर्भ या तिथि खोजें..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-800 text-white placeholder-slate-400 border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition"
-          />
+        {/* Header Right: Excel Export & Search Bar */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <button
+            onClick={() => exportBookingsToCSV(filteredBookings)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs whitespace-nowrap active:scale-95"
+            title="वर्तमान फ़िल्टर किए गए रिकॉर्ड्स को Excel (CSV) में डाउनलोड करें"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Excel एक्सपोर्ट</span>
+          </button>
+
+          <div className="relative flex-1 sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="नाम, मोबाइल, संदर्भ या तिथि खोजें..."
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-800 text-white placeholder-slate-400 border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition"
+            />
+          </div>
         </div>
       </div>
 
-      {/* 2. Status Filter Tabs */}
-      <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 text-xs text-slate-500 mr-2 font-medium">
-          <Filter className="w-3.5 h-3.5" />
-          <span>स्थिति अनुसार:</span>
+      {/* 2. Status & Date Range Filter Bar */}
+      <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        {/* Status Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mr-1 font-medium">
+            <Filter className="w-3.5 h-3.5" />
+            <span>स्थिति:</span>
+          </div>
+
+          {[
+            { id: 'ALL', label: 'सभी' },
+            { id: 'CONFIRMED', label: 'आरक्षित' },
+            { id: 'CHECKED_IN', label: 'उपस्थित' },
+            { id: 'CHECKED_OUT', label: 'चेक-आउट' },
+            { id: 'CANCELLED', label: 'निरस्त' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id as StatusFilter)}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition ${
+                statusFilter === tab.id
+                  ? 'bg-amber-500 text-slate-950 shadow-xs'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {[
-          { id: 'ALL', label: 'सभी (All)' },
-          { id: 'CONFIRMED', label: 'आरक्षित (Confirmed)' },
-          { id: 'CHECKED_IN', label: 'उपस्थित (In House)' },
-          { id: 'CHECKED_OUT', label: 'चेक-आउट (Completed)' },
-          { id: 'CANCELLED', label: 'निरस्त (Cancelled)' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setStatusFilter(tab.id as StatusFilter)}
-            className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
-              statusFilter === tab.id
-                ? 'bg-amber-500 text-slate-950 shadow-xs'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {/* Date Range Selector */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-slate-500 font-medium">कब से:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="outline-none text-slate-800 text-xs bg-transparent"
+            />
+          </div>
 
-        {searchTerm && (
-          <button
-            onClick={() => setSearchTerm('')}
-            className="ml-auto text-xs text-amber-600 hover:underline font-semibold"
-          >
-            खोज क्लियर करें
-          </button>
-        )}
+          <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+            <span className="text-slate-500 font-medium">कब तक:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="outline-none text-slate-800 text-xs bg-transparent"
+            />
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={setThisMonth}
+              className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold transition text-[11px]"
+              title="चालू माह की बुकिंग्स दिखाएं"
+            >
+              इस माह
+            </button>
+            <button
+              onClick={setLastMonth}
+              className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold transition text-[11px]"
+              title="पिछले माह की बुकिंग्स दिखाएं"
+            >
+              गत माह
+            </button>
+            {(fromDate || toDate || searchTerm) && (
+              <button
+                onClick={() => { clearDateFilter(); setSearchTerm(''); }}
+                className="px-2 py-1 text-rose-600 hover:text-rose-700 font-bold text-[11px] ml-1 hover:underline"
+                title="सभी फ़िल्टर हटाएं"
+              >
+                फ़िल्टर साफ़ करें
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 3. Booking Records List (Clean Cards, NOT raw Excel table) */}
@@ -330,6 +421,16 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       {/* Admin Controls */}
                       {isAdmin && (
                         <>
+                          {/* Edit Booking Button */}
+                          <button
+                            onClick={() => onEditBooking(b)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition border border-amber-200 shadow-2xs"
+                            title="बुकिंग विवरण संशोधित करें"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                            <span>संशोधन</span>
+                          </button>
+
                           <button
                             onClick={() => handleLifecycleClick(b)}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition bg-white text-slate-700 hover:bg-slate-100 shadow-xs"

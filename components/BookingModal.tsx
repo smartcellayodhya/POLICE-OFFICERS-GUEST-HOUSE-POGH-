@@ -267,11 +267,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 onChange={(e) => setMealStatus(e.target.value)}
                 className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
               >
-                {MEAL_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
+                {MEAL_STATUSES.map((status) => {
+                  let label: string = status;
+                  if (status === 'PAID') label = 'PAID (सशुल्क)';
+                  else if (status === 'COMPLIMENTARY') label = 'COMPLIMENTARY (शासकीय / वीआईपी)';
+                  else if (status === 'NOT REQUIRED') label = 'NOT REQUIRED (लागू नहीं)';
+                  else if (status === 'FREE') label = 'FREE (निःशुल्क)';
+                  else if (status === 'PENDING') label = 'PENDING (लंबित)';
+                  return (
+                    <option key={status} value={status}>
+                      {label}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
@@ -354,7 +362,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800">
-                बुकिंग धनराशि / किराया (₹) (वैकल्पिक)
+                प्रति रूम प्रति दिन किराया (₹) (वैकल्पिक)
               </label>
               <span className="text-[11px] text-slate-500 font-medium">
                 {Object.values(selectedSuits).filter(Boolean).length} सूट चयनित
@@ -367,12 +375,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 min="0"
                 value={manualAmount}
                 onChange={(e) => setManualAmount(e.target.value)}
-                placeholder="उदा. 800 (यदि पत्र में किराया नहीं छापना हो तो खाली छोड़ें)"
+                placeholder="उदा. 800 (खाली छोड़ने पर पत्र में 'As Per Applicable' छपेगा)"
                 className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white"
               />
             </div>
             <p className="text-[11px] text-slate-500">
-              * यदि आप यहाँ राशि लिखेंगे तो ही वह आवंटन पत्र में छपेगी। यदि खाली छोड़ेंगे तो पत्र में किराया नहीं छपेगा।
+              * यदि आप यहाँ किराया लिखेंगे तो वही आवंटन पत्र में छपेगा। खाली छोड़ने पर पत्र में <strong>As Per Applicable</strong> छपेगा।
             </p>
           </div>
 

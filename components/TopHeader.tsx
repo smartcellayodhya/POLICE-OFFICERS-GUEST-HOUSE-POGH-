@@ -5,6 +5,7 @@ import { AuthUser } from '@/lib/auth';
 import { Menu, Plus, Shield, User } from 'lucide-react';
 import { NavTab } from './Sidebar';
 import { formatToHindiDate } from '@/lib/dateUtils';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface TopHeaderProps {
   currentUser: AuthUser;
@@ -62,11 +63,24 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         {/* Right: Status and Quick Actions */}
         <div className="flex items-center gap-2.5">
           
-          {/* Subtle System Status Pill */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>पोर्टल सक्रिय (Active)</span>
-          </div>
+          {/* Cloud Synced / Local Storage Indicator */}
+          {isSupabaseConfigured() ? (
+            <div
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold"
+              title="Supabase PostgreSQL क्लाउड डेटाबेस से रियलटाइम सिंक सक्रिय है"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>क्लाउड सिंक सक्रिय</span>
+            </div>
+          ) : (
+            <div
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold"
+              title="ब्राउज़र लोकल स्टोरेज में सुरक्षित डेटा संगृहीत हो रहा है"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>लोकल स्टोरेज</span>
+            </div>
+          )}
 
           {/* Role Badge */}
           <div

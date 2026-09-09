@@ -20,6 +20,7 @@ import { StatsCards } from '@/components/StatsCards';
 import { RoomMatrix } from '@/components/RoomMatrix';
 import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
+import { EditBookingModal } from '@/components/EditBookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
 import { Phone, Shield } from 'lucide-react';
 
@@ -46,6 +47,9 @@ export default function HomePage() {
 
   const [selectedLetterBooking, setSelectedLetterBooking] = useState<Booking | null>(null);
   const [isLetterModalOpen, setIsLetterModalOpen] = useState(false);
+
+  const [selectedEditBooking, setSelectedEditBooking] = useState<Booking | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Check login on mount
   useEffect(() => {
@@ -264,6 +268,57 @@ export default function HomePage() {
     setIsLetterModalOpen(true);
   };
 
+  // Open Edit Booking Modal (Admin Only)
+  const handleOpenEdit = (booking: Booking) => {
+    if (currentUser?.role !== 'admin') {
+      alert('केवल प्रशासक (Admin) को विवरण संशोधित करने की अनुमति है।');
+      return;
+    }
+    setSelectedEditBooking(booking);
+    setIsEditModalOpen(true);
+  };
+
+  // Save Modified Booking Details
+  const handleSaveEdit = async (updatedData: Partial<Booking>, applyToAll: boolean) => {
+    if (!selectedEditBooking) return;
+    const refCode = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
+
+    if (isSupabaseConfigured()) {
+      const client = getSupabaseClient();
+      if (client) {
+        if (applyToAll && refCode) {
+          const { error } = await client
+            .from('pogh_bookings')
+            .update(updatedData)
+            .ilike('notes', `%${refCode}%`);
+          if (error) throw new Error(error.message);
+        } else {
+          const { error } = await client
+            .from('pogh_bookings')
+            .update(updatedData)
+            .eq('id', selectedEditBooking.id);
+          if (error) throw new Error(error.message);
+        }
+        await fetchBookings();
+        return;
+      }
+    }
+
+    // Local storage fallback
+    const updated = bookings.map((b) => {
+      if (applyToAll && refCode) {
+        const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+        if (bRef === refCode) {
+          return { ...b, ...updatedData };
+        }
+      }
+      return b.id === selectedEditBooking.id ? { ...b, ...updatedData } : b;
+    });
+
+    setBookings(updated);
+    saveLocalBookings(updated);
+  };
+
   // Related bookings for letter
   const refCode = selectedLetterBooking
     ? selectedLetterBooking.group_id || extractGroupIdFromNotes(selectedLetterBooking.notes)
@@ -359,6 +414,7 @@ export default function HomePage() {
                 bookings={bookings}
                 isAdmin={isAdmin}
                 onOpenLetter={handleOpenLetter}
+                onEditBooking={handleOpenEdit}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
               />
@@ -387,6 +443,7 @@ export default function HomePage() {
                 bookings={bookings}
                 isAdmin={isAdmin}
                 onOpenLetter={handleOpenLetter}
+                onEditBooking={handleOpenEdit}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
               />
@@ -431,6 +488,31 @@ export default function HomePage() {
           existingBookings={bookings}
           initialDate={initialBookingDate || selectedDate}
           initialSuit={initialBookingSuit}
+        />
+      )}
+
+      {isAdmin && (
+        <EditBookingModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedEditBooking(null);
+          }}
+          booking={selectedEditBooking}
+          relatedBookings={
+            selectedEditBooking
+              ? bookings.filter((b) => {
+                  const targetRef = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
+                  const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+                  return (
+                    (targetRef && bRef === targetRef) ||
+                    (b.guest_name.toLowerCase() === selectedEditBooking.guest_name.toLowerCase() &&
+                      b.mobile_number === selectedEditBooking.mobile_number)
+                  );
+                })
+              : []
+          }
+          onSave={handleSaveEdit}
         />
       )}
 
