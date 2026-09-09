@@ -358,9 +358,6 @@ export default function HomePage() {
               <BookingsTable
                 bookings={bookings}
                 isAdmin={isAdmin}
-                selectedDate={selectedDate}
-                onSelectDate={(d) => setSelectedDate(d)}
-                onOpenBookingModalForDate={handleOpenBookingForDate}
                 onOpenLetter={handleOpenLetter}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
@@ -389,9 +386,6 @@ export default function HomePage() {
               <BookingsTable
                 bookings={bookings}
                 isAdmin={isAdmin}
-                selectedDate={selectedDate}
-                onSelectDate={(d) => setSelectedDate(d)}
-                onOpenBookingModalForDate={handleOpenBookingForDate}
                 onOpenLetter={handleOpenLetter}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
