@@ -1,0 +1,6 @@
+legacy_streamlit/
+*.py
+credentials.json
+token.json
+pogh_bookings.csv
+*.pdf
