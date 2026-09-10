@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { AuthUser } from '@/lib/auth';
 import {
   LayoutDashboard,
@@ -91,13 +90,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-full border-2 border-amber-400 shadow-md overflow-hidden">
-                <Image
+              <div className="w-12 h-12 flex-shrink-0 bg-white rounded-full border-2 border-amber-400 shadow-md overflow-hidden flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src="/up_police_logo.png"
                   alt="UP Police Crest"
-                  fill
-                  className="object-contain p-0.5"
-                  priority
+                  className="w-full h-full object-contain p-0.5"
                 />
               </div>
               <div>

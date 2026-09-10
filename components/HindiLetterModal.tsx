@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import Image from 'next/image';
 import { Booking } from '@/lib/types';
 import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
@@ -251,13 +250,12 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
             {/* Emblem and Official Header */}
             <div className="text-center mb-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1.5 relative">
-                <Image
+              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src="/up_police_logo.png"
                   alt="UP Police Emblem"
-                  fill
-                  className="object-contain drop-shadow-sm"
-                  priority
+                  className="w-full h-full object-contain drop-shadow-sm"
                 />
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-blue-900 tracking-wide">

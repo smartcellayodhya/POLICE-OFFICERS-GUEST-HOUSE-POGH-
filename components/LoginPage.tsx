@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { AuthUser, authenticate, PRESET_ACCOUNTS } from '@/lib/auth';
 import { Shield, Lock, User, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 
@@ -53,13 +52,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         
         {/* Top Header with Crest */}
         <div className="p-8 pb-6 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
-          <div className="relative w-24 h-24 mx-auto mb-3 bg-white rounded-full border-2 border-amber-400 shadow-xl overflow-hidden">
-            <Image
+          <div className="w-24 h-24 mx-auto mb-3 bg-white rounded-full border-2 border-amber-400 shadow-xl overflow-hidden flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/up_police_logo.png"
               alt="Ayodhya Police Official Crest"
-              fill
-              className="object-contain p-1"
-              priority
+              className="w-full h-full object-contain p-1"
             />
           </div>
           
