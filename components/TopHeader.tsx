@@ -2,16 +2,19 @@
 
 import React from 'react';
 import { AuthUser } from '@/lib/auth';
-import { Menu, Plus, Shield, User } from 'lucide-react';
+import { Menu, Plus } from 'lucide-react';
 import { NavTab } from './Sidebar';
-import { formatToHindiDate } from '@/lib/dateUtils';
+import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { useLanguage } from '@/lib/languageContext';
+import { UserMenu } from './UserMenu';
 
 interface TopHeaderProps {
   currentUser: AuthUser;
   activeTab: NavTab;
   onOpenMobileMenu: () => void;
   onOpenBookingModal: () => void;
+  onLogout: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -19,28 +22,30 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   activeTab,
   onOpenMobileMenu,
   onOpenBookingModal,
+  onLogout,
 }) => {
+  const { language, t } = useLanguage();
   const isAdmin = currentUser.role === 'admin';
-  const todayHindi = formatToHindiDate(new Date());
+  const todayFormatted = language === 'hi' ? formatToHindiDate(new Date()) : formatToDisplayDate(new Date());
 
   const getTitle = () => {
     switch (activeTab) {
       case 'dashboard':
-        return 'प्रशासनिक डैशबोर्ड (Executive Overview)';
+        return t('dashboard');
       case 'matrix':
-        return 'कमरों की लाइव उपलब्धता स्थिति (Room Occupancy Matrix)';
+        return t('matrix');
       case 'bookings':
-        return 'बुकिंग पंजिका एवं आवागमन इतिहास (Booking Directory)';
+        return t('bookings');
       default:
-        return 'पुलिस ऑफिसर्स गेस्ट हाउस, जनपद अयोध्या';
+        return t('portalTitle');
     }
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
         
-        {/* Left: Mobile Menu Toggle & Title */}
+        {/* Left: Mobile Menu Toggle & Clean Title */}
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenMobileMenu}
@@ -51,59 +56,50 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </button>
 
           <div>
-            <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
               {getTitle()}
             </h1>
-            <p className="text-[11px] text-slate-500 font-hindi hidden sm:block">
-              कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या • दिनांक: {todayHindi}
+            <p className="text-[11px] text-slate-500 hidden sm:block">
+              {t('sspOffice')} • {todayFormatted}
             </p>
           </div>
         </div>
 
-        {/* Right: Status and Quick Actions */}
+        {/* Right: Status, New Booking & User Dropdown Menu */}
         <div className="flex items-center gap-2.5">
           
           {/* Cloud Synced / Local Storage Indicator */}
           {isSupabaseConfigured() ? (
             <div
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold"
-              title="Supabase PostgreSQL क्लाउड डेटाबेस से रियलटाइम सिंक सक्रिय है"
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold"
+              title="Supabase Cloud Synced"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>क्लाउड सिंक सक्रिय</span>
+              <span>{t('cloudSynced')}</span>
             </div>
           ) : (
             <div
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold"
-              title="ब्राउज़र लोकल स्टोरेज में सुरक्षित डेटा संगृहीत हो रहा है"
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold"
+              title="Local Browser Storage"
             >
               <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <span>लोकल स्टोरेज</span>
+              <span>{t('localStorage')}</span>
             </div>
           )}
-
-          {/* Role Badge */}
-          <div
-            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
-              isAdmin
-                ? 'bg-amber-50 text-amber-900 border-amber-300'
-                : 'bg-blue-50 text-blue-900 border-blue-200'
-            }`}
-          >
-            {isAdmin ? <Shield className="w-3.5 h-3.5 text-amber-600" /> : <User className="w-3.5 h-3.5 text-blue-600" />}
-            <span>{isAdmin ? 'प्रशासक (Admin)' : 'ड्यूटी अधिकारी (Officer)'}</span>
-          </div>
 
           {/* Quick New Booking Button (Admin Only) */}
           {isAdmin && (
             <button
               onClick={onOpenBookingModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition active:scale-95 whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-xs transition active:scale-95 whitespace-nowrap"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>नई बुकिंग</span>
+              <span>{t('newBooking')}</span>
             </button>
           )}
+
+          {/* Interactive User Dropdown Menu (Profile + Language Switcher + Logout) */}
+          <UserMenu currentUser={currentUser} onLogout={onLogout} />
 
         </div>
 
@@ -111,3 +107,4 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     </header>
   );
 };
+

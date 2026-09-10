@@ -28,6 +28,8 @@ import {
   Calendar
 } from 'lucide-react';
 
+import { useLanguage } from '@/lib/languageContext';
+
 interface BookingsTableProps {
   bookings: Booking[];
   isAdmin: boolean;
@@ -47,6 +49,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   onDeleteBooking,
   onUpdateStatus,
 }) => {
+  const { language, t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [fromDate, setFromDate] = useState('');
@@ -106,10 +109,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
 
   const getSuitsBookedList = (b: Booking) => {
     const suits: string[] = [];
-    if (b.suit_1 > 0) suits.push('Suit 1 (भू-तल)');
-    if (b.suit_2 > 0) suits.push('Suit 2 (भू-तल)');
-    if (b.suit_3 > 0) suits.push('Suit 3 (प्रथम तल)');
-    if (b.suit_4 > 0) suits.push('Suit 4 (प्रथम तल)');
+    if (b.suit_1 > 0) suits.push(`Suit 1 (${t('groundFloor')})`);
+    if (b.suit_2 > 0) suits.push(`Suit 2 (${t('groundFloor')})`);
+    if (b.suit_3 > 0) suits.push(`Suit 3 (${t('firstFloor')})`);
+    if (b.suit_4 > 0) suits.push(`Suit 4 (${t('firstFloor')})`);
     return suits;
   };
 
@@ -164,10 +167,11 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
-              अतिथि बुकिंग पंजिका एवं इतिहास (Booking Records)
+              {language === 'hi' ? 'अतिथि बुकिंग पंजिका' : 'Guest Booking Records'}
             </h2>
             <p className="text-xs text-amber-300 font-hindi mt-0.5">
-              कुल प्रविष्टियाँ: <strong>{filteredBookings.length}</strong> रिकॉर्ड्स
+              {language === 'hi' ? 'कुल प्रविष्टियाँ: ' : 'Total Records: '}
+              <strong>{filteredBookings.length}</strong>
             </p>
           </div>
         </div>
@@ -177,10 +181,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
           <button
             onClick={() => exportBookingsToCSV(filteredBookings)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs whitespace-nowrap active:scale-95"
-            title="वर्तमान फ़िल्टर किए गए रिकॉर्ड्स को Excel (CSV) में डाउनलोड करें"
+            title={language === 'hi' ? 'Excel में डाउनलोड करें' : 'Export to Excel'}
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Excel एक्सपोर्ट</span>
+            <span>{t('exportExcel')}</span>
           </button>
 
           <div className="relative flex-1 sm:w-72">
@@ -189,7 +193,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="नाम, मोबाइल, संदर्भ या तिथि खोजें..."
+              placeholder={language === 'hi' ? 'नाम, मोबाइल, संदर्भ या तिथि खोजें...' : 'Search by name, mobile, reference, date...'}
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-800 text-white placeholder-slate-400 border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition"
             />
           </div>
@@ -202,15 +206,15 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         <div className="flex flex-wrap items-center gap-1.5">
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mr-1 font-medium">
             <Filter className="w-3.5 h-3.5" />
-            <span>स्थिति:</span>
+            <span>{language === 'hi' ? 'स्थिति:' : 'Status:'}</span>
           </div>
 
           {[
-            { id: 'ALL', label: 'सभी' },
-            { id: 'CONFIRMED', label: 'आरक्षित' },
-            { id: 'CHECKED_IN', label: 'उपस्थित' },
-            { id: 'CHECKED_OUT', label: 'चेक-आउट' },
-            { id: 'CANCELLED', label: 'निरस्त' },
+            { id: 'ALL', label: t('all') },
+            { id: 'CONFIRMED', label: t('confirmed') },
+            { id: 'CHECKED_IN', label: t('checkedIn') },
+            { id: 'CHECKED_OUT', label: t('checkedOut') },
+            { id: 'CANCELLED', label: t('cancelled') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -230,7 +234,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-500 font-medium">कब से:</span>
+            <span className="text-slate-500 font-medium">{language === 'hi' ? 'कब से:' : 'From:'}</span>
             <input
               type="date"
               value={fromDate}
@@ -240,7 +244,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
           </div>
 
           <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
-            <span className="text-slate-500 font-medium">कब तक:</span>
+            <span className="text-slate-500 font-medium">{language === 'hi' ? 'कब तक:' : 'To:'}</span>
             <input
               type="date"
               value={toDate}
@@ -253,24 +257,24 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             <button
               onClick={setThisMonth}
               className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold transition text-[11px]"
-              title="चालू माह की बुकिंग्स दिखाएं"
+              title={language === 'hi' ? 'चालू माह की बुकिंग्स दिखाएं' : 'Show this month bookings'}
             >
-              इस माह
+              {language === 'hi' ? 'इस माह' : 'This Month'}
             </button>
             <button
               onClick={setLastMonth}
               className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold transition text-[11px]"
-              title="पिछले माह की बुकिंग्स दिखाएं"
+              title={language === 'hi' ? 'पिछले माह की बुकिंग्स दिखाएं' : 'Show last month bookings'}
             >
-              गत माह
+              {language === 'hi' ? 'गत माह' : 'Last Month'}
             </button>
             {(fromDate || toDate || searchTerm) && (
               <button
                 onClick={() => { clearDateFilter(); setSearchTerm(''); }}
                 className="px-2 py-1 text-rose-600 hover:text-rose-700 font-bold text-[11px] ml-1 hover:underline"
-                title="सभी फ़िल्टर हटाएं"
+                title={language === 'hi' ? 'सभी फ़िल्टर हटाएं' : 'Clear all filters'}
               >
-                फ़िल्टर साफ़ करें
+                {language === 'hi' ? 'फ़िल्टर साफ़ करें' : 'Clear Filter'}
               </button>
             )}
           </div>
@@ -282,8 +286,12 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         {filteredBookings.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-30 text-amber-500" />
-            <p className="text-sm font-medium text-slate-500">कोई बुकिंग रिकॉर्ड नहीं मिला।</p>
-            <p className="text-xs text-slate-400 mt-1">अन्य खोज शब्द अथवा स्थिति फ़िल्टर का चयन करें।</p>
+            <p className="text-sm font-medium text-slate-500">
+              {language === 'hi' ? 'कोई बुकिंग रिकॉर्ड नहीं मिला।' : 'No booking records found.'}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {language === 'hi' ? 'अन्य खोज शब्द अथवा स्थिति फ़िल्टर का चयन करें।' : 'Try selecting a different search term or filter.'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -314,7 +322,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         {refCode}
                       </span>
                       <span className="text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                        दिनांक: {formatToDisplayDate(b.booking_date)}
+                        {language === 'hi' ? 'दिनांक:' : 'Date:'} {formatToDisplayDate(b.booking_date)}
                       </span>
                     </div>
 
@@ -329,7 +337,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           <span>{b.mobile_number}</span>
                           {b.reference && (
                             <span className="ml-2 px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 text-[11px] font-sans">
-                              संदर्भ: {b.reference}
+                              {language === 'hi' ? 'संदर्भ:' : 'Ref:'} {b.reference}
                             </span>
                           )}
                         </div>
@@ -348,12 +356,12 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         }`}
                       >
                         {isCancelled
-                          ? 'निरस्त (Cancelled)'
+                          ? t('cancelled')
                           : isInHouse
-                          ? 'उपस्थित (In House)'
+                          ? t('checkedIn')
                           : isCheckedOut
-                          ? 'चेक-आउट'
-                          : 'आरक्षित (Confirmed)'}
+                          ? t('checkedOut')
+                          : t('confirmed')}
                       </span>
                     </div>
 
@@ -384,14 +392,14 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      {/* View Hindi Allotment Letter */}
+                      {/* View Allotment Letter */}
                       <button
                         onClick={() => onOpenLetter(b)}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition border border-blue-200"
-                        title="आधिकारिक आवंटन पत्र देखें"
+                        title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Allotment Letter'}
                       >
                         <FileText className="w-3.5 h-3.5" />
-                        <span>आवंटन पत्र</span>
+                        <span>{t('allotmentLetter')}</span>
                       </button>
 
                       {/* WhatsApp Share */}
@@ -413,7 +421,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           window.open(url, '_blank');
                         }}
                         className="p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition border border-emerald-200"
-                        title="व्हाट्सएप पर भेजें"
+                        title={language === 'hi' ? 'व्हाट्सएप पर भेजें' : 'Share on WhatsApp'}
                       >
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
@@ -425,26 +433,26 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           <button
                             onClick={() => onEditBooking(b)}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition border border-amber-200 shadow-2xs"
-                            title="बुकिंग विवरण संशोधित करें"
+                            title={language === 'hi' ? 'विवरण संशोधित करें' : 'Edit Booking'}
                           >
                             <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                            <span>संशोधन</span>
+                            <span>{t('edit')}</span>
                           </button>
 
                           <button
                             onClick={() => handleLifecycleClick(b)}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition bg-white text-slate-700 hover:bg-slate-100 shadow-xs"
-                            title={isInHouse ? 'प्रस्थान दर्ज करें' : 'आगमन दर्ज करें'}
+                            title={isInHouse ? (language === 'hi' ? 'चेक-आउट दर्ज करें' : 'Record Check-Out') : (language === 'hi' ? 'चेक-इन दर्ज करें' : 'Record Check-In')}
                           >
                             {isInHouse ? (
                               <>
                                 <LogOut className="w-3 h-3 text-amber-600" />
-                                <span>Check-Out</span>
+                                <span>{language === 'hi' ? 'चेक-आउट' : 'Check-Out'}</span>
                               </>
                             ) : (
                               <>
                                 <LogIn className="w-3 h-3 text-emerald-600" />
-                                <span>Check-In</span>
+                                <span>{language === 'hi' ? 'चेक-इन' : 'Check-In'}</span>
                               </>
                             )}
                           </button>
@@ -452,7 +460,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           <button
                             onClick={() => handleCancelClick(b)}
                             className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition border border-slate-200"
-                            title={isCancelled ? 'बुकिंग बहाल करें' : 'बुकिंग निरस्त करें'}
+                            title={isCancelled ? (language === 'hi' ? 'बुकिंग बहाल करें' : 'Restore Booking') : (language === 'hi' ? 'बुकिंग निरस्त करें' : 'Cancel Booking')}
                           >
                             {isCancelled ? <RotateCcw className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                           </button>
@@ -460,7 +468,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           <button
                             onClick={() => handleDeleteClick(b)}
                             className="p-1.5 rounded-xl text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition"
-                            title="रिकॉर्ड स्थायी रूप से हटाएं"
+                            title={language === 'hi' ? 'रिकॉर्ड हटाएं' : 'Delete Record'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

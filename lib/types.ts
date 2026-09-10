@@ -44,5 +44,6 @@ export interface LetterDetails {
   total_days: number;
   total_amount: number;
   meal_type_status: string;
+  contact_person?: string;
   dates: string[];
 }

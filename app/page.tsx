@@ -22,6 +22,7 @@ import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { EditBookingModal } from '@/components/EditBookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
+import { LanguageProvider } from '@/lib/languageContext';
 import { Phone, Shield } from 'lucide-react';
 
 export default function HomePage() {
@@ -345,40 +346,35 @@ export default function HomePage() {
   const isAdmin = currentUser.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
-      
-      {/* 1. Side Navigation Menu */}
-      <Sidebar
-        currentUser={currentUser}
-        activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab)}
-        isOpenMobile={isMobileMenuOpen}
-        onCloseMobile={() => setIsMobileMenuOpen(false)}
-        onOpenBookingModal={() => {
-          if (!isAdmin) return;
-          setInitialBookingDate(selectedDate);
-          setInitialBookingSuit(undefined);
-          setIsBookingModalOpen(true);
-        }}
-        onExportExcel={() => exportBookingsToExcel(bookings)}
-        onLogout={handleLogout}
-      />
-
-      {/* 2. Main Content Layout (Padded for Desktop Sidebar) */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all duration-300">
+    <LanguageProvider>
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
         
-        {/* Top Header */}
-        <TopHeader
+        {/* 1. Side Navigation Menu */}
+        <Sidebar
           currentUser={currentUser}
           activeTab={activeTab}
-          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-          onOpenBookingModal={() => {
-            if (!isAdmin) return;
-            setInitialBookingDate(selectedDate);
-            setInitialBookingSuit(undefined);
-            setIsBookingModalOpen(true);
-          }}
+          onSelectTab={(tab) => setActiveTab(tab)}
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+          onLogout={handleLogout}
         />
+
+        {/* 2. Main Content Layout (Padded for Desktop Sidebar) */}
+        <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all duration-300">
+          
+          {/* Top Header */}
+          <TopHeader
+            currentUser={currentUser}
+            activeTab={activeTab}
+            onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+            onOpenBookingModal={() => {
+              if (!isAdmin) return;
+              setInitialBookingDate(selectedDate);
+              setInitialBookingSuit(undefined);
+              setIsBookingModalOpen(true);
+            }}
+            onLogout={handleLogout}
+          />
 
         {/* Dynamic Main Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -525,6 +521,7 @@ export default function HomePage() {
         booking={selectedLetterBooking}
         relatedBookings={relatedBookings}
       />
-    </div>
+      </div>
+    </LanguageProvider>
   );
 }

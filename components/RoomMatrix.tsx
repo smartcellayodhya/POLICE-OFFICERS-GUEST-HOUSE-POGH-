@@ -22,6 +22,8 @@ import {
   BedDouble
 } from 'lucide-react';
 
+import { useLanguage } from '@/lib/languageContext';
+
 interface RoomMatrixProps {
   bookings: Booking[];
   isAdmin: boolean;
@@ -43,6 +45,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
   onUpdateStatus,
   onCancelBooking,
 }) => {
+  const { language, t } = useLanguage();
   const todayStr = formatToISODate(new Date());
   const isSelectedToday = selectedDate === todayStr;
 
@@ -79,13 +82,15 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
     if (getBookingForSuit(s.id)) occupiedCount++;
   });
 
+  const dateFormatted = language === 'hi' ? formatToHindiDate(selectedDate) : formatToDisplayDate(selectedDate);
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden mb-6 font-sans">
       
-      {/* Top Header with Date Picker & Navigation Controls (Jaha Today tha waha Date select karne ka option) */}
+      {/* Top Header with Date Picker & Navigation Controls */}
       <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white flex flex-col md:flex-row items-center justify-between gap-4 border-b border-amber-500/50">
         
-        {/* Title and Selected Date in Hindi */}
+        {/* Title and Selected Date */}
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
             <Calendar className="w-6 h-6 text-amber-400" />
@@ -93,28 +98,28 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
-                Room Occupancy & Live Status (कमरों की उपलब्धता स्थिति)
+                {t('matrix')}
               </h2>
               {isSelectedToday && (
                 <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-bold">
-                  आज (TODAY)
+                  {t('today')}
                 </span>
               )}
             </div>
-            <p className="text-xs text-amber-300 font-hindi mt-0.5">
-              चयनित तिथि: <strong>{formatToHindiDate(selectedDate)}</strong> ({formatToDisplayDate(selectedDate)}) • आरक्षित: {occupiedCount}/4 कमरे
+            <p className="text-xs text-amber-300 mt-0.5">
+              {dateFormatted} • {occupiedCount}/4 {t('rooms')} {t('booked')}
             </p>
           </div>
         </div>
 
-        {/* Date Selector & Navigation Controls (Date Select karne ka option directly where Today was) */}
+        {/* Date Selector & Navigation Controls */}
         <div className="flex items-center gap-1.5 bg-slate-800/90 p-1.5 rounded-2xl border border-slate-700">
           
           {/* Previous Day Button */}
           <button
             onClick={handlePrevDay}
             className="p-2 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition"
-            title="पिछली तिथि देखें"
+            title="Previous Day"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -128,7 +133,6 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                 if (e.target.value) onSelectDate(e.target.value);
               }}
               className="px-3 py-1.5 text-xs font-bold bg-slate-900 text-amber-400 rounded-xl border border-amber-500/40 hover:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition cursor-pointer"
-              title="कैलेंडर से तिथि चुनें (Select Date)"
             />
           </div>
 
@@ -141,14 +145,14 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                 : 'bg-slate-700/60 text-slate-200 hover:bg-slate-700 hover:text-white'
             }`}
           >
-            आज (Today)
+            {t('today')}
           </button>
 
           {/* Next Day Button */}
           <button
             onClick={handleNextDay}
             className="p-2 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition"
-            title="अगली तिथि देखें"
+            title="Next Day"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -176,7 +180,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950'
                       : 'bg-rose-50/80 border-rose-300 text-rose-950'
                   }`}
-                  title="विवरण एवं आवंटन पत्र देखने के लिए क्लिक करें"
+                  title={language === 'hi' ? 'विवरण एवं आवंटन पत्र देखने के लिए क्लिक करें' : 'Click to view details and allotment letter'}
                 >
                   <div>
                     {/* Header */}
@@ -185,7 +189,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                         {suit.name}
                       </span>
                       <span className="text-[11px] text-slate-500 font-medium">
-                        ₹{suit.rate}/दिन
+                        {suit.id === 'suit_1' || suit.id === 'suit_2' ? t('groundFloor') : t('firstFloor')}
                       </span>
                     </div>
 
@@ -198,13 +202,13 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                             : 'bg-rose-600 text-white'
                         }`}
                       >
-                        {isInHouse ? '● उपस्थित (In House)' : '● आरक्षित (Booked)'}
+                        {isInHouse ? `● ${t('checkedIn')}` : `● ${t('confirmed')}`}
                       </span>
                     </div>
 
                     {/* Guest Name */}
                     <div className="text-xs font-bold text-slate-800 truncate">
-                      {booking.guest_name}
+                      {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
                     </div>
                     <div className="text-[11px] text-slate-500 font-mono truncate">
                       {booking.mobile_number} {booking.reference ? `• ${booking.reference}` : ''}
@@ -215,7 +219,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
                     <span className="text-blue-700 font-bold flex items-center gap-1">
                       <FileText className="w-3 h-3" />
-                      <span>आवंटन पत्र देखें</span>
+                      <span>{t('allotmentLetter')}</span>
                     </span>
                     <span className="text-slate-400 text-[10px]">
                       {booking.meal_type_status || 'PAID'}
@@ -225,7 +229,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
               );
             }
 
-            // If Room is AVAILABLE: Simple, clean, no long paragraphs, no giant buttons!
+            // If Room is AVAILABLE
             return (
               <div
                 key={suit.id}
@@ -235,7 +239,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                 className={`p-3.5 sm:p-4 rounded-2xl border-2 border-dashed border-emerald-400 bg-emerald-50/50 hover:bg-emerald-50/80 transition flex flex-col justify-between shadow-xs ${
                   isAdmin ? 'cursor-pointer hover:border-emerald-600' : ''
                 }`}
-                title={isAdmin ? `क्लिक करके ${suit.name} बुक करें` : 'कमरा उपलब्ध है'}
+                title={isAdmin ? (language === 'hi' ? `क्लिक करके ${suit.name} बुक करें` : `Click to book ${suit.name}`) : (language === 'hi' ? 'कमरा उपलब्ध है' : 'Room is available')}
               >
                 <div>
                   {/* Header */}
@@ -244,7 +248,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       {suit.name}
                     </span>
                     <span className="text-[11px] text-slate-500 font-medium">
-                      ₹{suit.rate}/दिन
+                      {suit.id === 'suit_1' || suit.id === 'suit_2' ? t('groundFloor') : t('firstFloor')}
                     </span>
                   </div>
 
@@ -252,7 +256,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   <div className="my-3">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      उपलब्ध (Available)
+                      {t('available')}
                     </span>
                   </div>
                 </div>
@@ -262,15 +266,15 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   {isAdmin ? (
                     <span className="text-emerald-700 font-bold flex items-center gap-1 hover:underline">
                       <PlusCircle className="w-3 h-3" />
-                      <span>Book Now (बुक करें)</span>
+                      <span>{language === 'hi' ? 'बुक करें' : 'Book Now'}</span>
                     </span>
                   ) : (
                     <span className="text-emerald-600 font-medium">
-                      रिक्त (खाली)
+                      {t('available')}
                     </span>
                   )}
                   <span className="text-[10px] text-slate-400">
-                    {suit.id === 'suit_1' || suit.id === 'suit_2' ? 'भू-तल' : 'प्रथम तल'}
+                    {suit.id === 'suit_1' || suit.id === 'suit_2' ? t('groundFloor') : t('firstFloor')}
                   </span>
                 </div>
               </div>
@@ -284,19 +288,19 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-emerald-500" />
-            <span>उपलब्ध (Available)</span>
+            <span>{t('available')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-rose-500" />
-            <span>आरक्षित (Booked)</span>
+            <span>{t('confirmed')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-emerald-600 ring-2 ring-emerald-300" />
-            <span>उपस्थित (In House)</span>
+            <span>{t('checkedIn')}</span>
           </div>
         </div>
         <div className="text-[11px] text-slate-400">
-          तिथि बदलकर किसी भी दिन के चारों कमरों की स्थिति तुरंत देखें।
+          {language === 'hi' ? 'तिथि बदलकर कमरों की स्थिति देखें।' : 'Change date to view room status.'}
         </div>
       </div>
 

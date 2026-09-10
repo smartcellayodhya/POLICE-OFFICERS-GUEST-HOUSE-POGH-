@@ -53,12 +53,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         
         {/* Top Header with Crest */}
         <div className="p-8 pb-6 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
-          <div className="relative w-24 h-24 mx-auto mb-3 bg-white rounded-full p-2 border-2 border-amber-400 shadow-xl flex items-center justify-center">
+          <div className="relative w-24 h-24 mx-auto mb-3 bg-white rounded-full p-2 border-2 border-amber-400 shadow-xl flex items-center justify-center overflow-hidden">
             <Image
               src="/up_police_logo.png"
-              alt="UP Police Official Crest"
-              width={80}
-              height={80}
+              alt="Ayodhya Police Official Crest"
+              width={72}
+              height={72}
               className="object-contain"
               priority
             />
@@ -68,7 +68,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             POLICE OFFICERS GUEST HOUSE
           </h1>
           <p className="text-amber-400 font-bold text-xs tracking-widest mt-0.5">
-            AYODHYA • उत्तर प्रदेश पुलिस
+            AYODHYA POLICE • अयोध्या पुलिस
           </p>
           <p className="text-slate-400 text-xs font-hindi mt-1">
             कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
@@ -188,7 +188,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
         <div className="px-8 py-3 bg-slate-950/80 border-t border-slate-800/80 text-center">
           <p className="text-[11px] text-slate-400">
-            उत्तर प्रदेश पुलिस आधिकारिक आंतरिक पोर्टल • अनधिकृत प्रवेश वर्जित है
+            अयोध्या पुलिस आधिकारिक आंतरिक पोर्टल • अनधिकृत प्रवेश वर्जित है
           </p>
         </div>
 
