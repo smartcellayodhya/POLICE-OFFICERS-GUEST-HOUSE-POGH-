@@ -91,13 +91,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-full p-1 border-2 border-amber-400 shadow-md flex items-center justify-center overflow-hidden">
+              <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-full border-2 border-amber-400 shadow-md overflow-hidden">
                 <Image
                   src="/up_police_logo.png"
                   alt="UP Police Crest"
-                  width={42}
-                  height={42}
-                  className="object-contain"
+                  fill
+                  className="object-contain p-0.5"
                   priority
                 />
               </div>

@@ -53,13 +53,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         
         {/* Top Header with Crest */}
         <div className="p-8 pb-6 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
-          <div className="relative w-24 h-24 mx-auto mb-3 bg-white rounded-full p-2 border-2 border-amber-400 shadow-xl flex items-center justify-center overflow-hidden">
+          <div className="relative w-24 h-24 mx-auto mb-3 bg-white rounded-full border-2 border-amber-400 shadow-xl overflow-hidden">
             <Image
               src="/up_police_logo.png"
               alt="Ayodhya Police Official Crest"
-              width={72}
-              height={72}
-              className="object-contain"
+              fill
+              className="object-contain p-1"
               priority
             />
           </div>

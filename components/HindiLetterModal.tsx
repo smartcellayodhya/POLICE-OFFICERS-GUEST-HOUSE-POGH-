@@ -251,12 +251,11 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
             {/* Emblem and Official Header */}
             <div className="text-center mb-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1.5 relative flex items-center justify-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1.5 relative">
                 <Image
                   src="/up_police_logo.png"
                   alt="UP Police Emblem"
-                  width={76}
-                  height={76}
+                  fill
                   className="object-contain drop-shadow-sm"
                   priority
                 />
