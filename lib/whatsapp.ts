@@ -12,6 +12,18 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
     ? `- प्रति रूम प्रति दिन किराया: ₹${details.total_amount}/-\n`
     : `- प्रति रूम प्रति दिन किराया: As Per Applicable\n`;
 
+  const isSingleDay = details.check_in_date === details.check_out_date;
+  const datePhrase = isSingleDay
+    ? `दिनांक ${cin_h} को (01 दिवस हेतु)`
+    : `दिनांक ${cin_h} से ${cout_h} तक`;
+  const dateRangeDisplay = isSingleDay
+    ? `दि० ${cin_h} (01 दिवस)`
+    : `दि० ${cin_h} से ${cout_h} तक`;
+
+  const timeLine = (details.check_in_time || details.check_out_time)
+    ? `- चेक-इन / चेक-आउट: ${details.check_in_time || '12:00 PM'} / ${details.check_out_time || '12:00 PM'}\n`
+    : '';
+
   return (
 `सेवा में,
 श्री ${details.guest_name || '___________'}
@@ -20,14 +32,14 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
 ${dispLine}${refLine}विषय: पुलिस ऑफिसर्स गेस्ट हाउस में सूट आरक्षित किये जाने की पुष्टि के संबंध में।
 
 महोदय,
-  अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक ${cin_h} से ${cout_h} तक आपके प्रवास हेतु ${details.suits.length} रूम आरक्षित कर दिया गया है।
+  अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में ${datePhrase} आपके प्रवास हेतु ${details.suits.length} रूम आरक्षित कर दिया गया है।
 
 बुकिंग विवरण:
 - गेस्ट का नाम: ${details.guest_name}
-- कब से कब तक: दि० ${cin_h} से ${cout_h} तक
+- कब से कब तक: ${dateRangeDisplay}
 - रूम की संख्या: ${details.suits.length}
 - सूट नम्बर: ${suitsList}
-- कुल दिन: ${details.total_days} दिन
+${timeLine}- कुल दिन: ${details.total_days} दिन
 - भोजन व्यवस्था: ${details.meal_type_status}
 ${rentLine}
 संपर्क सूत्र ऑफिसर्स गेस्ट हाउस- ${details.contact_person || 'उ0नि0 यदुनाथ मो0न0-8317041684'}

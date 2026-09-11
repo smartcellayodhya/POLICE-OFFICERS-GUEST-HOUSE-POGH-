@@ -14,6 +14,7 @@ interface TopHeaderProps {
   activeTab: NavTab;
   onOpenMobileMenu: () => void;
   onOpenBookingModal: () => void;
+  onOpenAuditLog?: () => void;
   onLogout: () => void;
 }
 
@@ -22,6 +23,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   activeTab,
   onOpenMobileMenu,
   onOpenBookingModal,
+  onOpenAuditLog,
   onLogout,
 }) => {
   const { language, t } = useLanguage();
@@ -67,25 +69,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         {/* Right: Status, New Booking & User Dropdown Menu */}
         <div className="flex items-center gap-2.5">
-          
-          {/* Cloud Synced / Local Storage Indicator */}
-          {isSupabaseConfigured() ? (
-            <div
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold"
-              title="Supabase Cloud Synced"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{t('cloudSynced')}</span>
-            </div>
-          ) : (
-            <div
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold"
-              title="Local Browser Storage"
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <span>{t('localStorage')}</span>
-            </div>
-          )}
 
           {/* Quick New Booking Button (Admin Only) */}
           {isAdmin && (
@@ -99,7 +82,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           )}
 
           {/* Interactive User Dropdown Menu (Profile + Language Switcher + Logout) */}
-          <UserMenu currentUser={currentUser} onLogout={onLogout} />
+          <UserMenu
+            currentUser={currentUser}
+            onLogout={onLogout}
+            onOpenAuditLog={onOpenAuditLog}
+          />
 
         </div>
 

@@ -25,10 +25,10 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
   const rows = bookings.map((b) => {
     const refNo = b.group_id || extractGroupIdFromNotes(b.notes) || `POGH-${b.id.slice(0, 4)}`;
     const suits: string[] = [];
-    if (b.suit_1 > 0) suits.push('Suit 1 (भू-तल)');
-    if (b.suit_2 > 0) suits.push('Suit 2 (भू-तल)');
-    if (b.suit_3 > 0) suits.push('Suit 3 (प्रथम तल)');
-    if (b.suit_4 > 0) suits.push('Suit 4 (प्रथम तल)');
+    if (b.suit_1 > 0) suits.push('Suit 1');
+    if (b.suit_2 > 0) suits.push('Suit 2');
+    if (b.suit_3 > 0) suits.push('Suit 3');
+    if (b.suit_4 > 0) suits.push('Suit 4');
 
     const rent = Number(b.total_amount) > 0 ? `₹${Number(b.total_amount)}` : 'As Per Applicable';
 

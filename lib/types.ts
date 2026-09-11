@@ -15,8 +15,31 @@ export interface Booking {
   total_amount: number;
   meal_type_status: 'PAID' | 'FREE' | 'PENDING' | string;
   status: BookingStatus;
+  check_in_time?: string;
+  check_out_time?: string;
+  is_maintenance?: boolean;
   notes?: string;
   created_at?: string;
+}
+
+export interface ReceiptDetails {
+  receipt_no: string;
+  booking_ref_no: string;
+  guest_name: string;
+  mobile_number: string;
+  reference: string;
+  check_in_date: string;
+  check_out_date: string;
+  check_in_time: string;
+  check_out_time: string;
+  total_days: number;
+  suits: string[];
+  rent_per_day: number;
+  total_amount: number;
+  meal_type_status: string;
+  payment_mode: string;
+  remarks?: string;
+  incharge_name?: string;
 }
 
 export type SuitKey = 'suit_1' | 'suit_2' | 'suit_3' | 'suit_4';

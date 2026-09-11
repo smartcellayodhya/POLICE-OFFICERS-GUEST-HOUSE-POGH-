@@ -6,6 +6,7 @@ import { formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
 import { exportBookingsToCSV } from '@/lib/exportUtils';
+import { REFERENCES, SUITS } from '@/lib/constants';
 import {
   Search,
   FileText,
@@ -25,7 +26,8 @@ import {
   Filter,
   Edit3,
   Download,
-  Calendar
+  Calendar,
+  Receipt,
 } from 'lucide-react';
 
 import { useLanguage } from '@/lib/languageContext';
@@ -34,6 +36,7 @@ interface BookingsTableProps {
   bookings: Booking[];
   isAdmin: boolean;
   onOpenLetter: (booking: Booking) => void;
+  onOpenReceipt: (booking: Booking) => void;
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (id: string, groupId?: string) => Promise<void>;
   onUpdateStatus: (booking: Booking, newStatus: BookingStatus, updateAllDates?: boolean) => Promise<void>;
@@ -45,6 +48,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   bookings,
   isAdmin,
   onOpenLetter,
+  onOpenReceipt,
   onEditBooking,
   onDeleteBooking,
   onUpdateStatus,
@@ -52,6 +56,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   const { language, t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [referenceFilter, setReferenceFilter] = useState('ALL');
+  const [suitFilter, setSuitFilter] = useState('ALL');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -62,6 +68,17 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       if (statusFilter !== 'ALL') {
         const bStatus = b.status || 'CONFIRMED';
         if (bStatus !== statusFilter) return false;
+      }
+
+      // Reference filter
+      if (referenceFilter !== 'ALL' && b.reference !== referenceFilter) return false;
+
+      // Suit filter
+      if (suitFilter !== 'ALL') {
+        if (suitFilter === 'suit_1' && Number(b.suit_1) <= 0) return false;
+        if (suitFilter === 'suit_2' && Number(b.suit_2) <= 0) return false;
+        if (suitFilter === 'suit_3' && Number(b.suit_3) <= 0) return false;
+        if (suitFilter === 'suit_4' && Number(b.suit_4) <= 0) return false;
       }
 
       // Date range filter
@@ -81,7 +98,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         b.booking_date.includes(q)
       );
     });
-  }, [bookings, searchTerm, statusFilter, fromDate, toDate]);
+  }, [bookings, searchTerm, statusFilter, referenceFilter, suitFilter, fromDate, toDate]);
 
   const setThisMonth = () => {
     const now = new Date();
@@ -109,10 +126,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
 
   const getSuitsBookedList = (b: Booking) => {
     const suits: string[] = [];
-    if (b.suit_1 > 0) suits.push(`Suit 1 (${t('groundFloor')})`);
-    if (b.suit_2 > 0) suits.push(`Suit 2 (${t('groundFloor')})`);
-    if (b.suit_3 > 0) suits.push(`Suit 3 (${t('firstFloor')})`);
-    if (b.suit_4 > 0) suits.push(`Suit 4 (${t('firstFloor')})`);
+    if (b.suit_1 > 0) suits.push('Suit 1');
+    if (b.suit_2 > 0) suits.push('Suit 2');
+    if (b.suit_3 > 0) suits.push('Suit 3');
+    if (b.suit_4 > 0) suits.push('Suit 4');
     return suits;
   };
 
@@ -253,6 +270,36 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             />
           </div>
 
+          {/* Reference Filter */}
+          <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+            <Tag className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={referenceFilter}
+              onChange={(e) => setReferenceFilter(e.target.value)}
+              className="outline-none text-slate-800 text-xs bg-transparent cursor-pointer font-medium"
+            >
+              <option value="ALL">{language === 'hi' ? 'सभी संदर्भ' : 'All References'}</option>
+              {REFERENCES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Suit Filter */}
+          <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+            <BedDouble className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={suitFilter}
+              onChange={(e) => setSuitFilter(e.target.value)}
+              className="outline-none text-slate-800 text-xs bg-transparent cursor-pointer font-medium"
+            >
+              <option value="ALL">{language === 'hi' ? 'सभी सूट' : 'All Suits'}</option>
+              {SUITS.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-center gap-1">
             <button
               onClick={setThisMonth}
@@ -268,9 +315,15 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             >
               {language === 'hi' ? 'गत माह' : 'Last Month'}
             </button>
-            {(fromDate || toDate || searchTerm) && (
+            {(fromDate || toDate || searchTerm || referenceFilter !== 'ALL' || suitFilter !== 'ALL' || statusFilter !== 'ALL') && (
               <button
-                onClick={() => { clearDateFilter(); setSearchTerm(''); }}
+                onClick={() => {
+                  clearDateFilter();
+                  setSearchTerm('');
+                  setReferenceFilter('ALL');
+                  setSuitFilter('ALL');
+                  setStatusFilter('ALL');
+                }}
                 className="px-2 py-1 text-rose-600 hover:text-rose-700 font-bold text-[11px] ml-1 hover:underline"
                 title={language === 'hi' ? 'सभी फ़िल्टर हटाएं' : 'Clear all filters'}
               >
@@ -288,9 +341,6 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-30 text-amber-500" />
             <p className="text-sm font-medium text-slate-500">
               {language === 'hi' ? 'कोई बुकिंग रिकॉर्ड नहीं मिला।' : 'No booking records found.'}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              {language === 'hi' ? 'अन्य खोज शब्द अथवा स्थिति फ़िल्टर का चयन करें।' : 'Try selecting a different search term or filter.'}
             </p>
           </div>
         ) : (
@@ -379,7 +429,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                   </div>
 
                   {/* Footer with Amount, Official Letter & Actions */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
                     <div className="text-xs font-bold text-slate-900">
                       {Number(b.total_amount) > 0 ? (
                         <>₹{Number(b.total_amount).toLocaleString('en-IN')}/- </>
@@ -391,7 +441,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto sm:justify-end">
                       {/* View Allotment Letter */}
                       <button
                         onClick={() => onOpenLetter(b)}
@@ -400,6 +450,16 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       >
                         <FileText className="w-3.5 h-3.5" />
                         <span>{t('allotmentLetter')}</span>
+                      </button>
+
+                      {/* View Payment Receipt */}
+                      <button
+                        onClick={() => onOpenReceipt(b)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition border border-amber-200"
+                        title={language === 'hi' ? 'किराया रसीद देखें' : 'View Payment Receipt'}
+                      >
+                        <Receipt className="w-3.5 h-3.5 text-amber-700" />
+                        <span>{language === 'hi' ? 'रसीद' : 'Receipt'}</span>
                       </button>
 
                       {/* WhatsApp Share */}

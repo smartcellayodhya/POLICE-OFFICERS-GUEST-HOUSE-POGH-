@@ -46,3 +46,18 @@ VALUES
 ('2026-08-05', 'राहुल यादव', '9411616767', 'SSP SIR', 800.0, 800.0, 0.0, 0.0, 1600.0, 'PAID'),
 ('2026-08-13', 'ashwani', '8090467395', 'SSP SIR', 0.0, 800.0, 1200.0, 0.0, 2000.0, 'PAID')
 ON CONFLICT DO NOTHING;
+
+-- ====================================================================
+-- 7. UPGRADE / MIGRATION SCRIPT (For existing deployed databases)
+-- Run this block if your table was created previously
+-- ====================================================================
+ALTER TABLE public.pogh_bookings 
+    ADD COLUMN IF NOT EXISTS group_id TEXT,
+    ADD COLUMN IF NOT EXISTS dispatch_no TEXT,
+    ADD COLUMN IF NOT EXISTS check_in_time TEXT DEFAULT '12:00 PM',
+    ADD COLUMN IF NOT EXISTS check_out_time TEXT DEFAULT '12:00 PM',
+    ADD COLUMN IF NOT EXISTS is_maintenance BOOLEAN DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_pogh_group_id ON public.pogh_bookings (group_id);
+CREATE INDEX IF NOT EXISTS idx_pogh_reference ON public.pogh_bookings (reference);
+

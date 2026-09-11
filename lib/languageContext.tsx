@@ -64,8 +64,6 @@ export const translations = {
     available: 'उपलब्ध',
     booked: 'आरक्षित',
     today: 'आज',
-    groundFloor: 'भू-तल',
-    firstFloor: 'प्रथम तल',
     
     // Form Labels
     guestName: 'गेस्ट का नाम',
@@ -138,8 +136,6 @@ export const translations = {
     available: 'Available',
     booked: 'Booked',
     today: 'Today',
-    groundFloor: 'Ground Floor',
-    firstFloor: 'First Floor',
     
     // Form Labels
     guestName: 'Guest Name',

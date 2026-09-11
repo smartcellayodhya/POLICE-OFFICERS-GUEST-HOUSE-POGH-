@@ -29,6 +29,15 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   // Dynamic In-Charge / Contact Person (Editable and persists in localStorage)
   const [contactPerson, setContactPerson] = useState<string>('उ0नि0 यदुनाथ मो0न0-8317041684');
   const [isEditingContact, setIsEditingContact] = useState(false);
+  const [checkInTime, setCheckInTime] = useState('12:00 PM');
+  const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
+
+  useEffect(() => {
+    if (booking) {
+      setCheckInTime(booking.check_in_time || '12:00 PM');
+      setCheckOutTime(booking.check_out_time || '12:00 PM');
+    }
+  }, [booking]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -36,6 +45,15 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
       if (saved) setContactPerson(saved);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !booking) return null;
 
@@ -90,6 +108,8 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const cinHindi = formatToHindiDate(checkInDate);
   const coutHindi = formatToHindiDate(checkOutDate);
 
+  const isSingleDay = checkInDate === checkOutDate;
+
   const letterDetails = {
     guest_name: booking.guest_name,
     mobile_number: booking.mobile_number,
@@ -98,8 +118,8 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     dispatch_no: dispatchNo,
     check_in_date: checkInDate,
     check_out_date: checkOutDate,
-    check_in_time: '12:00 PM',
-    check_out_time: '12:00 PM',
+    check_in_time: checkInTime,
+    check_out_time: checkOutTime,
     suits: suitNames,
     total_days: totalDays,
     total_amount: hasRentAmount ? bookingRent : 0,
@@ -158,14 +178,20 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden my-6 flex flex-col max-h-[92vh]">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 overflow-y-auto p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs flex items-start justify-center"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden my-1 sm:my-6 flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150"
+      >
         
         {/* Modal Action Bar */}
         <div className="px-5 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-amber-500 no-print">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold">Official Hindi Booking Letter</h3>
+              <h3 className="text-base font-bold">आधिकारिक कक्ष आवंटन पत्र</h3>
               <span className="text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold font-mono">
                 {bookingRef}
               </span>
@@ -233,13 +259,13 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         </div>
 
         {/* Scrollable Letter Preview Area */}
-        <div className="p-4 sm:p-8 overflow-y-auto bg-slate-100 flex justify-center">
+        <div className="p-2 sm:p-6 md:p-8 overflow-y-auto bg-slate-100 flex justify-center">
           
           {/* A4 Printable Document Paper */}
           <div
             id="printable-letter"
             ref={printRef}
-            className="w-full max-w-[210mm] bg-white p-6 sm:p-10 shadow-lg border border-slate-200 text-slate-900 font-hindi leading-relaxed text-sm select-text"
+            className="w-full max-w-[210mm] bg-white p-4 sm:p-10 shadow-lg border border-slate-200 text-slate-900 font-hindi leading-relaxed text-sm select-text"
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
           >
             {/* Top Police Decorative Double Border */}
@@ -299,8 +325,16 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             <div className="mb-4 space-y-2 text-slate-800">
               <p className="font-semibold">महोदय,</p>
               <p className="indent-8 text-justify leading-relaxed">
-                अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक <strong>{cinHindi}</strong> से{' '}
-                <strong>{coutHindi}</strong> तक आपके प्रवास हेतु <strong>{numRooms}</strong> रूम आरक्षित कर दिया गया है, जिसका विवरण निम्नवत है:-
+                {isSingleDay ? (
+                  <>
+                    अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक <strong>{cinHindi} को (01 दिवस हेतु)</strong> आपके प्रवास हेतु <strong>{numRooms}</strong> रूम आरक्षित कर दिया गया है, जिसका विवरण निम्नवत है:-
+                  </>
+                ) : (
+                  <>
+                    अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक <strong>{cinHindi}</strong> से{' '}
+                    <strong>{coutHindi}</strong> तक (कुल <strong>{totalDays}</strong> दिवसों हेतु) आपके प्रवास हेतु <strong>{numRooms}</strong> रूम आरक्षित कर दिया गया है, जिसका विवरण निम्नवत है:-
+                  </>
+                )}
               </p>
             </div>
 
@@ -322,7 +356,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">कब से कब तक</span>
-                  <span className="col-span-2">दि० {cinHindi} से {coutHindi} तक</span>
+                  <span className="col-span-2">
+                    {isSingleDay ? `दि० ${cinHindi} (01 दिवस)` : `दि० ${cinHindi} से ${coutHindi} तक`}
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">रूम की संख्या</span>
@@ -334,7 +370,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">चेक-इन / चेक-आउट</span>
-                  <span className="col-span-2">{cinHindi} (12:00 PM) / {coutHindi} (12:00 PM)</span>
+                  <span className="col-span-2">{cinHindi} ({checkInTime}) / {coutHindi} ({checkOutTime})</span>
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">कुल दिन</span>

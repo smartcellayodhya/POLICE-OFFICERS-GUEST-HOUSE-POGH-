@@ -9,8 +9,9 @@ import {
   generateDispatchNumber,
   encodeNotesWithMeta,
 } from '@/lib/bookingUtils';
-import { X, Calendar, User, Phone, Tag, Utensils, AlertTriangle, CheckCircle2, Hash } from 'lucide-react';
+import { X, Calendar, User, Phone, Tag, Utensils, AlertTriangle, CheckCircle2, Hash, Clock, Wrench } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
+import { logActivity } from '@/lib/auditLog';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -45,6 +46,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     suit_4: initialSuit === 'suit_4',
   });
 
+  const [checkInTime, setCheckInTime] = useState('12:00 PM');
+  const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
+  const [isMaintenance, setIsMaintenance] = useState(false);
   const [manualAmount, setManualAmount] = useState<string>('');
   const [mealStatus, setMealStatus] = useState<string>('PAID');
   const [notes, setNotes] = useState('');
@@ -76,6 +80,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       });
     }
   }, [initialDate, initialSuit]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -116,8 +131,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       return;
     }
 
-    if (!mobileNumber.trim()) {
-      alert(language === 'hi' ? 'कृपया मोबाइल नंबर दर्ज करें।' : 'Please enter mobile number.');
+    const cleanedMobile = mobileNumber.replace(/\D/g, '');
+    if (cleanedMobile.length !== 10) {
+      alert(language === 'hi' ? 'कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -147,7 +163,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         dispatch_no: autoDispatch,
         booking_date: dateStr,
         guest_name: guestName.trim(),
-        mobile_number: mobileNumber.trim(),
+        mobile_number: cleanedMobile,
         reference: reference.trim(),
         suit_1: selectedSuits.suit_1 ? 1 : 0,
         suit_2: selectedSuits.suit_2 ? 1 : 0,
@@ -155,12 +171,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         suit_4: selectedSuits.suit_4 ? 1 : 0,
         total_amount: finalAmount,
         meal_type_status: mealStatus,
-        status: 'CONFIRMED',
+        status: isMaintenance ? 'MAINTENANCE' : 'CONFIRMED',
+        check_in_time: checkInTime.trim(),
+        check_out_time: checkOutTime.trim(),
+        is_maintenance: isMaintenance,
         notes: finalNotes,
         created_at: new Date().toISOString(),
       }));
 
       await onSave(recordsToCreate);
+
+      logActivity(
+        isMaintenance ? 'MAINTENANCE' : 'CREATE',
+        isMaintenance ? `कमरा मरम्मत ब्लॉक: ${autoRef}` : `नई बुकिंग: ${autoRef}`,
+        `अतिथि: ${guestName}, तारीख: ${checkInDate} से ${checkOutDate}, स्थिति: ${isMaintenance ? 'MAINTENANCE' : 'CONFIRMED'}`
+      );
+
+      alert(language === 'hi' ? 'बुकिंग सफलतापूर्वक दर्ज की गई!' : 'Booking created successfully!');
       onClose();
     } catch (err: any) {
       console.error('Error saving booking:', err);
@@ -186,49 +213,48 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
     return status;
   };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 overflow-y-auto p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs flex items-start justify-center"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-1 sm:my-6 animate-in fade-in zoom-in-95 duration-150"
+      >
         
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-amber-500">
+        {/* Header with Reference and Dispatch */}
+        <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-amber-500">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-base sm:text-lg font-bold">
                 {language === 'hi' ? 'नयी अतिथि बुकिंग' : 'New Guest Booking'}
               </h3>
-              <span className="text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold font-mono">
-                {autoRef || 'POGH'}
-              </span>
+              {autoRef && (
+                <span className="text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold font-mono">
+                  {autoRef}
+                </span>
+              )}
+              {autoDispatch && (
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono">
+                  {autoDispatch}
+                </span>
+              )}
             </div>
-            <p className="text-xs text-slate-300 font-hindi">
+            <p className="text-xs text-slate-300">
               {language === 'hi' ? 'पुलिस ऑफिसर्स गेस्ट हाउस - अयोध्या' : 'Police Officers Guest House - Ayodhya'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
           
-          <div className="p-2.5 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-between text-xs text-slate-700">
-            <div className="flex items-center gap-1.5 font-medium">
-              <Hash className="w-3.5 h-3.5 text-amber-600" />
-              <span>
-                {language === 'hi' ? 'बुकिंग संदर्भ:' : 'Booking Ref:'} <strong className="font-mono text-slate-900">{autoRef}</strong>
-              </span>
-            </div>
-            <div>
-              <span>
-                {language === 'hi' ? 'डिस्पैच संख्या:' : 'Dispatch No:'} <strong className="font-mono text-slate-900">{autoDispatch}</strong>
-              </span>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
@@ -253,8 +279,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <input
                 type="tel"
                 required
+                inputMode="numeric"
+                maxLength={10}
                 value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
+                onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 placeholder={language === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10 digit mobile number'}
                 className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition font-mono"
               />
@@ -334,9 +362,37 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               />
             </div>
 
-            <div className="col-span-full text-xs text-slate-500 flex items-center justify-between">
-              <span>{language === 'hi' ? `कुल अवधि: ${totalDays} रात्रि` : `Total Stay: ${totalDays} Night(s)`}</span>
-              <span>{formatToDisplayDate(checkInDate)} to {formatToDisplayDate(checkOutDate)}</span>
+            {/* Check-in & Check-out time */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                {language === 'hi' ? 'चेक-इन समय' : 'Check-in Time'}
+              </label>
+              <input
+                type="text"
+                value={checkInTime}
+                onChange={(e) => setCheckInTime(e.target.value)}
+                placeholder="12:00 PM"
+                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                {language === 'hi' ? 'चेक-आउट समय' : 'Check-out Time'}
+              </label>
+              <input
+                type="text"
+                value={checkOutTime}
+                onChange={(e) => setCheckOutTime(e.target.value)}
+                placeholder="12:00 PM"
+                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
+              />
+            </div>
+
+            <div className="col-span-full text-xs font-semibold text-slate-600 flex items-center justify-end pt-1 border-t border-slate-200">
+              <span>{language === 'hi' ? `कुल प्रवास अवधि: ${totalDays} रात्रि` : `Total Stay: ${totalDays} Night(s)`}</span>
             </div>
           </div>
 
@@ -344,27 +400,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <label className="block text-xs font-semibold text-slate-700 mb-2">
               {language === 'hi' ? 'आवंटित किए जाने वाले कमरे चुनें:' : 'Select Room(s) to Allocate:'}
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {SUITS.map((suit) => {
                 const isSelected = selectedSuits[suit.id];
-                const floorLabel = suit.id === 'suit_1' || suit.id === 'suit_2' ? t('groundFloor') : t('firstFloor');
                 return (
                   <div
                     key={suit.id}
                     onClick={() => handleSuitToggle(suit.id)}
-                    className={`cursor-pointer rounded-xl p-3 border-2 transition text-center flex flex-col items-center justify-center gap-1 select-none ${
+                    className={`cursor-pointer rounded-xl p-3 border-2 transition text-center flex items-center justify-center gap-1.5 select-none ${
                       isSelected
-                        ? 'border-amber-500 bg-amber-50/80 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-amber-500 bg-amber-50 font-bold text-amber-950 shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white text-slate-800 font-semibold'
                     }`}
                   >
-                    <div className="flex items-center gap-1 text-xs font-bold text-slate-900">
-                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />}
-                      {suit.name}
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      {floorLabel}
-                    </div>
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />}
+                    <span className="text-xs sm:text-sm">{suit.name}</span>
                   </div>
                 );
               })}
@@ -387,20 +437,46 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 min="0"
                 value={manualAmount}
                 onChange={(e) => setManualAmount(e.target.value)}
-                placeholder={language === 'hi' ? 'उदा. 800 (खाली छोड़ने पर "As Per Applicable" छपेगा)' : 'e.g. 800 (leave blank for As Per Applicable)'}
-                className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white"
+                placeholder="उदा. 800"
+                className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono"
               />
             </div>
-            <p className="text-[11px] text-slate-500">
-              {language === 'hi'
-                ? '* यदि आप यहाँ किराया लिखेंगे तो वही आवंटन पत्र में छपेगा। खाली छोड़ने पर पत्र में As Per Applicable छपेगा।'
-                : '* If entered, this rate will appear on the allotment letter. Otherwise, "As Per Applicable" will be printed.'}
-            </p>
+          </div>
+
+          {/* Maintenance Mode Option */}
+          <div className="pt-0.5">
+            <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={isMaintenance}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setIsMaintenance(checked);
+                  if (checked) {
+                    setGuestName('मरम्मत / मेंटेनेंस (AC / सिविल ब्लॉक)');
+                    setMobileNumber('8317041684');
+                    setReference('MAINTENANCE');
+                    setMealStatus('NOT REQUIRED');
+                    setManualAmount('0');
+                  } else {
+                    setGuestName('');
+                    setMobileNumber('');
+                    setReference('SSP SIR');
+                    setMealStatus('PAID');
+                  }
+                }}
+                className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500"
+              />
+              <span className="flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5 text-purple-600" />
+                {language === 'hi' ? 'कमरा मरम्मत / ब्लॉक मोड' : 'Maintenance / Block Mode'}
+              </span>
+            </label>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              {language === 'hi' ? 'विशेष निर्देश / टिप्पणी (वैकल्पिक)' : 'Special Instructions / Notes (Optional)'}
+              {language === 'hi' ? 'विशेष निर्देश / टिप्पणी' : 'Special Instructions / Notes'}
             </label>
             <input
               type="text"

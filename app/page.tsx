@@ -22,8 +22,10 @@ import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { EditBookingModal } from '@/components/EditBookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
+import { ReceiptModal } from '@/components/ReceiptModal';
+import { AuditLogModal } from '@/components/AuditLogModal';
 import { LanguageProvider } from '@/lib/languageContext';
-import { Phone, Shield } from 'lucide-react';
+import { logActivity } from '@/lib/auditLog';
 
 export default function HomePage() {
   // Authentication State
@@ -48,6 +50,10 @@ export default function HomePage() {
 
   const [selectedLetterBooking, setSelectedLetterBooking] = useState<Booking | null>(null);
   const [isLetterModalOpen, setIsLetterModalOpen] = useState(false);
+
+  const [selectedReceiptBooking, setSelectedReceiptBooking] = useState<Booking | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   const [selectedEditBooking, setSelectedEditBooking] = useState<Booking | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -191,11 +197,13 @@ export default function HomePage() {
           alert('त्रुटि: ' + error.message);
           return;
         }
+        logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}, ग्रुप: ${groupId || 'Single'}`);
         await fetchBookings();
         return;
       }
     }
 
+    logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}, ग्रुप: ${groupId || 'Single'}`);
     const filtered = bookings.filter((b) => b.id !== id);
     setBookings(filtered);
     saveLocalBookings(filtered);
@@ -236,6 +244,7 @@ export default function HomePage() {
             return;
           }
         }
+        logActivity('STATUS_CHANGE', `स्थिति बदली: ${newStatus}`, `अतिथि: ${booking.guest_name}, संदर्भ: ${refCode}`);
         await fetchBookings();
         return;
       }
@@ -251,22 +260,21 @@ export default function HomePage() {
       return b.id === booking.id ? { ...b, status: newStatus } : b;
     });
 
+    logActivity('STATUS_CHANGE', `स्थिति बदली: ${newStatus}`, `अतिथि: ${booking.guest_name}, संदर्भ: ${refCode}`);
     setBookings(updated);
     saveLocalBookings(updated);
-  };
-
-  // Open Booking Modal for a specific date & suit
-  const handleOpenBookingForDate = (dateStr: string, suitKey?: string) => {
-    if (currentUser?.role !== 'admin') return;
-    setInitialBookingDate(dateStr);
-    setInitialBookingSuit(suitKey);
-    setIsBookingModalOpen(true);
   };
 
   // Open Letter Modal
   const handleOpenLetter = (booking: Booking) => {
     setSelectedLetterBooking(booking);
     setIsLetterModalOpen(true);
+  };
+
+  // Open Receipt Modal
+  const handleOpenReceipt = (booking: Booking) => {
+    setSelectedReceiptBooking(booking);
+    setIsReceiptModalOpen(true);
   };
 
   // Open Edit Booking Modal (Admin Only)
@@ -337,7 +345,14 @@ export default function HomePage() {
       })
     : [];
 
-  if (!authChecked) return null;
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white font-sans">
+        <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs font-bold text-amber-400 tracking-wider uppercase">Police Officers Guest House</p>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
@@ -373,25 +388,13 @@ export default function HomePage() {
               setInitialBookingSuit(undefined);
               setIsBookingModalOpen(true);
             }}
+            onOpenAuditLog={() => setIsAuditModalOpen(true)}
             onLogout={handleLogout}
           />
 
         {/* Dynamic Main Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           
-          {/* Officer Notification Banner */}
-          {!isAdmin && (
-            <div className="mb-5 p-3 rounded-2xl bg-blue-900 text-blue-100 border-l-4 border-blue-400 flex items-center gap-3 shadow-xs">
-              <Shield className="w-5 h-5 text-blue-400 flex-shrink-0" />
-              <div className="text-xs">
-                <span className="font-bold text-white">ड्यूटी अधिकारी दृश्य (Officer Mode): </span>
-                <span className="text-blue-200">
-                  आप तिथि का चयन करके कमरों की स्थिति, अतिथि विवरण एवं आवंटन पत्र देख सकते हैं। नई बुकिंग एवं संपादन प्रशासक (Admin) द्वारा प्रबंधित हैं।
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Tab 1: Dashboard (Stats + Matrix + Date Inspector) */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
@@ -402,7 +405,6 @@ export default function HomePage() {
                 isAdmin={isAdmin}
                 selectedDate={selectedDate}
                 onSelectDate={(d) => setSelectedDate(d)}
-                onQuickBook={(d, s) => handleOpenBookingForDate(d, s)}
                 onSelectBooking={handleOpenLetter}
               />
 
@@ -410,6 +412,7 @@ export default function HomePage() {
                 bookings={bookings}
                 isAdmin={isAdmin}
                 onOpenLetter={handleOpenLetter}
+                onOpenReceipt={handleOpenReceipt}
                 onEditBooking={handleOpenEdit}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
@@ -420,13 +423,11 @@ export default function HomePage() {
           {/* Tab 2: Room Occupancy Matrix Focus */}
           {activeTab === 'matrix' && (
             <div className="space-y-6">
-              <StatsCards bookings={bookings} />
               <RoomMatrix
                 bookings={bookings}
                 isAdmin={isAdmin}
                 selectedDate={selectedDate}
                 onSelectDate={(d) => setSelectedDate(d)}
-                onQuickBook={(d, s) => handleOpenBookingForDate(d, s)}
                 onSelectBooking={handleOpenLetter}
               />
             </div>
@@ -439,6 +440,7 @@ export default function HomePage() {
                 bookings={bookings}
                 isAdmin={isAdmin}
                 onOpenLetter={handleOpenLetter}
+                onOpenReceipt={handleOpenReceipt}
                 onEditBooking={handleOpenEdit}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
@@ -460,14 +462,13 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-4 text-slate-400 text-xs">
-              <div className="flex items-center gap-1.5 font-hindi">
-                <Phone className="w-3.5 h-3.5 text-amber-400" />
-                <span>संपर्क सूत्र: उ0नि0 यदुनाथ मो0न0-8317041684</span>
-              </div>
-              <span>•</span>
-              <span className="text-slate-400 font-medium">
+            <div className="flex items-center gap-2 text-slate-400 text-xs">
+              <span className="text-slate-300 font-medium">
                 {currentUser.displayName}
+              </span>
+              <span>•</span>
+              <span className="text-amber-400/90 font-semibold">
+                {isAdmin ? 'प्रशासक' : 'ड्यूटी अधिकारी'}
               </span>
             </div>
           </div>
@@ -495,6 +496,7 @@ export default function HomePage() {
             setSelectedEditBooking(null);
           }}
           booking={selectedEditBooking}
+          existingBookings={bookings}
           relatedBookings={
             selectedEditBooking
               ? bookings.filter((b) => {
@@ -520,6 +522,33 @@ export default function HomePage() {
         }}
         booking={selectedLetterBooking}
         relatedBookings={relatedBookings}
+      />
+
+      <ReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => {
+          setIsReceiptModalOpen(false);
+          setSelectedReceiptBooking(null);
+        }}
+        booking={selectedReceiptBooking}
+        relatedBookings={
+          selectedReceiptBooking
+            ? bookings.filter((b) => {
+                const targetRef = selectedReceiptBooking.group_id || extractGroupIdFromNotes(selectedReceiptBooking.notes);
+                const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+                return (
+                  (targetRef && bRef === targetRef) ||
+                  (b.guest_name.toLowerCase() === selectedReceiptBooking.guest_name.toLowerCase() &&
+                    b.mobile_number === selectedReceiptBooking.mobile_number)
+                );
+              })
+            : []
+        }
+      />
+
+      <AuditLogModal
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
       />
       </div>
     </LanguageProvider>

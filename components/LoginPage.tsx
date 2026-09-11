@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AuthUser, authenticate, PRESET_ACCOUNTS } from '@/lib/auth';
-import { Shield, Lock, User, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { AuthUser, authenticate } from '@/lib/auth';
+import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser) => void;
@@ -31,17 +31,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }, 400);
   };
 
-  const handleSelectPreset = (role: 'admin' | 'officer') => {
-    const acc = PRESET_ACCOUNTS.find((a) => a.role === role);
-    if (acc) {
-      setUsername(acc.username);
-      setPassword(acc.password);
-      setError('');
-    }
-  };
-
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden font-sans">
       
       {/* Background Decorative Rings */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -72,54 +63,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </p>
         </div>
 
-        {/* Role Fast Switcher */}
-        <div className="px-8 pt-6 pb-2">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">
-            लॉगिन पदनाम चुनें (Select Portal Role)
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleSelectPreset('admin')}
-              className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
-                username === 'admin'
-                  ? 'bg-amber-500/15 border-amber-400 text-amber-300 shadow-sm'
-                  : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-amber-400" />
-                  प्रशासक (Admin)
-                </span>
-                {username === 'admin' && <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />}
-              </div>
-              <span className="text-[10px] opacity-80 mt-1">पूर्ण प्रशासनिक नियंत्रण</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectPreset('officer')}
-              className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
-                username === 'officer'
-                  ? 'bg-blue-500/15 border-blue-400 text-blue-300 shadow-sm'
-                  : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-blue-400" />
-                  ड्यूटी अधिकारी
-                </span>
-                {username === 'officer' && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />}
-              </div>
-              <span className="text-[10px] opacity-80 mt-1">उपलब्धता एवं रिपोर्ट दृश्य</span>
-            </button>
-          </div>
-        </div>
-
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="p-8 pt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-8 space-y-4">
           
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
@@ -190,6 +135,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </div>
 
       </div>
+
+      {/* Footer info below login card */}
+      <footer className="mt-6 text-center z-10 select-none space-y-1">
+        <p className="text-xs sm:text-sm text-slate-400 font-medium tracking-wide">
+          &copy; {new Date().getFullYear()} Ayodhya Police. All Rights Reserved.
+        </p>
+        <p className="text-xs sm:text-[13px] text-slate-500 font-normal">
+          Designed &amp; Developed by Rahul Yadav
+        </p>
+      </footer>
     </div>
   );
 };

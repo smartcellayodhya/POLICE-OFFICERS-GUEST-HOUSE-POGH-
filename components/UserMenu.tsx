@@ -10,17 +10,22 @@ import {
   ChevronDown,
   Languages,
   Check,
-  Building2
+  Building2,
+  KeyRound,
+  History,
 } from 'lucide-react';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface UserMenuProps {
   currentUser: AuthUser;
   onLogout: () => void;
+  onOpenAuditLog?: () => void;
 }
 
-export const UserMenu: React.FC<UserMenuProps> = ({ currentUser, onLogout }) => {
+export const UserMenu: React.FC<UserMenuProps> = ({ currentUser, onLogout, onOpenAuditLog }) => {
   const { language, setLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = currentUser.role === 'admin';
@@ -117,6 +122,33 @@ export const UserMenu: React.FC<UserMenuProps> = ({ currentUser, onLogout }) => 
             </div>
           </div>
 
+          {/* Security & System Section */}
+          <div className="px-2 py-1.5 border-b border-slate-100 space-y-0.5">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                setIsPasswordModalOpen(true);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition text-left"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+              <span>{language === 'hi' ? 'पासवर्ड बदलें' : 'Change Password'}</span>
+            </button>
+
+            {isAdmin && onOpenAuditLog && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenAuditLog();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition text-left"
+              >
+                <History className="w-3.5 h-3.5 text-blue-600" />
+                <span>{language === 'hi' ? 'ऑडिट एवं एक्टिविटी लॉग' : 'Audit & Activity Log'}</span>
+              </button>
+            )}
+          </div>
+
           {/* Logout Action */}
           <div className="px-2 pt-1.5">
             <button
@@ -132,6 +164,13 @@ export const UserMenu: React.FC<UserMenuProps> = ({ currentUser, onLogout }) => 
           </div>
         </div>
       )}
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 };
