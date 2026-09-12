@@ -16,6 +16,8 @@ import { formatToISODate } from '@/lib/dateUtils';
 import { LoginPage } from '@/components/LoginPage';
 import { Sidebar, NavTab } from '@/components/Sidebar';
 import { TopHeader } from '@/components/TopHeader';
+import { StatsCards } from '@/components/StatsCards';
+import { RoomMatrix } from '@/components/RoomMatrix';
 import { RoomStatus7Days } from '@/components/RoomStatus7Days';
 import { DateWiseRoomSchedule } from '@/components/DateWiseRoomSchedule';
 import { BookingsTable } from '@/components/BookingsTable';
@@ -452,9 +454,22 @@ export default function HomePage() {
         {/* Dynamic Main Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           
-          {/* Tab 1: Dashboard (Date-Wise Room Booking & Vacancy Schedule - Past & Future) */}
+          {/* Tab 1: Dashboard (Stats + Room Matrix Inspector + Date-Wise Past & Future Schedule) */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
+              {/* Upar ka hissa: Stats Cards */}
+              <StatsCards bookings={bookings} />
+              
+              {/* Upar ka hissa: Room Status Matrix Inspector (Selected Date) */}
+              <RoomMatrix
+                bookings={bookings}
+                isAdmin={isAdmin}
+                selectedDate={selectedDate}
+                onSelectDate={(d) => setSelectedDate(d)}
+                onSelectBooking={handleOpenLetter}
+              />
+
+              {/* Niche ka hissa: Har date par kaun sa room book ya khali hai (Past & Future list) */}
               <DateWiseRoomSchedule
                 bookings={bookings}
                 isAdmin={isAdmin}
