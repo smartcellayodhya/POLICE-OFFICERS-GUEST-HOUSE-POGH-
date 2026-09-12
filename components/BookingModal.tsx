@@ -36,8 +36,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [guestName, setGuestName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [reference, setReference] = useState('SSP SIR');
+
+  const getNextDayISO = (dateStr: string): string => {
+    const d = new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : ''));
+    if (isNaN(d.getTime())) return dateStr;
+    d.setDate(d.getDate() + 1);
+    return formatToISODate(d);
+  };
+
   const [checkInDate, setCheckInDate] = useState(initialDate || today);
-  const [checkOutDate, setCheckOutDate] = useState(initialDate || today);
+  const [checkOutDate, setCheckOutDate] = useState(() => getNextDayISO(initialDate || today));
   
   const [selectedSuits, setSelectedSuits] = useState<Record<string, boolean>>({
     suit_1: initialSuit === 'suit_1',
@@ -69,7 +77,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   useEffect(() => {
     if (initialDate) {
       setCheckInDate(initialDate);
-      setCheckOutDate(initialDate);
+      setCheckOutDate(getNextDayISO(initialDate));
     }
     if (initialSuit) {
       setSelectedSuits({
@@ -134,6 +142,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     const cleanedMobile = mobileNumber.replace(/\D/g, '');
     if (cleanedMobile.length !== 10) {
       alert(language === 'hi' ? 'कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (checkOutDate <= checkInDate) {
+      alert(language === 'hi' ? 'प्रस्थान तिथि (Check-out Date) आगमन तिथि से अगले दिन की होनी चाहिए।' : 'Check-out date must be after check-in date.');
       return;
     }
 
@@ -341,9 +354,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 min={formatToISODate(new Date())}
                 value={checkInDate}
                 onChange={(e) => {
-                  setCheckInDate(e.target.value);
-                  if (e.target.value > checkOutDate) {
-                    setCheckOutDate(e.target.value);
+                  const newIn = e.target.value;
+                  setCheckInDate(newIn);
+                  if (checkOutDate <= newIn) {
+                    setCheckOutDate(getNextDayISO(newIn));
                   }
                 }}
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white"
@@ -358,7 +372,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <input
                 type="date"
                 required
-                min={checkInDate}
+                min={getNextDayISO(checkInDate)}
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white"
