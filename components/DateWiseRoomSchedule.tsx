@@ -65,6 +65,103 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
     );
   };
 
+  // Group suites for a date with comma separation (e.g. "Suit 2, Suit 3") to eliminate duplicacy
+  const getDateOccupancyGroups = (dateStr: string, allBookings: Booking[]) => {
+    const dayBookings = allBookings.filter(
+      (b) => b.booking_date === dateStr && b.status !== 'CANCELLED'
+    );
+
+    const occupiedSuitIds = new Set<string>();
+
+    interface GuestGroup {
+      primaryBooking: Booking;
+      suitIds: string[];
+      isMaintenance: boolean;
+      isInHouse: boolean;
+    }
+
+    const guestGroups: GuestGroup[] = [];
+
+    dayBookings.forEach((b) => {
+      const bSuits: string[] = [];
+      SUITS.forEach((s) => {
+        if (Number(b[s.id as keyof Booking]) > 0) {
+          bSuits.push(s.id);
+        }
+      });
+
+      if (bSuits.length === 0) return;
+
+      const guestKey = `${b.guest_name.trim().toLowerCase()}_${b.mobile_number.trim()}`;
+      const existing = guestGroups.find((g) => {
+        const gKey = `${g.primaryBooking.guest_name.trim().toLowerCase()}_${g.primaryBooking.mobile_number.trim()}`;
+        return gKey === guestKey;
+      });
+
+      if (existing) {
+        bSuits.forEach((sid) => {
+          if (!existing.suitIds.includes(sid)) {
+            existing.suitIds.push(sid);
+          }
+        });
+        bSuits.forEach((sid) => occupiedSuitIds.add(sid));
+      } else {
+        bSuits.forEach((sid) => occupiedSuitIds.add(sid));
+        guestGroups.push({
+          primaryBooking: b,
+          suitIds: bSuits,
+          isMaintenance: b.status === 'MAINTENANCE' || b.is_maintenance,
+          isInHouse: b.status === 'CHECKED_IN',
+        });
+      }
+    });
+
+    const result: Array<{
+      id: string;
+      isAvailable: boolean;
+      isMaintenance: boolean;
+      isInHouse: boolean;
+      suitIds: string[];
+      suitNames: string;
+      booking?: Booking;
+    }> = [];
+
+    // Add occupied groups
+    guestGroups.forEach((g) => {
+      g.suitIds.sort((a, b) => a.localeCompare(b));
+      const suitNameList = g.suitIds.map((sid) => {
+        const found = SUITS.find((s) => s.id === sid);
+        return found ? found.name : sid;
+      });
+
+      result.push({
+        id: `booked-${g.primaryBooking.id}-${g.suitIds.join('-')}`,
+        isAvailable: false,
+        isMaintenance: g.isMaintenance,
+        isInHouse: g.isInHouse,
+        suitIds: g.suitIds,
+        suitNames: suitNameList.join(', '),
+        booking: g.primaryBooking,
+      });
+    });
+
+    // Add available suits grouped with comma
+    const availableSuits = SUITS.filter((s) => !occupiedSuitIds.has(s.id));
+    if (availableSuits.length > 0) {
+      const suitNames = availableSuits.map((s) => s.name).join(', ');
+      result.push({
+        id: `available-${dateStr}-${availableSuits.map((s) => s.id).join('-')}`,
+        isAvailable: true,
+        isMaintenance: false,
+        isInHouse: false,
+        suitIds: availableSuits.map((s) => s.id),
+        suitNames: suitNames,
+      });
+    }
+
+    return result;
+  };
+
   // Find range of dates with existing bookings
   const { minBookedDate, maxBookedDate, bookedDatesSet } = useMemo(() => {
     const dates: string[] = [];
@@ -534,68 +631,89 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                   </div>
                 </div>
 
-                {/* 4 Suits Grid for this Date */}
-                <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {SUITS.map((suit) => {
-                    const booking = getBookingForSuitOnDate(suit.id, dateStr);
-                    const isAvailable = !booking;
-
+                {/* Suits Grid for this Date (Grouped with comma to eliminate duplicacy) */}
+                <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {getDateOccupancyGroups(dateStr, bookings).map((group) => {
                     // CASE 1: AVAILABLE (खाली)
-                    if (isAvailable) {
+                    if (group.isAvailable) {
+                      const allFourEmpty = group.suitIds.length === 4;
                       return (
                         <div
-                          key={`${dateStr}-${suit.id}`}
-                          className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 sm:p-3.5 flex flex-col justify-between transition hover:border-emerald-300 hover:bg-emerald-50/70"
+                          key={group.id}
+                          className={`rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 sm:p-3.5 flex flex-col justify-between transition hover:border-emerald-300 hover:bg-emerald-50/70 ${
+                            allFourEmpty ? 'sm:col-span-2 lg:col-span-3 xl:col-span-4' : ''
+                          }`}
                         >
                           <div>
                             <div className="flex items-center justify-between pb-1.5 border-b border-emerald-100">
-                              <span className="text-xs font-black text-slate-900">
-                                {suit.name}
+                              <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                                <span>{group.suitNames}</span>
                               </span>
                               <span className="text-[10px] font-bold text-slate-500 font-mono">
-                                ₹{suit.rate}/रात
+                                {group.suitIds.length === 1
+                                  ? `₹${SUITS.find((s) => s.id === group.suitIds[0])?.rate || 800}/रात`
+                                  : `${group.suitIds.length} कमरे`}
                               </span>
                             </div>
 
                             <div className="my-2.5 flex items-center gap-1.5 text-emerald-700">
                               <CheckCircle2 className="w-4 h-4 shrink-0" />
                               <span className="text-xs font-extrabold">
-                                {language === 'hi' ? 'खाली (उपलब्ध)' : 'Available'}
+                                {language === 'hi'
+                                  ? allFourEmpty
+                                    ? 'सभी 4 कमरे खाली (उपलब्ध)'
+                                    : `${group.suitNames} खाली (उपलब्ध)`
+                                  : `${group.suitNames} Available`}
                               </span>
                             </div>
                           </div>
 
                           {/* Quick booking button if admin */}
                           {isAdmin && onQuickBook && (
-                            <button
-                              onClick={() => onQuickBook(dateStr, suit.id)}
-                              className="w-full mt-1.5 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
-                              title={`${formatToDisplayDate(dateStr)} के लिए ${suit.name} बुक करें`}
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span>{language === 'hi' ? '+ बुक करें' : '+ Quick Book'}</span>
-                            </button>
+                            <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-1.5 flex-wrap">
+                              {group.suitIds.length === 1 ? (
+                                <button
+                                  onClick={() => onQuickBook(dateStr, group.suitIds[0])}
+                                  className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
+                                  title={`${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें`}
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>{language === 'hi' ? '+ बुक करें' : '+ Quick Book'}</span>
+                                </button>
+                              ) : (
+                                group.suitIds.map((sid) => {
+                                  const sObj = SUITS.find((s) => s.id === sid);
+                                  return (
+                                    <button
+                                      key={sid}
+                                      onClick={() => onQuickBook(dateStr, sid)}
+                                      className="flex-1 min-w-[75px] py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
+                                      title={`${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें`}
+                                    >
+                                      <Plus className="w-2.5 h-2.5" />
+                                      <span>{sObj?.name || sid}</span>
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
                           )}
                         </div>
                       );
                     }
 
-                    // CASE 2: BOOKED OR IN-HOUSE OR MAINTENANCE
-                    const isMaintenance =
-                      booking.status === 'MAINTENANCE' || booking.is_maintenance;
-                    const isInHouse = booking.status === 'CHECKED_IN';
-
-                    if (isMaintenance) {
+                    // CASE 2: MAINTENANCE
+                    if (group.isMaintenance) {
                       return (
                         <div
-                          key={`${dateStr}-${suit.id}`}
-                          onClick={() => onSelectBooking(booking)}
+                          key={group.id}
+                          onClick={() => group.booking && onSelectBooking(group.booking)}
                           className="rounded-xl border border-purple-200 bg-purple-50/60 p-3 sm:p-3.5 flex flex-col justify-between transition cursor-pointer hover:border-purple-300 shadow-2xs"
                         >
                           <div>
                             <div className="flex items-center justify-between pb-1.5 border-b border-purple-100">
                               <span className="text-xs font-black text-purple-950">
-                                {suit.name}
+                                {group.suitNames}
                               </span>
                               <span className="text-[10px] font-bold text-purple-700">
                                 ब्लॉक
@@ -607,36 +725,43 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                             </div>
                           </div>
                           <p className="text-[10px] text-purple-600 truncate mt-1">
-                            {booking.notes || 'कमरा मरम्मत कार्य हेतु बंद है'}
+                            {group.booking?.notes || 'कमरा मरम्मत कार्य हेतु बंद है'}
                           </p>
                         </div>
                       );
                     }
 
-                    // Normal Confirmed or In-House Booking
+                    // CASE 3: BOOKED OR IN-HOUSE (With Comma separated suits e.g. "Suit 2, Suit 3")
                     return (
                       <div
-                        key={`${dateStr}-${suit.id}`}
+                        key={group.id}
                         className={`rounded-xl border p-3 sm:p-3.5 flex flex-col justify-between transition ${
-                          isInHouse
+                          group.isInHouse
                             ? 'border-blue-200 bg-blue-50/50 hover:border-blue-300'
                             : 'border-rose-200 bg-rose-50/40 hover:border-rose-300'
                         }`}
                       >
                         <div>
-                          {/* Suite Title & Status Badge */}
+                          {/* Suite Title with Comma & Status Badge */}
                           <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
-                            <span className="text-xs font-black text-slate-900">
-                              {suit.name}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-black text-slate-900 tracking-wide">
+                                {group.suitNames}
+                              </span>
+                              {group.suitIds.length > 1 && (
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
+                                  {group.suitIds.length} कमरे
+                                </span>
+                              )}
+                            </div>
                             <span
                               className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                                isInHouse
+                                group.isInHouse
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-rose-600 text-white'
                               }`}
                             >
-                              {isInHouse
+                              {group.isInHouse
                                 ? language === 'hi'
                                   ? 'इन-हाउस'
                                   : 'In House'
@@ -649,13 +774,13 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                           {/* Guest Name & Reference */}
                           <div className="my-2">
                             <h4 className="text-xs font-black text-slate-900 truncate leading-snug">
-                              {booking.guest_name}
+                              {group.booking?.guest_name}
                             </h4>
                             <div className="flex items-center justify-between text-[11px] text-slate-600 mt-0.5 font-medium">
-                              <span className="font-mono">{booking.mobile_number}</span>
+                              <span className="font-mono">{group.booking?.mobile_number}</span>
                               <span className="text-slate-400">•</span>
-                              <span className="font-bold text-amber-700 truncate max-w-[90px]">
-                                {booking.reference}
+                              <span className="font-bold text-amber-700 truncate max-w-[110px]">
+                                {group.booking?.reference}
                               </span>
                             </div>
                           </div>
@@ -664,8 +789,8 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                         {/* Action: Open Official Letter Modal */}
                         <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1">
                           <button
-                            onClick={() => onSelectBooking(booking)}
-                            className="w-full py-1 px-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs hover:text-amber-700 active:scale-95"
+                            onClick={() => group.booking && onSelectBooking(group.booking)}
+                            className="w-full py-1.5 px-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs hover:text-amber-700 active:scale-95"
                             title="आधिकारिक पत्र देखें एवं प्रिंट करें"
                           >
                             <FileText className="w-3 h-3 text-amber-600" />

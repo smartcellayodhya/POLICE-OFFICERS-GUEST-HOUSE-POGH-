@@ -105,6 +105,103 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
     );
   };
 
+  // Group suites for a date with comma separation (e.g. "Suit 2, Suit 3")
+  const getDateOccupancyGroups = (dateStr: string) => {
+    const dayBookings = bookings.filter(
+      (b) => b.booking_date === dateStr && b.status !== 'CANCELLED'
+    );
+
+    const occupiedSuitIds = new Set<string>();
+
+    interface GuestGroup {
+      primaryBooking: Booking;
+      suitIds: string[];
+      isMaintenance: boolean;
+      isInHouse: boolean;
+    }
+
+    const guestGroups: GuestGroup[] = [];
+
+    dayBookings.forEach((b) => {
+      const bSuits: string[] = [];
+      SUITS.forEach((s) => {
+        if (Number(b[s.id as keyof Booking]) > 0) {
+          bSuits.push(s.id);
+        }
+      });
+
+      if (bSuits.length === 0) return;
+
+      const guestKey = `${b.guest_name.trim().toLowerCase()}_${b.mobile_number.trim()}`;
+      const existing = guestGroups.find((g) => {
+        const gKey = `${g.primaryBooking.guest_name.trim().toLowerCase()}_${g.primaryBooking.mobile_number.trim()}`;
+        return gKey === guestKey;
+      });
+
+      if (existing) {
+        bSuits.forEach((sid) => {
+          if (!existing.suitIds.includes(sid)) {
+            existing.suitIds.push(sid);
+          }
+        });
+        bSuits.forEach((sid) => occupiedSuitIds.add(sid));
+      } else {
+        bSuits.forEach((sid) => occupiedSuitIds.add(sid));
+        guestGroups.push({
+          primaryBooking: b,
+          suitIds: bSuits,
+          isMaintenance: b.status === 'MAINTENANCE' || b.is_maintenance,
+          isInHouse: b.status === 'CHECKED_IN',
+        });
+      }
+    });
+
+    const result: Array<{
+      id: string;
+      isAvailable: boolean;
+      isMaintenance: boolean;
+      isInHouse: boolean;
+      suitIds: string[];
+      suitNames: string;
+      booking?: Booking;
+    }> = [];
+
+    // Add occupied groups
+    guestGroups.forEach((g) => {
+      g.suitIds.sort((a, b) => a.localeCompare(b));
+      const suitNameList = g.suitIds.map((sid) => {
+        const found = SUITS.find((s) => s.id === sid);
+        return found ? found.name : sid;
+      });
+
+      result.push({
+        id: `booked-${g.primaryBooking.id}-${g.suitIds.join('-')}`,
+        isAvailable: false,
+        isMaintenance: g.isMaintenance,
+        isInHouse: g.isInHouse,
+        suitIds: g.suitIds,
+        suitNames: suitNameList.join(', '),
+        booking: g.primaryBooking,
+      });
+    });
+
+    // Add available suits
+    const availableSuits = SUITS.filter((s) => !occupiedSuitIds.has(s.id));
+    if (availableSuits.length > 0) {
+      const suitNames = availableSuits.map((s) => s.name).join(', ');
+      result.push({
+        id: `available-${dateStr}-${availableSuits.map((s) => s.id).join('-')}`,
+        isAvailable: true,
+        isMaintenance: false,
+        isInHouse: false,
+        suitIds: availableSuits.map((s) => s.id),
+        suitNames: suitNames,
+      });
+    }
+
+    return result;
+  };
+
   const endDateStr = sevenDays[sixDaysLength(sevenDays)];
   function sixDaysLength(arr: string[]) {
     return arr.length > 0 ? arr.length - 1 : 0;
@@ -343,19 +440,20 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                 </div>
               </div>
 
-              {/* 4 Suite Tiles Grid for this day */}
-              <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {SUITS.map((suit) => {
-                  const booking = getBookingForSuitOnDate(suit.id, dateStr);
-                  const isAvailable = !booking;
+              {/* Suite Tiles Grid for this day (Grouped with comma) */}
+              <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {getDateOccupancyGroups(dateStr).map((group) => {
+                  const allFourEmpty = group.isAvailable && group.suitIds.length === 4;
 
                   return (
                     <div
-                      key={`${dateStr}-${suit.id}`}
+                      key={group.id}
                       className={`relative rounded-xl border p-3.5 flex flex-col justify-between transition min-h-[140px] ${
-                        isAvailable
+                        allFourEmpty ? 'sm:col-span-2 lg:col-span-3 xl:col-span-4' : ''
+                      } ${
+                        group.isAvailable
                           ? 'bg-emerald-50/30 border-emerald-300/80 hover:border-emerald-400 hover:bg-emerald-50/60'
-                          : booking.status === 'CHECKED_IN'
+                          : group.isInHouse
                           ? 'bg-blue-50/40 border-blue-300 hover:border-blue-400'
                           : 'bg-rose-50/30 border-rose-300/80 hover:border-rose-400'
                       }`}
@@ -363,11 +461,18 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                       {/* Top Row: Suite Title & Status Badge */}
                       <div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-slate-900 tracking-wide">
-                            {suit.name}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-black text-slate-900 tracking-wide">
+                              {group.suitNames}
+                            </span>
+                            {group.suitIds.length > 1 && (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700">
+                                {group.suitIds.length} कमरे
+                              </span>
+                            )}
+                          </div>
 
-                          {isAvailable ? (
+                          {group.isAvailable ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300">
                               <CheckCircle2 className="w-3 h-3" />
                               <span>{language === 'hi' ? 'उपलब्ध' : 'Available'}</span>
@@ -375,39 +480,43 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                           ) : (
                             <span
                               className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                booking.status === 'CHECKED_IN'
+                                group.isInHouse
                                   ? 'text-blue-800 bg-blue-100 border-blue-300'
                                   : 'text-rose-800 bg-rose-100 border-rose-300'
                               }`}
                             >
                               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                              <span>{booking.status || 'CONFIRMED'}</span>
+                              <span>{group.isInHouse ? 'IN HOUSE' : 'CONFIRMED'}</span>
                             </span>
                           )}
                         </div>
 
                         {/* Middle Content: Available prompt OR Guest/Officer Details */}
                         <div className="mt-3">
-                          {isAvailable ? (
+                          {group.isAvailable ? (
                             <div className="py-2 text-center text-slate-400">
                               <p className="text-xs font-medium text-emerald-700/80">
-                                {language === 'hi' ? 'कमरा आवंटन हेतु रिक्त है' : 'Room is ready for allotment'}
+                                {language === 'hi'
+                                  ? allFourEmpty
+                                    ? 'सभी 4 कमरे आवंटन हेतु रिक्त हैं'
+                                    : `${group.suitNames} आवंटन हेतु रिक्त हैं`
+                                  : `${group.suitNames} ready for allotment`}
                               </p>
                             </div>
                           ) : (
                             <div className="space-y-1">
                               <p className="text-xs font-black text-slate-900 leading-tight truncate">
-                                {booking.guest_name}
+                                {group.booking?.guest_name}
                               </p>
-                              {booking.reference && (
+                              {group.booking?.reference && (
                                 <p className="text-[11px] font-semibold text-slate-600 truncate flex items-center gap-1">
                                   <ShieldCheck className="w-3 h-3 text-amber-600 shrink-0" />
-                                  <span>{booking.reference}</span>
+                                  <span>{group.booking.reference}</span>
                                 </p>
                               )}
-                              {booking.mobile_number && (
+                              {group.booking?.mobile_number && (
                                 <p className="text-[10px] text-slate-500 font-mono">
-                                  {booking.mobile_number}
+                                  {group.booking.mobile_number}
                                 </p>
                               )}
                             </div>
@@ -417,16 +526,35 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
 
                       {/* Bottom Row: Quick Book or View Letter Button */}
                       <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between">
-                        {isAvailable ? (
+                        {group.isAvailable ? (
                           isAdmin && onQuickBook ? (
-                            <button
-                              type="button"
-                              onClick={() => onQuickBook(dateStr, suit.id)}
-                              className="w-full flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-2xs active:scale-95"
-                            >
-                              <Plus className="w-3 h-3 stroke-[2.5]" />
-                              <span>{language === 'hi' ? 'त्वरित बुकिंग' : 'Quick Book'}</span>
-                            </button>
+                            <div className="w-full flex items-center gap-1.5 flex-wrap">
+                              {group.suitIds.length === 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onQuickBook(dateStr, group.suitIds[0])}
+                                  className="w-full flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-2xs active:scale-95"
+                                >
+                                  <Plus className="w-3 h-3 stroke-[2.5]" />
+                                  <span>{language === 'hi' ? 'त्वरित बुकिंग' : 'Quick Book'}</span>
+                                </button>
+                              ) : (
+                                group.suitIds.map((sid) => {
+                                  const sObj = SUITS.find((s) => s.id === sid);
+                                  return (
+                                    <button
+                                      key={sid}
+                                      type="button"
+                                      onClick={() => onQuickBook(dateStr, sid)}
+                                      className="flex-1 min-w-[75px] flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition shadow-2xs active:scale-95"
+                                    >
+                                      <Plus className="w-2.5 h-2.5" />
+                                      <span>{sObj?.name || sid}</span>
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
                           ) : (
                             <span className="text-[10px] text-emerald-600 font-semibold w-full text-center">
                               {language === 'hi' ? 'आरक्षण हेतु खुला' : 'Open for booking'}
@@ -436,16 +564,12 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                           <div className="w-full flex items-center justify-between">
                             <button
                               type="button"
-                              onClick={() => onSelectBooking(booking)}
+                              onClick={() => group.booking && onSelectBooking(group.booking)}
                               className="flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:underline"
                             >
                               <FileText className="w-3.5 h-3.5" />
                               <span>{language === 'hi' ? 'आवंटन पत्र' : 'Official Letter'}</span>
                             </button>
-
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
-                              {booking.meal_type_status || 'PAID'}
-                            </span>
                           </div>
                         )}
                       </div>
