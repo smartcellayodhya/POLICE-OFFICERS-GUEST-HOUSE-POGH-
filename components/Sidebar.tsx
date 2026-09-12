@@ -12,7 +12,7 @@ import {
 
 import { useLanguage } from '@/lib/languageContext';
 
-export type NavTab = 'dashboard' | 'matrix' | 'bookings';
+export type NavTab = 'dashboard' | 'matrix' | 'bookings' | 'monthly';
 
 interface SidebarProps {
   currentUser?: AuthUser;
@@ -21,7 +21,6 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout?: () => void;
-  onOpenMonthlyCollection?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -29,7 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   isOpen,
   onClose,
-  onOpenMonthlyCollection,
 }) => {
   const { language, t } = useLanguage();
 
@@ -48,6 +46,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'bookings' as NavTab,
       label: t('bookings'),
       icon: BookOpenCheck,
+    },
+    {
+      id: 'monthly' as NavTab,
+      label: language === 'hi' ? 'माह-वार कलेक्शन' : 'Monthly Collection',
+      icon: BarChart3,
     },
   ];
 
@@ -126,22 +129,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               );
             })}
-
-            {/* Monthly Collection Option */}
-            {onOpenMonthlyCollection && (
-              <div className="pt-2 mt-2 border-t border-slate-800">
-                <button
-                  onClick={() => {
-                    onOpenMonthlyCollection();
-                    onClose();
-                  }}
-                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition text-left shadow-2xs"
-                >
-                  <BarChart3 className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>{language === 'hi' ? 'माह-वार कलेक्शन आख्या' : 'Monthly Collection'}</span>
-                </button>
-              </div>
-            )}
           </nav>
         </div>
 

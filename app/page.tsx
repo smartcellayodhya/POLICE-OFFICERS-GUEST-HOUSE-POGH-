@@ -24,7 +24,7 @@ import { EditBookingModal } from '@/components/EditBookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
 import { ReceiptModal } from '@/components/ReceiptModal';
 import { AuditLogModal } from '@/components/AuditLogModal';
-import { MonthlyCollectionModal } from '@/components/MonthlyCollectionModal';
+import { MonthlyCollectionPage } from '@/components/MonthlyCollectionPage';
 import { SplashScreen } from '@/components/SplashScreen';
 import { LanguageProvider } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
@@ -57,7 +57,6 @@ export default function HomePage() {
   const [selectedReceiptBooking, setSelectedReceiptBooking] = useState<Booking | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
-  const [isMonthlyModalOpen, setIsMonthlyModalOpen] = useState(false);
 
   const [selectedEditBooking, setSelectedEditBooking] = useState<Booking | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -397,7 +396,6 @@ export default function HomePage() {
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
           onLogout={handleLogout}
-          onOpenMonthlyCollection={() => setIsMonthlyModalOpen(true)}
         />
 
         {/* 2. Main Content Layout (Padded for Desktop Sidebar) */}
@@ -415,7 +413,7 @@ export default function HomePage() {
               setIsBookingModalOpen(true);
             }}
             onOpenAuditLog={() => setIsAuditModalOpen(true)}
-            onOpenMonthlyCollection={() => setIsMonthlyModalOpen(true)}
+            onOpenMonthlyCollection={() => setActiveTab('monthly')}
             onLogout={handleLogout}
           />
 
@@ -425,11 +423,7 @@ export default function HomePage() {
           {/* Tab 1: Dashboard (Stats + Matrix + Date Inspector) */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              <StatsCards
-                bookings={bookings}
-                onSelectBooking={handleOpenLetter}
-                onOpenMonthlyModal={() => setIsMonthlyModalOpen(true)}
-              />
+              <StatsCards bookings={bookings} />
               
               <RoomMatrix
                 bookings={bookings}
@@ -477,6 +471,14 @@ export default function HomePage() {
                 onUpdateStatus={handleUpdateStatus}
               />
             </div>
+          )}
+
+          {/* Tab 4: Month-Wise Revenue & Collection Page */}
+          {activeTab === 'monthly' && (
+            <MonthlyCollectionPage
+              bookings={bookings}
+              onSelectBooking={handleOpenLetter}
+            />
           )}
 
         </main>
@@ -581,13 +583,6 @@ export default function HomePage() {
             : []
         }
       />
-
-        <MonthlyCollectionModal
-          isOpen={isMonthlyModalOpen}
-          onClose={() => setIsMonthlyModalOpen(false)}
-          bookings={bookings}
-          onSelectBooking={handleOpenLetter}
-        />
 
         <AuditLogModal
           isOpen={isAuditModalOpen}

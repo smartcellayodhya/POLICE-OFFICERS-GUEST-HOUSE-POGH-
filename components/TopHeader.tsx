@@ -39,6 +39,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         return t('matrix');
       case 'bookings':
         return t('bookings');
+      case 'monthly':
+        return language === 'hi' ? 'माह-वार किराया संग्रह आख्या' : 'Monthly Collection';
       default:
         return t('portalTitle');
     }
@@ -70,18 +72,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         {/* Right: Actions & User Dropdown Menu */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-
-          {/* Quick Month-Wise Collection Button */}
-          {onOpenMonthlyCollection && (
-            <button
-              onClick={onOpenMonthlyCollection}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/90 shadow-2xs transition active:scale-95 whitespace-nowrap"
-              title="माह-वार किराया संग्रह आख्या देखें"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-              <span>{language === 'hi' ? 'माह-वार कलेक्शन' : 'Monthly Revenue'}</span>
-            </button>
-          )}
 
           {/* Quick New Booking Button (Admin Only) */}
           {isAdmin && (
