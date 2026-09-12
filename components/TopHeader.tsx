@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AuthUser } from '@/lib/auth';
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, BarChart3 } from 'lucide-react';
 import { NavTab } from './Sidebar';
 import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import { useLanguage } from '@/lib/languageContext';
@@ -14,6 +14,7 @@ interface TopHeaderProps {
   onOpenMobileMenu: () => void;
   onOpenBookingModal: () => void;
   onOpenAuditLog?: () => void;
+  onOpenMonthlyCollection?: () => void;
   onLogout: () => void;
 }
 
@@ -23,6 +24,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenMobileMenu,
   onOpenBookingModal,
   onOpenAuditLog,
+  onOpenMonthlyCollection,
   onLogout,
 }) => {
   const { language, t } = useLanguage();
@@ -66,8 +68,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: New Booking & User Dropdown Menu */}
+        {/* Right: Actions & User Dropdown Menu */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+
+          {/* Quick Month-Wise Collection Button */}
+          {onOpenMonthlyCollection && (
+            <button
+              onClick={onOpenMonthlyCollection}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/90 shadow-2xs transition active:scale-95 whitespace-nowrap"
+              title="माह-वार किराया संग्रह आख्या देखें"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{language === 'hi' ? 'माह-वार कलेक्शन' : 'Monthly Revenue'}</span>
+            </button>
+          )}
 
           {/* Quick New Booking Button (Admin Only) */}
           {isAdmin && (
@@ -85,6 +99,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             currentUser={currentUser}
             onLogout={onLogout}
             onOpenAuditLog={onOpenAuditLog}
+            onOpenMonthlyCollection={onOpenMonthlyCollection}
           />
 
         </div>

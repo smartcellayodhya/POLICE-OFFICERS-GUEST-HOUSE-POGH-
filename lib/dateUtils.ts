@@ -1,4 +1,4 @@
-const HINDI_MONTHS: Record<number, string> = {
+export const HINDI_MONTHS: Record<number, string> = {
   0: 'जनवरी',
   1: 'फरवरी',
   2: 'मार्च',
@@ -13,7 +13,23 @@ const HINDI_MONTHS: Record<number, string> = {
   11: 'दिसंबर',
 };
 
-const ENGLISH_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const ENGLISH_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const FULL_ENGLISH_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+export function formatMonthKey(monthKey: string, lang: 'hi' | 'en' = 'hi'): string {
+  if (!monthKey || monthKey.length < 7) return monthKey;
+  const parts = monthKey.split('-');
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  if (isNaN(monthIdx) || monthIdx < 0 || monthIdx > 11) return monthKey;
+  if (lang === 'hi') {
+    return `${HINDI_MONTHS[monthIdx]} ${year}`;
+  }
+  return `${FULL_ENGLISH_MONTHS[monthIdx]} ${year}`;
+}
 
 export function formatToDisplayDate(dateStr: string | Date): string {
   const d = typeof dateStr === 'string' ? new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : '')) : dateStr;

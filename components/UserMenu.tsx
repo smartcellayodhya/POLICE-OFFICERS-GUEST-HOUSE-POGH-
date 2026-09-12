@@ -13,6 +13,7 @@ import {
   Building2,
   KeyRound,
   History,
+  BarChart3,
 } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
@@ -20,9 +21,15 @@ interface UserMenuProps {
   currentUser: AuthUser;
   onLogout: () => void;
   onOpenAuditLog?: () => void;
+  onOpenMonthlyCollection?: () => void;
 }
 
-export const UserMenu: React.FC<UserMenuProps> = ({ currentUser, onLogout, onOpenAuditLog }) => {
+export const UserMenu: React.FC<UserMenuProps> = ({
+  currentUser,
+  onLogout,
+  onOpenAuditLog,
+  onOpenMonthlyCollection,
+}) => {
   const { language, setLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -145,6 +152,19 @@ export const UserMenu: React.FC<UserMenuProps> = ({ currentUser, onLogout, onOpe
               >
                 <History className="w-3.5 h-3.5 text-blue-600" />
                 <span>{language === 'hi' ? 'ऑडिट एवं एक्टिविटी लॉग' : 'Audit & Activity Log'}</span>
+              </button>
+            )}
+
+            {onOpenMonthlyCollection && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenMonthlyCollection();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition text-left"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{language === 'hi' ? 'माह-वार किराया संग्रह आख्या' : 'Monthly Collection Report'}</span>
               </button>
             )}
           </div>

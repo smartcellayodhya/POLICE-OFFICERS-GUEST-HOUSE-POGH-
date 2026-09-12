@@ -154,3 +154,58 @@ export function cleanNotesText(notes?: string): string {
   if (!notes) return '';
   return notes.replace(/\[META:.*?\]/g, '').trim();
 }
+
+/**
+ * Calculates the exact rent of a booking according to POGH rules and meta rates.
+ */
+export function calculateBookingRent(b: Booking): number {
+  if (b.status === 'CANCELLED') return 0;
+
+  const metaRate = extractRatePerRoomFromNotes(b.notes);
+  const roomsCount =
+    (Number(b.suit_1) > 0 ? 1 : 0) +
+    (Number(b.suit_2) > 0 ? 1 : 0) +
+    (Number(b.suit_3) > 0 ? 1 : 0) +
+    (Number(b.suit_4) > 0 ? 1 : 0);
+
+  if (metaRate > 0) {
+    return metaRate * (roomsCount || 1);
+  }
+
+  const rawTotal = Number(b.total_amount) || 0;
+  const suitSum =
+    (Number(b.suit_1) > 1 ? Number(b.suit_1) : 0) +
+    (Number(b.suit_2) > 1 ? Number(b.suit_2) : 0) +
+    (Number(b.suit_3) > 1 ? Number(b.suit_3) : 0) +
+    (Number(b.suit_4) > 1 ? Number(b.suit_4) : 0);
+
+  if (suitSum > 0) {
+    return Math.max(rawTotal, suitSum);
+  }
+
+  if (rawTotal <= 0) return 0;
+
+  if (roomsCount > 1 && rawTotal <= 1500) {
+    return rawTotal * roomsCount;
+  }
+
+  return rawTotal;
+}
+
+export function getBookingRoomsCount(b: Booking): number {
+  const count =
+    (Number(b.suit_1) > 0 ? 1 : 0) +
+    (Number(b.suit_2) > 0 ? 1 : 0) +
+    (Number(b.suit_3) > 0 ? 1 : 0) +
+    (Number(b.suit_4) > 0 ? 1 : 0);
+  return count > 0 ? count : 1;
+}
+
+export function getBookingSuitsList(b: Booking): string[] {
+  const suits: string[] = [];
+  if (Number(b.suit_1) > 0) suits.push('सूट 1');
+  if (Number(b.suit_2) > 0) suits.push('सूट 2');
+  if (Number(b.suit_3) > 0) suits.push('सूट 3');
+  if (Number(b.suit_4) > 0) suits.push('सूट 4');
+  return suits.length > 0 ? suits : ['सूट 1'];
+}
