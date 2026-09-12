@@ -322,6 +322,11 @@ export default function HomePage() {
   // Quick booking from room matrix / 7-days forecast view
   const handleQuickBook = (dateStr: string, suitKey: string) => {
     if (currentUser?.role !== 'admin') return;
+    const today = formatToISODate(new Date());
+    if (dateStr < today) {
+      alert('बीती तारीख में नया आरक्षण नहीं किया जा सकता। कृपया आज या आगामी तारीख चुनें।');
+      return;
+    }
     setInitialBookingDate(dateStr);
     setInitialBookingSuit(suitKey);
     setIsBookingModalOpen(true);

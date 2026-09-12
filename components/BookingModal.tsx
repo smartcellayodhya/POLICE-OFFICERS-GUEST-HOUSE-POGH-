@@ -338,6 +338,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <input
                 type="date"
                 required
+                min={formatToISODate(new Date())}
                 value={checkInDate}
                 onChange={(e) => {
                   setCheckInDate(e.target.value);

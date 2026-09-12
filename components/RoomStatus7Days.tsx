@@ -349,6 +349,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
       <div className="space-y-6">
         {sevenDays.map((dateStr, dayIndex) => {
           const isToday = dateStr === todayStr;
+          const isPast = dateStr < todayStr;
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           const isTomorrow = dateStr === formatToISODate(tomorrow);
@@ -527,7 +528,11 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                       {/* Bottom Row: Quick Book or View Letter Button */}
                       <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between">
                         {group.isAvailable ? (
-                          isAdmin && onQuickBook ? (
+                          isPast ? (
+                            <span className="text-[10px] text-slate-400 font-semibold w-full text-center">
+                              {language === 'hi' ? 'बीती तारीख (केवल रिकॉर्ड)' : 'Past Date (Record only)'}
+                            </span>
+                          ) : isAdmin && onQuickBook ? (
                             <div className="w-full flex items-center gap-1.5 flex-wrap">
                               {group.suitIds.length === 1 ? (
                                 <button

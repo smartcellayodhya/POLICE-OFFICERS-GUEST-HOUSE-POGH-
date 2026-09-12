@@ -640,62 +640,81 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                       return (
                         <div
                           key={group.id}
-                          className={`rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 sm:p-3.5 flex flex-col justify-between transition hover:border-emerald-300 hover:bg-emerald-50/70 ${
+                          className={`rounded-xl border p-3 sm:p-3.5 flex flex-col justify-between transition ${
+                            isPast
+                              ? 'border-slate-200 bg-slate-50/60'
+                              : 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-300 hover:bg-emerald-50/70'
+                          } ${
                             allFourEmpty ? 'sm:col-span-2 lg:col-span-3 xl:col-span-4' : ''
                           }`}
                         >
                           <div>
-                            <div className="flex items-center justify-between pb-1.5 border-b border-emerald-100">
+                            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
                               <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                                 <span>{group.suitNames}</span>
                               </span>
                               <span className="text-[10px] font-bold text-slate-500 font-mono">
-                                {group.suitIds.length === 1
+                                {isPast
+                                  ? `${group.suitIds.length} कमरे खाली रहे`
+                                  : group.suitIds.length === 1
                                   ? `₹${SUITS.find((s) => s.id === group.suitIds[0])?.rate || 800}/रात`
                                   : `${group.suitIds.length} कमरे`}
                               </span>
                             </div>
 
-                            <div className="my-2.5 flex items-center gap-1.5 text-emerald-700">
+                            <div className={`my-2.5 flex items-center gap-1.5 ${isPast ? 'text-slate-500' : 'text-emerald-700'}`}>
                               <CheckCircle2 className="w-4 h-4 shrink-0" />
                               <span className="text-xs font-extrabold">
                                 {language === 'hi'
-                                  ? allFourEmpty
+                                  ? isPast
+                                    ? allFourEmpty
+                                      ? 'सभी 4 कमरे खाली रहे थे (कोई बुकिंग नहीं)'
+                                      : `${group.suitNames} खाली रहे थे`
+                                    : allFourEmpty
                                     ? 'सभी 4 कमरे खाली (उपलब्ध)'
                                     : `${group.suitNames} खाली (उपलब्ध)`
+                                  : isPast
+                                  ? `${group.suitNames} was unoccupied`
                                   : `${group.suitNames} Available`}
                               </span>
                             </div>
                           </div>
 
-                          {/* Quick booking button if admin */}
-                          {isAdmin && onQuickBook && (
-                            <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-1.5 flex-wrap">
-                              {group.suitIds.length === 1 ? (
-                                <button
-                                  onClick={() => onQuickBook(dateStr, group.suitIds[0])}
-                                  className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
-                                  title={`${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें`}
-                                >
-                                  <Plus className="w-3 h-3" />
-                                  <span>{language === 'hi' ? '+ बुक करें' : '+ Quick Book'}</span>
-                                </button>
-                              ) : (
-                                group.suitIds.map((sid) => {
-                                  const sObj = SUITS.find((s) => s.id === sid);
-                                  return (
-                                    <button
-                                      key={sid}
-                                      onClick={() => onQuickBook(dateStr, sid)}
-                                      className="flex-1 min-w-[75px] py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
-                                      title={`${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें`}
-                                    >
-                                      <Plus className="w-2.5 h-2.5" />
-                                      <span>{sObj?.name || sid}</span>
-                                    </button>
-                                  );
-                                })
-                              )}
+                          {/* Quick booking button: ONLY FOR TODAY & FUTURE (Never in the past!) */}
+                          {!isPast ? (
+                            isAdmin && onQuickBook ? (
+                              <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-1.5 flex-wrap">
+                                {group.suitIds.length === 1 ? (
+                                  <button
+                                    onClick={() => onQuickBook(dateStr, group.suitIds[0])}
+                                    className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
+                                    title={`${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें`}
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>{language === 'hi' ? '+ बुक करें' : '+ Quick Book'}</span>
+                                  </button>
+                                ) : (
+                                  group.suitIds.map((sid) => {
+                                    const sObj = SUITS.find((s) => s.id === sid);
+                                    return (
+                                      <button
+                                        key={sid}
+                                        onClick={() => onQuickBook(dateStr, sid)}
+                                        className="flex-1 min-w-[75px] py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
+                                        title={`${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें`}
+                                      >
+                                        <Plus className="w-2.5 h-2.5" />
+                                        <span>{sObj?.name || sid}</span>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            ) : null
+                          ) : (
+                            <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400">
+                              <span>बीती तारीख (Past Date)</span>
+                              <span>अनावंटित</span>
                             </div>
                           )}
                         </div>
