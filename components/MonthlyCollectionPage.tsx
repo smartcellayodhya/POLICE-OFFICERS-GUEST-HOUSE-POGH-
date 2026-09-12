@@ -42,6 +42,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
   const printRef = useRef<HTMLDivElement>(null);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPrintMonth, setSelectedPrintMonth] = useState<string>('ALL');
+  const [activePrintingMonth, setActivePrintingMonth] = useState<string>('ALL');
 
   // Determine current and last month keys dynamically
   const { currentMonthKey, lastMonthKey } = useMemo(() => {
@@ -219,13 +221,21 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     );
   };
 
-  // Dedicated Official Statement Print Handler
-  const handlePrint = () => {
-    if (printRef.current) {
-      printDocumentDirectly(printRef.current, 'POGH_Ayodhya_Monthly_Collection_Statement', true);
-    } else {
-      window.print();
-    }
+  // Dedicated Print Handler: prints either a specific month or all months
+  const handlePrint = (targetMonth: string = selectedPrintMonth) => {
+    setActivePrintingMonth(targetMonth);
+    // Allow state to render into printRef before capturing iframe
+    setTimeout(() => {
+      if (printRef.current) {
+        const title =
+          targetMonth === 'ALL'
+            ? 'POGH_Ayodhya_All_Months_Collection_Statement'
+            : `POGH_Ayodhya_${targetMonth}_Collection_Statement`;
+        printDocumentDirectly(printRef.current, title, true);
+      } else {
+        window.print();
+      }
+    }, 60);
   };
 
   // Filtered list if search query entered
@@ -243,6 +253,12 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         (b.dispatch_no || '').includes(q)
     );
   });
+
+  // Current month being printed for single-month print mode
+  const singleMonthPrintData = useMemo(() => {
+    if (activePrintingMonth === 'ALL') return null;
+    return monthlyData.find((m) => m.monthKey === activePrintingMonth) || null;
+  }, [monthlyData, activePrintingMonth]);
 
   return (
     <div className="space-y-6 font-sans">
@@ -270,25 +286,42 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: Excel Download & Print */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        {/* Action Buttons: Excel Download & Month Specific Print Selector */}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
           <button
             onClick={handleExportExcel}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 whitespace-nowrap"
             title="Download Full Excel Statement"
           >
             <Download className="w-4 h-4" />
-            <span>{language === 'hi' ? 'एक्सेल डाउनलोड (.xlsx)' : 'Download Excel'}</span>
+            <span>{language === 'hi' ? 'एक्सेल (.xlsx)' : 'Excel'}</span>
           </button>
 
-          <button
-            onClick={handlePrint}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 whitespace-nowrap"
-            title="Print Official Statement"
-          >
-            <Printer className="w-4 h-4" />
-            <span>{language === 'hi' ? 'प्रिंट स्टेटमेंट' : 'Print Statement'}</span>
-          </button>
+          {/* Month Print Selector Dropdown & Button */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-2xs">
+            <select
+              value={selectedPrintMonth}
+              onChange={(e) => setSelectedPrintMonth(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 py-1 px-2 focus:outline-hidden cursor-pointer"
+              title="प्रिंट हेतु माह चुनें"
+            >
+              <option value="ALL">समस्त माह (All Months)</option>
+              {monthlyData.map((m) => (
+                <option key={m.monthKey} value={m.monthKey}>
+                  {formatMonthKey(m.monthKey, language === 'hi' ? 'hi' : 'en')}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => handlePrint(selectedPrintMonth)}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-xs active:scale-95 whitespace-nowrap"
+              title="चयनित माह की स्टेटमेंट प्रिंट करें"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'प्रिंट' : 'Print'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -477,10 +510,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                   </div>
                 </div>
 
-                {/* Right: Rent & Progress & Accordion Trigger */}
-                <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0">
+                {/* Right: Rent & Progress & Actions (Print Specific Month + Expand Trigger) */}
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
                   {/* Visual Bar Indicator */}
-                  <div className="hidden md:flex flex-col items-end w-32">
+                  <div className="hidden md:flex flex-col items-end w-28">
                     <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
                       <span>{peakPct}% {language === 'hi' ? 'चरम का' : 'of peak'}</span>
                     </div>
@@ -508,7 +541,21 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Expand Button */}
+                  {/* Direct Print Button for THIS Specific Month */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrint(m.monthKey);
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 border border-slate-200 text-xs font-bold transition shadow-2xs active:scale-95"
+                    title={`${monthHindi} की आधिकारिक स्टेटमेंट प्रिंट करें`}
+                  >
+                    <Printer className="w-3.5 h-3.5 text-slate-600" />
+                    <span className="hidden xs:inline sm:inline">{language === 'hi' ? 'प्रिंट' : 'Print'}</span>
+                  </button>
+
+                  {/* Expand Accordion Button */}
                   <button
                     type="button"
                     className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
@@ -532,11 +579,14 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                         ? `${monthHindi} के सभी आवंटन विवरण (${m.bookings.length})`
                         : `All Bookings for ${monthEnglish} (${m.bookings.length})`}
                     </span>
-                    <span className="text-xs text-slate-500 hidden sm:inline">
-                      {language === 'hi'
-                        ? 'आवंटन पत्र देखने हेतु किसी भी पंक्ति पर क्लिक करें'
-                        : 'Click on any booking to view allotment letter'}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handlePrint(m.monthKey)}
+                      className="text-xs font-bold text-amber-700 hover:text-amber-800 hover:underline flex items-center gap-1"
+                    >
+                      <Printer className="w-3 h-3" />
+                      <span>{language === 'hi' ? `केवल ${monthHindi} का विवरण प्रिंट करें` : `Print only ${monthEnglish}`}</span>
+                    </button>
                   </div>
 
                   <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
@@ -633,7 +683,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* HIDDEN PRINTABLE OFFICIAL STATEMENT CONTAINER (Captured by printDocumentDirectly) */}
+      {/* DYNAMIC PRINTABLE STATEMENT CONTAINER (Captured by printDocumentDirectly) */}
+      {/* Supports: Specific Selected Month OR All Months Comprehensive Statement   */}
       {/* ========================================================================= */}
       <div ref={printRef} className="hidden">
         <div style={{ padding: '24px 30px', background: '#FFFFFF', color: '#0F172A', fontFamily: `'Noto Sans Devanagari', 'Inter', sans-serif`, fontSize: '12px', lineHeight: 1.5 }}>
@@ -652,150 +703,258 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                 </h2>
               </div>
             </div>
-            <div style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 12px', borderRadius: '6px', display: 'inline-block', marginTop: '6px' }}>
+            
+            <div style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 14px', borderRadius: '6px', display: 'inline-block', marginTop: '6px' }}>
               <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '0.5px' }}>
-                ★ माह-वार किराया संग्रह एवं आवंटन विवरण आख्या ★
+                {singleMonthPrintData
+                  ? `★ माह ${formatMonthKey(singleMonthPrintData.monthKey, 'hi')} - किराया संग्रह एवं आवंटन विवरण आख्या ★`
+                  : '★ माह-वार किराया संग्रह एवं आवंटन विवरण आख्या ★'}
               </span>
             </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', fontSize: '11px', color: '#475569' }}>
-              <span>सत्र / अवधि: समस्त सक्रिय आवंटन</span>
+              <span>
+                {singleMonthPrintData
+                  ? `विवरण माह: ${formatMonthKey(singleMonthPrintData.monthKey, 'hi')} (${singleMonthPrintData.monthKey})`
+                  : 'सत्र / अवधि: समस्त सक्रिय आवंटन (अप्रैल 2026 से सितम्बर 2026)'}
+              </span>
               <span>आख्या मुद्रण दिनांक: {formatToHindiDate(new Date())}</span>
             </div>
           </div>
 
-          {/* 2. Key Highlights / Summary Boxes */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
-            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल संकलित किराया</div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</div>
-              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalBookingsCount} आवंटन • {overallStats.totalRoomsCount} कक्ष दिवस</div>
-            </div>
-
-            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>गत माह ({formatMonthKey(lastMonthKey, 'hi')})</div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#7E22CE', marginTop: '2px' }}>₹{overallStats.lastMonthRent.toLocaleString('en-IN')}</div>
-              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.lastMonthCount} आवंटन पत्र दर्ज</div>
-            </div>
-
-            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह ({formatMonthKey(currentMonthKey, 'hi')})</div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#B45309', marginTop: '2px' }}>₹{overallStats.currentMonthRent.toLocaleString('en-IN')}</div>
-              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.currentMonthCount} आवंटन पत्र दर्ज</div>
-            </div>
-
-            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>सर्वाधिक संग्रह माह</div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.peakRent.toLocaleString('en-IN')}</div>
-              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{formatMonthKey(overallStats.peakMonthKey, 'hi')}</div>
-            </div>
-          </div>
-
-          {/* 3. भाग 1: माह-वार राजस्व संग्रह सारांश तालिका (Summary Table) */}
-          <div style={{ marginBottom: '22px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-              भाग 1: माह-वार किराया संग्रह सारांश तालिका (Monthly Revenue Summary)
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-              <thead>
-                <tr style={{ background: '#0F172A', color: '#FFFFFF', textAlign: 'left' }}>
-                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '40px', textAlign: 'center' }}>क्र०सं०</th>
-                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A' }}>माह एवं वर्ष (Month & Year)</th>
-                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>माह कोड</th>
-                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कुल आवंटन संख्या</th>
-                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>आवंटित कक्ष दिवस</th>
-                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कुल निर्धारित किराया (₹)</th>
-                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>औसत किराया / आवंटन (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthlyData.map((m, idx) => {
-                  const isCurrent = m.monthKey === currentMonthKey;
-                  const isLast = m.monthKey === lastMonthKey;
-                  const avgRent = m.bookings.length > 0 ? Math.round(m.totalRent / m.bookings.length) : 0;
-
-                  return (
-                    <tr key={m.monthKey} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
-                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
-                        {formatMonthKey(m.monthKey, 'hi')}
-                        {isCurrent && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: '3px', border: '1px solid #FCD34D' }}>चालू माह</span>}
-                        {isLast && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#F3E8FF', color: '#6B21A8', padding: '1px 5px', borderRadius: '3px', border: '1px solid #D8B4FE' }}>गत माह</span>}
-                      </td>
-                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', color: '#64748B' }}>{m.monthKey}</td>
-                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 700 }}>{m.bookings.length}</td>
-                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center' }}>{m.roomsCount}</td>
-                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', color: '#475569' }}>₹{avgRent.toLocaleString('en-IN')}</td>
-                    </tr>
-                  );
-                })}
-
-                {/* Grand Total Row */}
-                <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '12px' }}>
-                  <td colSpan={3} style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>कुल महायोग (GRAND TOTAL)</td>
-                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalBookingsCount}</td>
-                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
-                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</td>
-                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
-                    ₹{overallStats.totalBookingsCount > 0 ? Math.round(overallStats.grandTotal / overallStats.totalBookingsCount).toLocaleString('en-IN') : 0}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* 4. भाग 2: विस्तृत आवंटन एवं किराया विवरण तालिका (Detailed Allotments Record) */}
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-              भाग 2: विस्तृत आवंटन एवं किराया विवरण (Detailed Allotments & Rent Record)
-            </div>
-
-            {monthlyData.map((m) => (
-              <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '14px' }}>
-                <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 8px', fontWeight: 700, fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>माह: {formatMonthKey(m.monthKey, 'hi')} ({m.bookings.length} आवंटन)</span>
-                  <span>मासिक संग्रह: ₹{m.totalRent.toLocaleString('en-IN')}</span>
+          {/* =================================================================== */}
+          {/* CASE A: SINGLE MONTH SPECIFIC PRINT (जब विशिष्ट माह चुना गया हो)    */}
+          {/* =================================================================== */}
+          {singleMonthPrintData ? (
+            <div>
+              {/* Month KPI Summary Tiles */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>माह</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{formatMonthKey(singleMonthPrintData.monthKey, 'hi')}</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>कोड: {singleMonthPrintData.monthKey}</div>
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल आवंटन संख्या</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{singleMonthPrintData.bookings.length} पत्र</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>सक्रिय बुकिंग्स</div>
+                </div>
+
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल कक्ष दिवस</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{singleMonthPrintData.roomsCount} दिवस</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>आवंटित कमरे/रात्रि</div>
+                </div>
+
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#FEF3C7' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>कुल संकलित किराया</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#92400E', marginTop: '2px' }}>₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#92400E', marginTop: '2px' }}>
+                    औसत: ₹{singleMonthPrintData.bookings.length > 0 ? Math.round(singleMonthPrintData.totalRent / singleMonthPrintData.bookings.length).toLocaleString('en-IN') : 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Single Month Allotment Table */}
+              <div style={{ marginBottom: '22px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
+                  आवंटन एवं किराया संग्रह विवरण तालिका (Allotments & Revenue Log)
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                   <thead>
-                    <tr style={{ background: '#F8FAFC', color: '#334155', borderBottom: '1px solid #CBD5E1' }}>
-                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '30px', textAlign: 'center' }}>क्र०</th>
-                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '75px' }}>दिनांक</th>
-                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px' }}>पत्र संख्या</th>
-                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>अधिकारी का नाम एवं पदनाम</th>
-                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '70px' }}>आवंटित सूट</th>
-                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>किराया (₹)</th>
-                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'center' }}>स्थिति</th>
+                    <tr style={{ background: '#0F172A', color: '#FFFFFF' }}>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '35px', textAlign: 'center' }}>क्र०</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '85px', textAlign: 'center' }}>दिनांक</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '75px', textAlign: 'center' }}>पत्र संख्या</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'left' }}>अधिकारी का नाम एवं पदनाम</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '85px', textAlign: 'center' }}>आवंटित सूट</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '85px', textAlign: 'right' }}>निर्धारित किराया (₹)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '75px', textAlign: 'center' }}>स्थिति</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {m.bookings.map((b, bIdx) => {
+                    {singleMonthPrintData.bookings.map((b, idx) => {
                       const rent = calculateBookingRent(b);
                       const suits = getBookingSuitsList(b).join(', ');
                       const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
 
                       return (
-                        <tr key={`print-b-${b.id}`} style={{ background: bIdx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center' }}>{bIdx + 1}</td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{b.booking_date}</td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>
-                            <span style={{ fontWeight: 700 }}>{b.guest_name}</span>
-                            {b.reference && <span style={{ color: '#64748B', display: 'block', fontSize: '9px' }}>{b.reference}</span>}
+                        <tr key={`print-single-${b.id}`} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{b.booking_date}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>
+                            <div style={{ fontWeight: 700, color: '#0F172A' }}>{b.guest_name}</div>
+                            {b.reference && <div style={{ fontSize: '10px', color: '#64748B' }}>{b.reference}</div>}
                           </td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>{suits}</td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{rent.toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center', fontSize: '9px' }}>{b.status || 'CONFIRMED'}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{suits}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{rent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '10px' }}>{b.status || 'CONFIRMED'}</td>
                         </tr>
                       );
                     })}
+
+                    {/* Total Row */}
+                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '12px' }}>
+                      <td colSpan={4} style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
+                        कुल योग (TOTAL COLLECTION - {formatMonthKey(singleMonthPrintData.monthKey, 'hi')})
+                      </td>
+                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
+                        {singleMonthPrintData.roomsCount} कक्ष दिवस
+                      </td>
+                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
+                        ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
+                        {singleMonthPrintData.bookings.length} आवंटन
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            /* =================================================================== */
+            /* CASE B: ALL MONTHS STATEMENT (जब समस्त माह चुना गया हो)            */
+            /* =================================================================== */
+            <div>
+              {/* Key Highlights / Summary Boxes */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल संकलित किराया</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalBookingsCount} आवंटन • {overallStats.totalRoomsCount} कक्ष दिवस</div>
+                </div>
+
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>गत माह ({formatMonthKey(lastMonthKey, 'hi')})</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#7E22CE', marginTop: '2px' }}>₹{overallStats.lastMonthRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.lastMonthCount} आवंटन पत्र दर्ज</div>
+                </div>
+
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह ({formatMonthKey(currentMonthKey, 'hi')})</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#B45309', marginTop: '2px' }}>₹{overallStats.currentMonthRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.currentMonthCount} आवंटन पत्र दर्ज</div>
+                </div>
+
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>सर्वाधिक संग्रह माह</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.peakRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{formatMonthKey(overallStats.peakMonthKey, 'hi')}</div>
+                </div>
+              </div>
+
+              {/* भाग 1: माह-वार राजस्व संग्रह सारांश तालिका (Summary Table) */}
+              <div style={{ marginBottom: '22px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
+                  भाग 1: माह-वार किराया संग्रह सारांश तालिका (Monthly Revenue Summary)
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ background: '#0F172A', color: '#FFFFFF', textAlign: 'left' }}>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '40px', textAlign: 'center' }}>क्र०सं०</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A' }}>माह एवं वर्ष (Month & Year)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>माह कोड</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कुल आवंटन संख्या</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>आवंटित कक्ष दिवस</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कुल निर्धारित किराया (₹)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>औसत किराया / आवंटन (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyData.map((m, idx) => {
+                      const isCurrent = m.monthKey === currentMonthKey;
+                      const isLast = m.monthKey === lastMonthKey;
+                      const avgRent = m.bookings.length > 0 ? Math.round(m.totalRent / m.bookings.length) : 0;
+
+                      return (
+                        <tr key={m.monthKey} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                            {formatMonthKey(m.monthKey, 'hi')}
+                            {isCurrent && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: '3px', border: '1px solid #FCD34D' }}>चालू माह</span>}
+                            {isLast && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#F3E8FF', color: '#6B21A8', padding: '1px 5px', borderRadius: '3px', border: '1px solid #D8B4FE' }}>गत माह</span>}
+                          </td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', color: '#64748B' }}>{m.monthKey}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 700 }}>{m.bookings.length}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center' }}>{m.roomsCount}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', color: '#475569' }}>₹{avgRent.toLocaleString('en-IN')}</td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* Grand Total Row */}
+                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '12px' }}>
+                      <td colSpan={3} style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>कुल महायोग (GRAND TOTAL)</td>
+                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalBookingsCount}</td>
+                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
+                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
+                        ₹{overallStats.totalBookingsCount > 0 ? Math.round(overallStats.grandTotal / overallStats.totalBookingsCount).toLocaleString('en-IN') : 0}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* भाग 2: विस्तृत आवंटन एवं किराया विवरण तालिका (Detailed Allotments Record) */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
+                  भाग 2: विस्तृत आवंटन एवं किराया विवरण (Detailed Allotments & Rent Record)
+                </div>
+
+                {monthlyData.map((m) => (
+                  <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '14px' }}>
+                    <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 8px', fontWeight: 700, fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>माह: {formatMonthKey(m.monthKey, 'hi')} ({m.bookings.length} आवंटन)</span>
+                      <span>मासिक संग्रह: ₹{m.totalRent.toLocaleString('en-IN')}</span>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                      <thead>
+                        <tr style={{ background: '#F8FAFC', color: '#334155', borderBottom: '1px solid #CBD5E1' }}>
+                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '30px', textAlign: 'center' }}>क्र०</th>
+                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '75px' }}>दिनांक</th>
+                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px' }}>पत्र संख्या</th>
+                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>अधिकारी का नाम एवं पदनाम</th>
+                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '70px' }}>आवंटित सूट</th>
+                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>किराया (₹)</th>
+                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'center' }}>स्थिति</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {m.bookings.map((b, bIdx) => {
+                          const rent = calculateBookingRent(b);
+                          const suits = getBookingSuitsList(b).join(', ');
+                          const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
+
+                          return (
+                            <tr key={`print-b-${b.id}`} style={{ background: bIdx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center' }}>{bIdx + 1}</td>
+                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{b.booking_date}</td>
+                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
+                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>
+                                <span style={{ fontWeight: 700 }}>{b.guest_name}</span>
+                                {b.reference && <span style={{ color: '#64748B', display: 'block', fontSize: '9px' }}>{b.reference}</span>}
+                              </td>
+                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>{suits}</td>
+                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{rent.toLocaleString('en-IN')}</td>
+                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center', fontSize: '9px' }}>{b.status || 'CONFIRMED'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 5. प्रमाणीकरण एवं आधिकारिक हस्ताक्षर ब्लॉक */}
           <div style={{ marginTop: '28px', paddingTop: '16px', borderTop: '1px dashed #94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px' }}>
