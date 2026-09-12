@@ -61,14 +61,38 @@ export default function HomePage() {
   const [selectedEditBooking, setSelectedEditBooking] = useState<Booking | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Check login on mount
+  // Check login and sync URL route on mount
   useEffect(() => {
     const user = getLoggedInUser();
     if (user) {
       setCurrentUser(user);
     }
     setAuthChecked(true);
+
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.replace(/^\//, '').toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+
+      if (path === 'monthly' || path === 'monthly-collection' || tabParam === 'monthly') {
+        setActiveTab('monthly');
+      } else if (path === 'matrix' || tabParam === 'matrix') {
+        setActiveTab('matrix');
+      } else if (path === 'bookings' || tabParam === 'bookings') {
+        setActiveTab('bookings');
+      } else if (path === 'dashboard' || tabParam === 'dashboard') {
+        setActiveTab('dashboard');
+      }
+    }
   }, []);
+
+  const handleSelectTab = (tab: NavTab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = tab === 'dashboard' ? '/' : `/${tab}`;
+      window.history.pushState({}, '', url);
+    }
+  };
 
   const handleLogout = () => {
     logoutUser();
@@ -392,7 +416,7 @@ export default function HomePage() {
         <Sidebar
           currentUser={currentUser}
           activeTab={activeTab}
-          onSelectTab={(tab) => setActiveTab(tab)}
+          onSelectTab={handleSelectTab}
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
           onLogout={handleLogout}
@@ -413,7 +437,7 @@ export default function HomePage() {
               setIsBookingModalOpen(true);
             }}
             onOpenAuditLog={() => setIsAuditModalOpen(true)}
-            onOpenMonthlyCollection={() => setActiveTab('monthly')}
+            onOpenMonthlyCollection={() => handleSelectTab('monthly')}
             onLogout={handleLogout}
           />
 
