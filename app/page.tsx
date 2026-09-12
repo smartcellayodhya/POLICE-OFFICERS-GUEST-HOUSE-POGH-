@@ -159,7 +159,7 @@ export default function HomePage() {
   // Handle New Bookings Save (Admin Only)
   const handleSaveBookings = async (newBookings: Booking[]) => {
     if (currentUser?.role !== 'admin') {
-      alert('केवल प्रशासक (Admin) को नई बुकिंग करने की अनुमति है।');
+      alert('केवल एडमिन को नई बुकिंग करने की अनुमति है।');
       return;
     }
 
@@ -199,7 +199,7 @@ export default function HomePage() {
   // Handle Delete Booking (Admin Only)
   const handleDeleteBooking = async (id: string, groupId?: string) => {
     if (currentUser?.role !== 'admin') {
-      alert('केवल प्रशासक (Admin) को रिकॉर्ड हटाने की अनुमति है।');
+      alert('केवल एडमिन को रिकॉर्ड हटाने की अनुमति है।');
       return;
     }
 
@@ -264,7 +264,7 @@ export default function HomePage() {
     updateAllDates: boolean = false
   ) => {
     if (currentUser?.role !== 'admin') {
-      alert('केवल प्रशासक (Admin) को स्थिति अद्यतन करने की अनुमति है।');
+      alert('केवल एडमिन को स्थिति अद्यतन करने की अनुमति है।');
       return;
     }
 
@@ -341,7 +341,7 @@ export default function HomePage() {
   // Open Edit Booking Modal (Admin Only)
   const handleOpenEdit = (booking: Booking) => {
     if (currentUser?.role !== 'admin') {
-      alert('केवल प्रशासक (Admin) को विवरण संशोधित करने की अनुमति है।');
+      alert('केवल एडमिन को विवरण संशोधित करने की अनुमति है।');
       return;
     }
     setSelectedEditBooking(booking);
@@ -543,7 +543,7 @@ export default function HomePage() {
               </span>
               <span>•</span>
               <span className="text-amber-400/90 font-semibold">
-                {isAdmin ? 'प्रशासक' : 'ड्यूटी अधिकारी'}
+                {isAdmin ? 'एडमिन' : 'ड्यूटी अधिकारी'}
               </span>
             </div>
           </div>

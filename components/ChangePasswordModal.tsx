@@ -150,7 +150,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  प्रशासक (SSP Office)
+                  एडमिन (SSP Office)
                 </button>
                 <button
                   type="button"

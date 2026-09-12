@@ -272,24 +272,6 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
     bookings,
   ]);
 
-  // Key stats for summary banner
-  const stats = useMemo(() => {
-    let todayOccupied = 0;
-    SUITS.forEach((s) => {
-      if (getBookingForSuitOnDate(s.id, todayStr)) todayOccupied++;
-    });
-
-    const upcomingBookedDaysCount = Array.from(bookedDatesSet).filter((d) => d >= todayStr).length;
-    const pastBookedDaysCount = Array.from(bookedDatesSet).filter((d) => d < todayStr).length;
-
-    return {
-      todayOccupied,
-      todayAvailable: 4 - todayOccupied,
-      upcomingBookedDaysCount,
-      pastBookedDaysCount,
-    };
-  }, [bookings, todayStr, bookedDatesSet]);
-
   // Visible subset for smooth performance
   const visibleDates = useMemo(() => {
     return filteredDates.slice(0, visibleCount);
@@ -331,7 +313,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                 {language === 'hi' ? 'दैनिक कमरा स्थिति व उपलब्धता' : 'Daily Room Status & Availability'}
               </h2>
               <p className="text-[11px] text-slate-400 font-medium">
-                {language === 'hi' ? 'भूतकाल एवं भविष्य की तारीख-वार आवंटन सूची' : 'Date-wise occupancy schedule (Past & Future)'}
+                {language === 'hi' ? 'तारीख-वार कक्ष आवंटन व उपलब्धता सूची' : 'Date-wise room occupancy & availability'}
               </p>
             </div>
           </div>
@@ -372,7 +354,6 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
             >
               <History className="w-3.5 h-3.5" />
               <span>{language === 'hi' ? 'पिछली तारीखें' : 'Past Dates'}</span>
-              <span className="text-[10px] opacity-75 font-mono">({stats.pastBookedDaysCount})</span>
             </button>
 
             <button

@@ -13,7 +13,7 @@ export const translations = {
     settings: 'सेटिंग्स',
     
     // User & Roles
-    admin: 'प्रशासक',
+    admin: 'एडमिन',
     officer: 'ड्यूटी अधिकारी',
     logout: 'लॉग आउट',
     language: 'भाषा',

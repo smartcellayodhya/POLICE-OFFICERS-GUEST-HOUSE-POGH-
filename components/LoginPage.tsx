@@ -69,7 +69,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-slate-400" />
-              उपयोगकर्ता नाम (Username)
+              उपयोगकर्ता नाम
             </label>
             <input
               type="text"
@@ -86,7 +86,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Lock className="w-3.5 h-3.5 text-slate-400" />
-              पासवर्ड (Password)
+              पासवर्ड
             </label>
             <div className="relative">
               <input
@@ -128,7 +128,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               </>
             ) : (
               <>
-                <span>प्रवेश करें (Login)</span>
+                <span>लॉगिन करें</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

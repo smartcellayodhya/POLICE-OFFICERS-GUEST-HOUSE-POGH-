@@ -589,27 +589,23 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
         })}
       </div>
 
-      {/* 3. Status Legend Footer */}
+      {/* 3. Status Legend */}
       <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 text-xs flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4 flex-wrap">
-          <span className="font-bold text-slate-600">{language === 'hi' ? 'संकेत विवरण:' : 'Status Legend:'}</span>
+          <span className="font-bold text-slate-500">{language === 'hi' ? 'संकेत:' : 'Legend:'}</span>
           <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span>{language === 'hi' ? 'उपलब्ध (Available)' : 'Available'}</span>
+            <span>{language === 'hi' ? 'उपलब्ध' : 'Available'}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 text-rose-700 font-semibold">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-            <span>{language === 'hi' ? 'आरक्षित (Confirmed)' : 'Confirmed'}</span>
+            <span>{language === 'hi' ? 'आरक्षित' : 'Confirmed'}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 text-blue-700 font-semibold">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            <span>{language === 'hi' ? 'इन-हाउस (In House)' : 'In House'}</span>
+            <span>{language === 'hi' ? 'उपस्थित' : 'In House'}</span>
           </span>
         </div>
-
-        <p className="text-[11px] text-slate-400">
-          पुलिस ऑफिसर्स गेस्ट हाउस (POGH), अयोध्या • आगामी 7-दिवसीय कक्ष स्थिति
-        </p>
       </div>
 
     </div>
