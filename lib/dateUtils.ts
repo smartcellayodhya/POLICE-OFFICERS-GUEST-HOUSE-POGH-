@@ -19,6 +19,17 @@ export const FULL_ENGLISH_MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+export const HINDI_DAYS = ['रविवार', 'सोमवार', 'मंगलवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'];
+export const ENGLISH_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const SHORT_ENGLISH_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export function getDayOfWeekName(dateStr: string | Date, lang: 'hi' | 'en' = 'hi'): string {
+  const d = typeof dateStr === 'string' ? new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : '')) : dateStr;
+  if (isNaN(d.getTime())) return '';
+  const dayIdx = d.getDay();
+  return lang === 'hi' ? HINDI_DAYS[dayIdx] : ENGLISH_DAYS[dayIdx];
+}
+
 export function formatMonthKey(monthKey: string, lang: 'hi' | 'en' = 'hi'): string {
   if (!monthKey || monthKey.length < 7) return monthKey;
   const parts = monthKey.split('-');

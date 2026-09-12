@@ -18,6 +18,7 @@ import { Sidebar, NavTab } from '@/components/Sidebar';
 import { TopHeader } from '@/components/TopHeader';
 import { StatsCards } from '@/components/StatsCards';
 import { RoomMatrix } from '@/components/RoomMatrix';
+import { RoomStatus7Days } from '@/components/RoomStatus7Days';
 import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { EditBookingModal } from '@/components/EditBookingModal';
@@ -317,6 +318,14 @@ export default function HomePage() {
     setIsLetterModalOpen(true);
   };
 
+  // Quick booking from room matrix / 7-days forecast view
+  const handleQuickBook = (dateStr: string, suitKey: string) => {
+    if (currentUser?.role !== 'admin') return;
+    setInitialBookingDate(dateStr);
+    setInitialBookingSuit(suitKey);
+    setIsBookingModalOpen(true);
+  };
+
   // Open Receipt Modal
   const handleOpenReceipt = (booking: Booking) => {
     setSelectedReceiptBooking(booking);
@@ -469,15 +478,14 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Tab 2: Room Occupancy Matrix Focus */}
+          {/* Tab 2: Room Occupancy Matrix Focus (7 Days Forecast) */}
           {activeTab === 'matrix' && (
             <div className="space-y-6">
-              <RoomMatrix
+              <RoomStatus7Days
                 bookings={bookings}
                 isAdmin={isAdmin}
-                selectedDate={selectedDate}
-                onSelectDate={(d) => setSelectedDate(d)}
                 onSelectBooking={handleOpenLetter}
+                onQuickBook={handleQuickBook}
               />
             </div>
           )}
