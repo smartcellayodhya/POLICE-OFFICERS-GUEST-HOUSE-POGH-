@@ -968,7 +968,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             <div style={{ textAlign: 'center', width: '240px' }}>
               <div style={{ height: '35px' }}></div>
               <div style={{ fontWeight: 800, color: '#0F172A' }}>प्रतिहस्ताक्षरित / अनुमोदित</div>
-              <div style={{ color: '#475569' }}>वरिष्ठ पुलिस अधीक्षक / प्रशासक</div>
+              <div style={{ color: '#475569' }}>वरिष्ठ पुलिस अधीक्षक</div>
               <div style={{ color: '#64748B', fontSize: '10px' }}>जनपद अयोध्या (उ0प्र0)</div>
             </div>
           </div>
