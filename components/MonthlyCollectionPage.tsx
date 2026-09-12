@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Booking } from '@/lib/types';
-import { formatMonthKey } from '@/lib/dateUtils';
+import { formatMonthKey, formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import {
   calculateBookingRent,
   getBookingRoomsCount,
@@ -10,6 +10,7 @@ import {
   extractDispatchNoFromNotes,
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
+import { printDocumentDirectly } from '@/lib/pdfUtils';
 import * as XLSX from 'xlsx';
 import {
   Calendar,
@@ -26,8 +27,6 @@ import {
   Award,
   CheckCircle2,
   BarChart3,
-  CalendarCheck,
-  BedDouble,
 } from 'lucide-react';
 
 interface MonthlyCollectionPageProps {
@@ -40,6 +39,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
   onSelectBooking,
 }) => {
   const { language } = useLanguage();
+  const printRef = useRef<HTMLDivElement>(null);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -219,9 +219,13 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     );
   };
 
-  // Print Report
+  // Dedicated Official Statement Print Handler
   const handlePrint = () => {
-    window.print();
+    if (printRef.current) {
+      printDocumentDirectly(printRef.current, 'POGH_Ayodhya_Monthly_Collection_Statement', true);
+    } else {
+      window.print();
+    }
   };
 
   // Filtered list if search query entered
@@ -232,7 +236,6 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     const monthLabelEn = formatMonthKey(m.monthKey, 'en').toLowerCase();
     if (monthLabel.includes(q) || monthLabelEn.includes(q) || m.monthKey.includes(q)) return true;
 
-    // Check if any booking inside matches officer or dispatch no
     return m.bookings.some(
       (b) =>
         b.guest_name.toLowerCase().includes(q) ||
@@ -284,7 +287,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             title="Print Official Statement"
           >
             <Printer className="w-4 h-4" />
-            <span>{language === 'hi' ? 'प्रिंट' : 'Print'}</span>
+            <span>{language === 'hi' ? 'प्रिंट स्टेटमेंट' : 'Print Statement'}</span>
           </button>
         </div>
       </div>
@@ -402,7 +405,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         </span>
       </div>
 
-      {/* Month-Wise Breakdown List */}
+      {/* Month-Wise Breakdown List (On-Screen Interactive Accordions) */}
       <div className="space-y-3.5">
         {filteredMonths.map((m) => {
           const isExpanded = expandedMonth === m.monthKey;
@@ -627,6 +630,196 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       {/* Page Footer Note */}
       <div className="text-center text-xs text-slate-400 py-3">
         पुलिस ऑफिसर्स गेस्ट हाउस (POGH), अयोध्या • सम्पूर्ण संकलित किराया: ₹{overallStats.grandTotal.toLocaleString('en-IN')}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* HIDDEN PRINTABLE OFFICIAL STATEMENT CONTAINER (Captured by printDocumentDirectly) */}
+      {/* ========================================================================= */}
+      <div ref={printRef} className="hidden">
+        <div style={{ padding: '24px 30px', background: '#FFFFFF', color: '#0F172A', fontFamily: `'Noto Sans Devanagari', 'Inter', sans-serif`, fontSize: '12px', lineHeight: 1.5 }}>
+          
+          {/* 1. Official Letterhead Header */}
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #0F172A', paddingBottom: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '6px' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/up_police_logo.png" alt="UP Police" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+              <div>
+                <h1 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
+                </h1>
+                <h2 style={{ margin: '2px 0 0', fontSize: '14px', fontWeight: 700, color: '#B45309' }}>
+                  पुलिस ऑफिसर्स गेस्ट हाउस (POGH), सिविल लाइंस, अयोध्या (उ0प्र0)
+                </h2>
+              </div>
+            </div>
+            <div style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 12px', borderRadius: '6px', display: 'inline-block', marginTop: '6px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '0.5px' }}>
+                ★ माह-वार किराया संग्रह एवं आवंटन विवरण आख्या ★
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', fontSize: '11px', color: '#475569' }}>
+              <span>सत्र / अवधि: समस्त सक्रिय आवंटन</span>
+              <span>आख्या मुद्रण दिनांक: {formatToHindiDate(new Date())}</span>
+            </div>
+          </div>
+
+          {/* 2. Key Highlights / Summary Boxes */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
+            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल संकलित किराया</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</div>
+              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalBookingsCount} आवंटन • {overallStats.totalRoomsCount} कक्ष दिवस</div>
+            </div>
+
+            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>गत माह ({formatMonthKey(lastMonthKey, 'hi')})</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#7E22CE', marginTop: '2px' }}>₹{overallStats.lastMonthRent.toLocaleString('en-IN')}</div>
+              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.lastMonthCount} आवंटन पत्र दर्ज</div>
+            </div>
+
+            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह ({formatMonthKey(currentMonthKey, 'hi')})</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#B45309', marginTop: '2px' }}>₹{overallStats.currentMonthRent.toLocaleString('en-IN')}</div>
+              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.currentMonthCount} आवंटन पत्र दर्ज</div>
+            </div>
+
+            <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>सर्वाधिक संग्रह माह</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.peakRent.toLocaleString('en-IN')}</div>
+              <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{formatMonthKey(overallStats.peakMonthKey, 'hi')}</div>
+            </div>
+          </div>
+
+          {/* 3. भाग 1: माह-वार राजस्व संग्रह सारांश तालिका (Summary Table) */}
+          <div style={{ marginBottom: '22px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
+              भाग 1: माह-वार किराया संग्रह सारांश तालिका (Monthly Revenue Summary)
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ background: '#0F172A', color: '#FFFFFF', textAlign: 'left' }}>
+                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '40px', textAlign: 'center' }}>क्र०सं०</th>
+                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A' }}>माह एवं वर्ष (Month & Year)</th>
+                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>माह कोड</th>
+                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कुल आवंटन संख्या</th>
+                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>आवंटित कक्ष दिवस</th>
+                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कुल निर्धारित किराया (₹)</th>
+                  <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>औसत किराया / आवंटन (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyData.map((m, idx) => {
+                  const isCurrent = m.monthKey === currentMonthKey;
+                  const isLast = m.monthKey === lastMonthKey;
+                  const avgRent = m.bookings.length > 0 ? Math.round(m.totalRent / m.bookings.length) : 0;
+
+                  return (
+                    <tr key={m.monthKey} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
+                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                        {formatMonthKey(m.monthKey, 'hi')}
+                        {isCurrent && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: '3px', border: '1px solid #FCD34D' }}>चालू माह</span>}
+                        {isLast && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#F3E8FF', color: '#6B21A8', padding: '1px 5px', borderRadius: '3px', border: '1px solid #D8B4FE' }}>गत माह</span>}
+                      </td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', color: '#64748B' }}>{m.monthKey}</td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 700 }}>{m.bookings.length}</td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center' }}>{m.roomsCount}</td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', color: '#475569' }}>₹{avgRent.toLocaleString('en-IN')}</td>
+                    </tr>
+                  );
+                })}
+
+                {/* Grand Total Row */}
+                <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '12px' }}>
+                  <td colSpan={3} style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>कुल महायोग (GRAND TOTAL)</td>
+                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalBookingsCount}</td>
+                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
+                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</td>
+                  <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
+                    ₹{overallStats.totalBookingsCount > 0 ? Math.round(overallStats.grandTotal / overallStats.totalBookingsCount).toLocaleString('en-IN') : 0}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* 4. भाग 2: विस्तृत आवंटन एवं किराया विवरण तालिका (Detailed Allotments Record) */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
+              भाग 2: विस्तृत आवंटन एवं किराया विवरण (Detailed Allotments & Rent Record)
+            </div>
+
+            {monthlyData.map((m) => (
+              <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '14px' }}>
+                <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 8px', fontWeight: 700, fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>माह: {formatMonthKey(m.monthKey, 'hi')} ({m.bookings.length} आवंटन)</span>
+                  <span>मासिक संग्रह: ₹{m.totalRent.toLocaleString('en-IN')}</span>
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFC', color: '#334155', borderBottom: '1px solid #CBD5E1' }}>
+                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '30px', textAlign: 'center' }}>क्र०</th>
+                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '75px' }}>दिनांक</th>
+                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px' }}>पत्र संख्या</th>
+                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>अधिकारी का नाम एवं पदनाम</th>
+                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '70px' }}>आवंटित सूट</th>
+                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>किराया (₹)</th>
+                      <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'center' }}>स्थिति</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {m.bookings.map((b, bIdx) => {
+                      const rent = calculateBookingRent(b);
+                      const suits = getBookingSuitsList(b).join(', ');
+                      const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
+
+                      return (
+                        <tr key={`print-b-${b.id}`} style={{ background: bIdx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center' }}>{bIdx + 1}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{b.booking_date}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>
+                            <span style={{ fontWeight: 700 }}>{b.guest_name}</span>
+                            {b.reference && <span style={{ color: '#64748B', display: 'block', fontSize: '9px' }}>{b.reference}</span>}
+                          </td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>{suits}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{rent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center', fontSize: '9px' }}>{b.status || 'CONFIRMED'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+
+          {/* 5. प्रमाणीकरण एवं आधिकारिक हस्ताक्षर ब्लॉक */}
+          <div style={{ marginTop: '28px', paddingTop: '16px', borderTop: '1px dashed #94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px' }}>
+            <div style={{ textAlign: 'center', width: '220px' }}>
+              <div style={{ height: '35px' }}></div>
+              <div style={{ fontWeight: 800, color: '#0F172A' }}>हस्ताक्षर प्रभारी</div>
+              <div style={{ color: '#475569' }}>पुलिस ऑफिसर्स गेस्ट हाउस (POGH)</div>
+              <div style={{ color: '#64748B', fontSize: '10px' }}>जनपद अयोध्या (उ0प्र0)</div>
+            </div>
+
+            <div style={{ textAlign: 'center', width: '240px' }}>
+              <div style={{ height: '35px' }}></div>
+              <div style={{ fontWeight: 800, color: '#0F172A' }}>प्रतिहस्ताक्षरित / अनुमोदित</div>
+              <div style={{ color: '#475569' }}>वरिष्ठ पुलिस अधीक्षक / प्रशासक</div>
+              <div style={{ color: '#64748B', fontSize: '10px' }}>जनपद अयोध्या (उ0प्र0)</div>
+            </div>
+          </div>
+
+          {/* Statement Verification Footer */}
+          <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', color: '#94A3B8', borderTop: '1px solid #E2E8F0', paddingTop: '6px' }}>
+            यह विवरण कंप्यूटर आधारित पुलिस ऑफिसर्स गेस्ट हाउस (POGH) अयोध्या पोर्टल द्वारा स्वतः उत्पन्न किया गया आधिकारिक विवरण है।
+          </div>
+
+        </div>
       </div>
 
     </div>

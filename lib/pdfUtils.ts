@@ -129,7 +129,11 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
  * Prevents the main application DOM (RoomMatrix, BookingsTable)
  * from inflating the document height and creating repeated duplicate pages.
  */
-export function printDocumentDirectly(element: HTMLElement, title = 'POGH Document'): void {
+export function printDocumentDirectly(
+  element: HTMLElement,
+  title = 'POGH Document',
+  isMultiPage = false
+): void {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -167,7 +171,7 @@ export function printDocumentDirectly(element: HTMLElement, title = 'POGH Docume
         <style>
           @page {
             size: A4 portrait;
-            margin: 6mm 10mm 6mm 10mm;
+            margin: 8mm 10mm 8mm 10mm;
           }
           *, *::before, *::after {
             -webkit-print-color-adjust: exact !important;
@@ -182,16 +186,26 @@ export function printDocumentDirectly(element: HTMLElement, title = 'POGH Docume
             font-family: 'Noto Sans Devanagari', 'Inter', sans-serif !important;
             height: auto !important;
             overflow: visible !important;
+            color: #0f172a !important;
           }
           #print-root {
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            page-break-after: avoid !important;
+            ${
+              isMultiPage
+                ? ''
+                : 'page-break-after: avoid !important; page-break-inside: avoid !important; break-after: avoid !important; break-inside: avoid !important;'
+            }
+          }
+          tr {
             page-break-inside: avoid !important;
-            break-after: avoid !important;
             break-inside: avoid !important;
+          }
+          .page-break {
+            page-break-before: always !important;
+            break-before: page !important;
           }
           .no-print {
             display: none !important;
