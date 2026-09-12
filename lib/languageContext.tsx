@@ -43,8 +43,8 @@ export const translations = {
     clearFilter: 'साफ़ करें',
     thisMonth: 'इस माह',
     lastMonth: 'गत माह',
-    fromDate: 'कब से:',
-    toDate: 'कब तक:',
+    fromDate: 'दिनांक से:',
+    toDate: 'दिनांक तक:',
     
     // Status
     all: 'सभी',
@@ -66,15 +66,15 @@ export const translations = {
     today: 'आज',
     
     // Form Labels
-    guestName: 'गेस्ट का नाम',
+    guestName: 'अतिथि का नाम',
     mobileNumber: 'मोबाइल नंबर',
-    reference: 'संदर्भ (रेफरेंस)',
-    checkIn: 'आगमन (चेक-इन)',
-    checkOut: 'प्रस्थान (चेक-आउट)',
+    reference: 'संदर्भ',
+    checkIn: 'आगमन तिथि',
+    checkOut: 'प्रस्थान तिथि',
     rooms: 'कमरे',
-    roomRent: 'प्रति रूम प्रति दिन किराया (₹)',
+    roomRent: 'प्रति कमरा दैनिक किराया (₹)',
     mealStatus: 'भोजन व्यवस्था',
-    notes: 'विशेष विवरण (रिमार्क्स)',
+    notes: 'विशेष विवरण / टिप्पणी',
     applyToAll: 'इस प्रवास के सभी दिवसों पर लागू करें',
   },
   en: {

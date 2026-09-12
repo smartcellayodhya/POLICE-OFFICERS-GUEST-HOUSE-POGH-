@@ -2,12 +2,17 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Booking } from '@/lib/types';
-import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
+import { formatToHindiDate, formatToDisplayDate, formatToISODate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
-import { extractGroupIdFromNotes, extractDispatchNoFromNotes } from '@/lib/bookingUtils';
-import { X, Printer, Download, Share2, Copy, Check } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import {
+  extractGroupIdFromNotes,
+  extractDispatchNoFromNotes,
+  extractCheckInDateFromNotes,
+  extractCheckOutDateFromNotes,
+  extractRatePerRoomFromNotes,
+} from '@/lib/bookingUtils';
+import { X, Printer, Download, Share2 } from 'lucide-react';
+import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
 
 interface HindiLetterModalProps {
   isOpen: boolean;
@@ -24,7 +29,6 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // Dynamic In-Charge / Contact Person (Editable and persists in localStorage)
   const [contactPerson, setContactPerson] = useState<string>('उ0नि0 यदुनाथ मो0न0-8317041684');
@@ -57,12 +61,28 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
   if (!isOpen || !booking) return null;
 
-  // Determine full date range
+  // Determine full date range and stay duration
   const allGuestBookings = relatedBookings.length > 0 ? relatedBookings : [booking];
   const sortedDates = allGuestBookings.map((b) => b.booking_date).sort();
-  const checkInDate = sortedDates[0];
-  const checkOutDate = sortedDates[sortedDates.length - 1];
-  const totalDays = sortedDates.length;
+
+  const notesCin = extractCheckInDateFromNotes(booking.notes);
+  const notesCout = extractCheckOutDateFromNotes(booking.notes);
+
+  const checkInDate = notesCin || sortedDates[0];
+  let checkOutDate = notesCout || sortedDates[sortedDates.length - 1];
+
+  // If there's only 1 booking record and no notesCout, default next-day checkout for overnight stays
+  if (!notesCout && sortedDates.length === 1) {
+    const nextDay = new Date(checkInDate + 'T00:00:00');
+    nextDay.setDate(nextDay.getDate() + 1);
+    checkOutDate = formatToISODate(nextDay);
+  }
+
+  // Calculate actual nights / days (e.g. 12th to 13th = 1 day!)
+  const dCin = new Date(checkInDate + 'T00:00:00');
+  const dCout = new Date(checkOutDate + 'T00:00:00');
+  const diffDays = Math.round((dCout.getTime() - dCin.getTime()) / 86400000);
+  const totalDays = diffDays > 0 ? diffDays : 1;
 
   // Reference and dispatch number
   const bookingRef =
@@ -99,10 +119,28 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const suitsDisplay = suitNames.length > 0 ? suitNames.join(', ') : 'Suit 1';
   const numRooms = suitNames.length || 1;
   
-  // Single room rent per day directly from booking data (entered in New Booking modal)
-  const bookingRent = Number(booking.total_amount);
+  // Single room rent per day
+  const metaRoomRate = extractRatePerRoomFromNotes(booking.notes);
+  const suitRateFound = Math.max(Number(booking.suit_1) || 0, Number(booking.suit_2) || 0, Number(booking.suit_3) || 0, Number(booking.suit_4) || 0);
+  const bookingRent = metaRoomRate > 0
+    ? metaRoomRate
+    : (suitRateFound > 1
+      ? suitRateFound
+      : (numRooms > 1 && Number(booking.total_amount) > 1500
+        ? Math.round(Number(booking.total_amount) / numRooms)
+        : Number(booking.total_amount)));
+
   const hasRentAmount = !isNaN(bookingRent) && bookingRent > 0;
-  const rentDisplay = hasRentAmount ? `₹${bookingRent.toLocaleString('en-IN')}/-` : 'As Per Applicable';
+  const rentDisplay = hasRentAmount ? `₹${bookingRent.toLocaleString('en-IN')}/-` : 'लागू नियमानुसार';
+
+  const getMealLabel = (st?: string) => {
+    if (st === 'PAID') return 'सशुल्क';
+    if (st === 'COMPLIMENTARY') return 'शासकीय / वीआईपी';
+    if (st === 'NOT REQUIRED') return 'लागू नहीं';
+    if (st === 'FREE') return 'निःशुल्क';
+    if (st === 'PENDING') return 'लंबित';
+    return st || 'सशुल्क';
+  };
 
   const todayHindi = formatToHindiDate(new Date());
   const cinHindi = formatToHindiDate(checkInDate);
@@ -129,37 +167,24 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    if (printRef.current) {
+      printDocumentDirectly(printRef.current, `POGH_Letter_${bookingRef}`);
+    } else {
+      window.print();
+    }
   };
 
   const handleDownloadPDF = async () => {
     if (!printRef.current) return;
     setDownloading(true);
     try {
-      const element = printRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#FFFFFF',
+      await downloadElementAsPDF({
+        element: printRef.current,
+        filename: `POGH_Letter_${bookingRef}_${booking.guest_name.replace(/\s+/g, '_')}.pdf`,
       });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
-      pdf.save(`POGH_Letter_${bookingRef}_${booking.guest_name.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error('Failed to generate PDF', err);
-      alert('Error downloading PDF. You can also use the Print button to Save as PDF.');
+      alert('पीडीएफ तैयार करने में समस्या आई। आप प्रिंट (Print) बटन से भी पीडीएफ सुरक्षित कर सकते हैं।');
     } finally {
       setDownloading(false);
     }
@@ -168,13 +193,6 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const handleWhatsApp = () => {
     const url = getWhatsAppUrl(letterDetails);
     window.open(url, '_blank');
-  };
-
-  const handleCopyText = () => {
-    const text = `सेवा में, श्री ${booking.guest_name} (मो०नं०- ${booking.mobile_number})\nपत्रांक: पी.ओ.जी.एच. / 2026 / ${dispatchNo}\nबुकिंग संदर्भ: ${bookingRef}\nपुलिस ऑफिसर्स गेस्ट हाउस, अयोध्या में आपका सूट आरक्षित कर दिया गया है।\nदिनांक: ${cinHindi} से ${coutHindi} तक (${suitsDisplay}).\nसंपर्क: ${contactPerson}`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
   };
 
   return (
@@ -214,9 +232,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                     localStorage.setItem('pogh_contact_person', e.target.value);
                   }
                 }}
-                placeholder="उदा. उ0नि0 यदुनाथ मो0न0-8317041684"
-                className="bg-slate-950 text-amber-300 text-xs px-2 py-0.5 rounded border border-slate-700 focus:border-amber-400 outline-none w-48 sm:w-56 font-sans font-semibold"
-                title="आवंटन पत्र पर छपने वाले प्रभारी का नाम व नंबर यहाँ बदलें"
+                placeholder="प्रभारी का नाम व संपर्क"
+                className="bg-slate-950 text-amber-300 text-xs px-2.5 py-1 rounded border border-slate-700 focus:border-amber-400 outline-none w-48 sm:w-56 font-sans font-semibold"
+                title="प्रभारी का नाम व मोबाइल नंबर"
               />
             </div>
 
@@ -224,7 +242,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             <button
               onClick={handleWhatsApp}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm"
-              title="Share confirmation on WhatsApp"
+              title="व्हाट्सएप पर शेयर करें"
             >
               <Share2 className="w-3.5 h-3.5" />
               <span>WhatsApp</span>
@@ -234,16 +252,16 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
               onClick={handleDownloadPDF}
               disabled={downloading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50"
-              title="Download PDF"
+              title="पीडीएफ डाउनलोड करें"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>{downloading ? 'Exporting...' : 'PDF'}</span>
+              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF'}</span>
             </button>
 
             <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm"
-              title="Print Document"
+              title="दस्तावेज़ प्रिंट करें"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print</span>
@@ -252,6 +270,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              title="बंद करें"
             >
               <X className="w-5 h-5" />
             </button>
@@ -265,7 +284,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
           <div
             id="printable-letter"
             ref={printRef}
-            className="w-full max-w-[210mm] bg-white p-4 sm:p-10 shadow-lg border border-slate-200 text-slate-900 font-hindi leading-relaxed text-sm select-text"
+            className="w-full max-w-[210mm] bg-white p-4 sm:p-8 shadow-lg border border-slate-200 text-slate-900 font-hindi leading-relaxed text-sm select-text"
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
           >
             {/* Top Police Decorative Double Border */}
@@ -276,12 +295,13 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
             {/* Emblem and Official Header */}
             <div className="text-center mb-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1.5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1.5 flex items-center justify-center border-0 border-none outline-none shadow-none">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/up_police_logo.png"
                   alt="UP Police Emblem"
-                  className="w-full h-full object-contain drop-shadow-sm"
+                  className="w-full h-full object-contain border-0 border-none outline-none shadow-none"
+                  style={{ border: 'none', outline: 'none', boxShadow: 'none', filter: 'none' }}
                 />
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-blue-900 tracking-wide">
@@ -332,7 +352,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                 ) : (
                   <>
                     अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक <strong>{cinHindi}</strong> से{' '}
-                    <strong>{coutHindi}</strong> तक (कुल <strong>{totalDays}</strong> दिवसों हेतु) आपके प्रवास हेतु <strong>{numRooms}</strong> रूम आरक्षित कर दिया गया है, जिसका विवरण निम्नवत है:-
+                    <strong>{coutHindi}</strong> तक (कुल <strong>{totalDays > 9 ? totalDays : `0${totalDays}`} दिवस हेतु</strong>) आपके प्रवास हेतु <strong>{numRooms}</strong> रूम आरक्षित कर दिया गया है, जिसका विवरण निम्नवत है:-
                   </>
                 )}
               </p>
@@ -357,7 +377,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">कब से कब तक</span>
                   <span className="col-span-2">
-                    {isSingleDay ? `दि० ${cinHindi} (01 दिवस)` : `दि० ${cinHindi} से ${coutHindi} तक`}
+                    {isSingleDay ? `दि० ${cinHindi} (01 दिवस)` : `दि० ${cinHindi} से ${coutHindi} तक (${totalDays > 9 ? totalDays : `0${totalDays}`} दिवस)`}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
@@ -374,11 +394,11 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">कुल दिन</span>
-                  <span className="col-span-2">{totalDays} दिन</span>
+                  <span className="col-span-2">{totalDays} दिन ({totalDays} रात्रि)</span>
                 </div>
                 <div className="grid grid-cols-3 p-2 hover:bg-slate-50">
                   <span className="font-semibold text-slate-700">भोजन व्यवस्था स्थिति</span>
-                  <span className="col-span-2 font-semibold text-emerald-700">{booking.meal_type_status || 'PAID'}</span>
+                  <span className="col-span-2 font-semibold text-emerald-700">{getMealLabel(booking.meal_type_status)}</span>
                 </div>
                 <div
                   className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900"
@@ -427,19 +447,12 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         </div>
 
         {/* Modal Bottom Footer */}
-        <div className="px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 no-print">
-          <button
-            onClick={handleCopyText}
-            className="flex items-center gap-1 text-slate-600 hover:text-slate-900 underline transition"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Copied to Clipboard!' : 'Copy Summary'}</span>
-          </button>
+        <div className="px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-end text-xs text-slate-500 no-print">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition"
+            className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition shadow-xs"
           >
-            Close
+            बंद करें (Close)
           </button>
         </div>
 

@@ -12,14 +12,14 @@ export const PRESET_ACCOUNTS = [
   {
     username: 'admin',
     password: 'admin@pogh2026',
-    displayName: 'SSP Office / Admin In-Charge',
+    displayName: 'SSP Office',
     role: 'admin' as UserRole,
     badgeTitle: 'प्रशासनिक नियंत्रण (Full Control)',
   },
   {
     username: 'officer',
     password: 'officer@2026',
-    displayName: 'Duty Officer / Ayodhya Police',
+    displayName: 'Duty Officer',
     role: 'officer' as UserRole,
     badgeTitle: 'अधिकारी दृश्य (Reports & Occupancy Only)',
   },
@@ -32,7 +32,15 @@ export function getLoggedInUser(): AuthUser | null {
   const stored = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!stored) return null;
   try {
-    return JSON.parse(stored);
+    const user: AuthUser = JSON.parse(stored);
+    if (user.displayName === 'SSP Office / Admin In-Charge') {
+      user.displayName = 'SSP Office';
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    } else if (user.displayName === 'Duty Officer / Ayodhya Police') {
+      user.displayName = 'Duty Officer';
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    }
+    return user;
   } catch {
     return null;
   }
@@ -80,6 +88,24 @@ export function changeUserPassword(username: string, oldPass: string, newPass: s
   custom[cleanUser] = newPass;
   localStorage.setItem(CUSTOM_CREDS_KEY, JSON.stringify(custom));
   return { success: true, message: 'पासवर्ड सफलतापूर्वक बदल दिया गया।' };
+}
+
+export function adminResetUserPassword(targetUsername: string, newPass: string): { success: boolean; message: string } {
+  const cleanUser = targetUsername.trim().toLowerCase();
+  const custom = getCustomCredentials();
+  const preset = PRESET_ACCOUNTS.find((a) => a.username.toLowerCase() === cleanUser);
+  
+  if (!preset) {
+    return { success: false, message: 'उपयोगकर्ता नहीं मिला।' };
+  }
+
+  if (newPass.length < 6) {
+    return { success: false, message: 'नया पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।' };
+  }
+
+  custom[cleanUser] = newPass;
+  localStorage.setItem(CUSTOM_CREDS_KEY, JSON.stringify(custom));
+  return { success: true, message: 'पासवर्ड सफलतापूर्वक अपडेट कर दिया गया।' };
 }
 
 export function authenticate(username: string, password: string): AuthUser | null {

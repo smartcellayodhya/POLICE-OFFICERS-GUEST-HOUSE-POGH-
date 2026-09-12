@@ -10,7 +10,7 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
 
   const rentLine = details.total_amount && details.total_amount > 0
     ? `- प्रति रूम प्रति दिन किराया: ₹${details.total_amount}/-\n`
-    : `- प्रति रूम प्रति दिन किराया: As Per Applicable\n`;
+    : `- प्रति रूम प्रति दिन किराया: लागू नियमानुसार\n`;
 
   const isSingleDay = details.check_in_date === details.check_out_date;
   const datePhrase = isSingleDay
@@ -23,6 +23,14 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
   const timeLine = (details.check_in_time || details.check_out_time)
     ? `- चेक-इन / चेक-आउट: ${details.check_in_time || '12:00 PM'} / ${details.check_out_time || '12:00 PM'}\n`
     : '';
+
+  const mealDisplay = details.meal_type_status === 'FREE'
+    ? 'निःशुल्क'
+    : details.meal_type_status === 'COMPLIMENTARY'
+    ? 'शासकीय / वीआईपी'
+    : details.meal_type_status === 'NOT REQUIRED'
+    ? 'लागू नहीं'
+    : 'सशुल्क';
 
   return (
 `सेवा में,
@@ -40,7 +48,7 @@ ${dispLine}${refLine}विषय: पुलिस ऑफिसर्स गे�
 - रूम की संख्या: ${details.suits.length}
 - सूट नम्बर: ${suitsList}
 ${timeLine}- कुल दिन: ${details.total_days} दिन
-- भोजन व्यवस्था: ${details.meal_type_status}
+- भोजन व्यवस्था: ${mealDisplay}
 ${rentLine}
 संपर्क सूत्र ऑफिसर्स गेस्ट हाउस- ${details.contact_person || 'उ0नि0 यदुनाथ मो0न0-8317041684'}
 

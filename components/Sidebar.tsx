@@ -81,12 +81,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 flex-shrink-0 bg-white rounded-full border-2 border-amber-400 shadow-md overflow-hidden flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-white p-1.5 shadow-md flex-shrink-0 flex items-center justify-center border border-amber-400/50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/up_police_logo.png"
                   alt="UP Police Crest"
-                  className="w-full h-full object-contain p-0.5"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div>

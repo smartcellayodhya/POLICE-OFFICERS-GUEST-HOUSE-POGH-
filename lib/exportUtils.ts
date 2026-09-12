@@ -1,6 +1,12 @@
 import { Booking } from './types';
-import { formatToDisplayDate } from './dateUtils';
-import { extractGroupIdFromNotes } from './bookingUtils';
+import { formatToDisplayDate, calculateStayNights } from './dateUtils';
+import {
+  extractGroupIdFromNotes,
+  cleanNotesText,
+  extractCheckInDateFromNotes,
+  extractCheckOutDateFromNotes,
+  extractRatePerRoomFromNotes,
+} from './bookingUtils';
 
 export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhya_Bookings.csv') {
   if (!bookings || bookings.length === 0) {
@@ -11,12 +17,15 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
   // Column Headers in Hindi
   const headers = [
     'पत्रांक / संदर्भ सं०',
-    'बुकिंग दिनांक',
+    'आगमन तिथि (Check-In)',
+    'प्रस्थान तिथि (Check-Out)',
+    'कुल दिवस / रात्रि',
     'गेस्ट का नाम',
     'मोबाइल नंबर',
     'संदर्भ (रेफरेंस)',
     'आरक्षित सूट',
     'प्रति रूम किराया (₹)',
+    'कुल देय किराया (₹)',
     'भोजन व्यवस्था',
     'बुकिंग स्थिति',
     'विशेष विवरण (रिमार्क्स)',
@@ -30,19 +39,34 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     if (b.suit_3 > 0) suits.push('Suit 3');
     if (b.suit_4 > 0) suits.push('Suit 4');
 
-    const rent = Number(b.total_amount) > 0 ? `₹${Number(b.total_amount)}` : 'As Per Applicable';
+    const numRooms = suits.length || 1;
+    const notesCin = extractCheckInDateFromNotes(b.notes);
+    const notesCout = extractCheckOutDateFromNotes(b.notes);
+    const checkIn = notesCin || b.booking_date;
+    const checkOut = notesCout || b.booking_date;
+    const stayNights = calculateStayNights(checkIn, checkOut);
+
+    const metaRate = extractRatePerRoomFromNotes(b.notes);
+    const suitRate = Math.max(Number(b.suit_1) || 0, Number(b.suit_2) || 0, Number(b.suit_3) || 0, Number(b.suit_4) || 0);
+    const perRoomRent = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(b.total_amount) || 0);
+    const totalPayable = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
+
+    const cleanedNotes = cleanNotesText(b.notes);
 
     return [
       `"${refNo}"`,
-      `"${formatToDisplayDate(b.booking_date)}"`,
+      `"${formatToDisplayDate(checkIn)}"`,
+      `"${formatToDisplayDate(checkOut)}"`,
+      `"${stayNights} दिन"`,
       `"${b.guest_name}"`,
       `"${b.mobile_number}"`,
       `"${b.reference || '-'}"`,
       `"${suits.join(', ')}"`,
-      `"${rent}"`,
+      `"${perRoomRent > 0 ? `₹${perRoomRent}` : 'लागू अनुसार'}"`,
+      `"${totalPayable > 0 ? `₹${totalPayable}` : 'लागू अनुसार'}"`,
       `"${b.meal_type_status || 'PAID'}"`,
       `"${b.status || 'CONFIRMED'}"`,
-      `"${(b.notes || '').replace(/"/g, '""')}"`,
+      `"${cleanedNotes.replace(/"/g, '""')}"`,
     ].join(',');
   });
 

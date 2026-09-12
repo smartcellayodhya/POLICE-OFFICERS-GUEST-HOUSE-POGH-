@@ -2,9 +2,15 @@
 
 import React, { useState, useMemo } from 'react';
 import { Booking, BookingStatus } from '@/lib/types';
-import { formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
+import { formatToDisplayDate, formatToHindiDate, calculateStayNights } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
-import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
+import {
+  extractGroupIdFromNotes,
+  extractDispatchNoFromNotes,
+  extractCheckInDateFromNotes,
+  extractCheckOutDateFromNotes,
+  extractRatePerRoomFromNotes,
+} from '@/lib/bookingUtils';
 import { exportBookingsToCSV } from '@/lib/exportUtils';
 import { REFERENCES, SUITS } from '@/lib/constants';
 import {
@@ -251,7 +257,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-500 font-medium">{language === 'hi' ? 'कब से:' : 'From:'}</span>
+            <span className="text-slate-500 font-medium">{language === 'hi' ? 'दिनांक से:' : 'From:'}</span>
             <input
               type="date"
               value={fromDate}
@@ -261,7 +267,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
           </div>
 
           <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
-            <span className="text-slate-500 font-medium">{language === 'hi' ? 'कब तक:' : 'To:'}</span>
+            <span className="text-slate-500 font-medium">{language === 'hi' ? 'दिनांक तक:' : 'To:'}</span>
             <input
               type="date"
               value={toDate}
@@ -352,6 +358,14 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
               const isCheckedOut = b.status === 'CHECKED_OUT';
               const isCancelled = b.status === 'CANCELLED';
 
+              const notesCin = extractCheckInDateFromNotes(b.notes);
+              const notesCout = extractCheckOutDateFromNotes(b.notes);
+              const checkInDate = notesCin || b.booking_date;
+              const checkOutDate = notesCout || b.booking_date;
+              const stayDays = calculateStayNights(checkInDate, checkOutDate);
+              const metaRate = extractRatePerRoomFromNotes(b.notes);
+              const roomRate = metaRate > 0 ? metaRate : (Number(b.suit_1) > 1 ? Number(b.suit_1) : Number(b.total_amount) || 0);
+
               return (
                 <div
                   key={b.id}
@@ -372,7 +386,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         {refCode}
                       </span>
                       <span className="text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                        {language === 'hi' ? 'दिनांक:' : 'Date:'} {formatToDisplayDate(b.booking_date)}
+                        {language === 'hi' ? 'दिनांक:' : 'Date:'} {stayDays > 1 ? `${formatToDisplayDate(checkInDate)} ${language === 'hi' ? 'से' : 'to'} ${formatToDisplayDate(checkOutDate)} (${stayDays} दिवस)` : formatToDisplayDate(b.booking_date)}
                       </span>
                     </div>
 
@@ -434,10 +448,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       {Number(b.total_amount) > 0 ? (
                         <>₹{Number(b.total_amount).toLocaleString('en-IN')}/- </>
                       ) : (
-                        <span className="text-slate-500 font-medium text-[11px]">As Per Applicable </span>
+                        <span className="text-slate-500 font-medium text-[11px]">{language === 'hi' ? 'लागू नियमानुसार' : 'As Applicable'} </span>
                       )}
                       <span className="text-[10px] font-normal text-slate-500">
-                        ({b.meal_type_status || 'PAID'})
+                        ({b.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (b.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (b.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (language === 'hi' ? 'सशुल्क' : 'Paid')))})
                       </span>
                     </div>
 
@@ -465,17 +479,22 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       {/* WhatsApp Share */}
                       <button
                         onClick={() => {
+                          const customIncharge = typeof window !== 'undefined' ? localStorage.getItem('pogh_contact_person') : null;
                           const url = getWhatsAppUrl({
                             guest_name: b.guest_name,
                             mobile_number: b.mobile_number,
                             reference: b.reference,
                             booking_ref_no: refCode,
-                            check_in_date: b.booking_date,
-                            check_out_date: b.booking_date,
+                            dispatch_no: extractDispatchNoFromNotes(b.notes) || '',
+                            check_in_date: checkInDate,
+                            check_out_date: checkOutDate,
+                            check_in_time: b.check_in_time || '12:00 PM',
+                            check_out_time: b.check_out_time || '12:00 PM',
                             suits: suits,
-                            total_days: 1,
-                            total_amount: Number(b.total_amount || 0),
+                            total_days: stayDays,
+                            total_amount: roomRate,
                             meal_type_status: b.meal_type_status,
+                            contact_person: customIncharge || undefined,
                             dates: [b.booking_date],
                           });
                           window.open(url, '_blank');
@@ -492,10 +511,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           {/* Edit Booking Button */}
                           <button
                             onClick={() => onEditBooking(b)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition border border-amber-200 shadow-2xs"
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition border border-slate-200"
                             title={language === 'hi' ? 'विवरण संशोधित करें' : 'Edit Booking'}
                           >
-                            <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                            <Edit3 className="w-3.5 h-3.5 text-slate-600" />
                             <span>{t('edit')}</span>
                           </button>
 
@@ -527,7 +546,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
 
                           <button
                             onClick={() => handleDeleteClick(b)}
-                            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition"
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition border border-slate-200"
                             title={language === 'hi' ? 'रिकॉर्ड हटाएं' : 'Delete Record'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />

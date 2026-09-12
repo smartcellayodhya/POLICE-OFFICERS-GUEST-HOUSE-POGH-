@@ -74,6 +74,28 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
     }
   };
 
+  const getActionLabel = (action: ActivityLog['action']) => {
+    if (language === 'hi') {
+      switch (action) {
+        case 'CREATE':
+          return 'नई प्रविष्टि';
+        case 'UPDATE':
+          return 'संशोधन';
+        case 'DELETE':
+          return 'हटाया गया';
+        case 'STATUS_CHANGE':
+          return 'स्थिति परिवर्तन';
+        case 'MAINTENANCE':
+          return 'मरम्मत';
+        case 'LOGIN':
+          return 'लॉगिन';
+        default:
+          return action;
+      }
+    }
+    return action;
+  };
+
   return (
     <div 
       onClick={onClose}
@@ -104,20 +126,21 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
             <button
               onClick={refreshLogs}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="Refresh"
+              title={language === 'hi' ? 'रिफ्रेश करें' : 'Refresh'}
             >
               <RefreshCw className="w-4 h-4" />
             </button>
             <button
               onClick={handleClear}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
-              title="Clear all logs"
+              title={language === 'hi' ? 'सभी लॉग हटाएं' : 'Clear all logs'}
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              title={language === 'hi' ? 'बंद करें' : 'Close'}
             >
               <X className="w-5 h-5" />
             </button>
@@ -142,7 +165,7 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
         <div className="p-4 overflow-y-auto divide-y divide-slate-100 flex-1">
           {filteredLogs.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
-              कोई लॉग उपलब्ध नहीं है।
+              {language === 'hi' ? 'कोई लॉग उपलब्ध नहीं है।' : 'No activity logs found.'}
             </div>
           ) : (
             filteredLogs.map((item) => {
@@ -155,7 +178,7 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getActionBadge(item.action)}`}>
-                        {item.action}
+                        {getActionLabel(item.action)}
                       </span>
                       <span className="text-xs font-bold text-slate-900">{item.title}</span>
                     </div>

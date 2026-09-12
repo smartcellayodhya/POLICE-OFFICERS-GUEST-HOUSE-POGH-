@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { AuthUser, authenticate } from '@/lib/auth';
-import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, KeyRound, Loader2 } from 'lucide-react';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser) => void;
@@ -14,6 +15,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       if (user) {
         onLoginSuccess(user);
       } else {
-        setError('अमान्य उपयोगकर्ता नाम या पासवर्ड (Invalid Username or Password).');
+        setError('अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है।');
         setLoading(false);
       }
     }, 400);
@@ -42,13 +44,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="w-full max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Top Header with Crest */}
-        <div className="p-8 pb-6 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
-          <div className="w-24 h-24 mx-auto mb-3 bg-white rounded-full border-2 border-amber-400 shadow-xl overflow-hidden flex items-center justify-center">
+        <div className="p-6 sm:p-8 pb-5 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
+          <div className="w-24 h-24 mx-auto mb-3 rounded-full bg-white p-2.5 shadow-xl flex items-center justify-center border-2 border-amber-400/50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/up_police_logo.png"
               alt="Ayodhya Police Official Crest"
-              className="w-full h-full object-contain p-1"
+              className="w-full h-full object-contain"
             />
           </div>
           
@@ -56,7 +58,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             POLICE OFFICERS GUEST HOUSE
           </h1>
           <p className="text-amber-400 font-bold text-xs tracking-widest mt-0.5">
-            AYODHYA POLICE • अयोध्या पुलिस
+            अयोध्या पुलिस • Ayodhya Police
           </p>
           <p className="text-slate-400 text-xs font-hindi mt-1">
             कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
@@ -64,20 +66,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-4">
           
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-slate-400" />
-              उपयोगकर्ता नाम (Username)
+              उपयोगकर्ता नाम
             </label>
             <input
               type="text"
               required
+              autoFocus
               autoComplete="off"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Username"
               className="w-full px-4 py-2.5 text-sm bg-slate-950/90 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
             />
           </div>
@@ -85,7 +87,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Lock className="w-3.5 h-3.5 text-slate-400" />
-              पासवर्ड (Password)
+              पासवर्ड
             </label>
             <div className="relative">
               <input
@@ -94,12 +96,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder="••••••••"
                 className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/90 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? 'पासवर्ड छुपाएं' : 'पासवर्ड देखें'}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -120,33 +123,56 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             className="w-full py-3 mt-2 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-500/20 transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? (
-              <span>सत्यापित किया जा रहा है...</span>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                <span>सत्यापित किया जा रहा है...</span>
+              </>
             ) : (
               <>
-                <span>सुरक्षित प्रवेश करें (Sign In)</span>
+                <span>सुरक्षित प्रवेश करें</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
-        </form>
 
-        <div className="px-8 py-3 bg-slate-950/80 border-t border-slate-800/80 text-center">
-          <p className="text-[11px] text-slate-400">
-            अयोध्या पुलिस आधिकारिक आंतरिक पोर्टल • अनधिकृत प्रवेश वर्जित है
-          </p>
-        </div>
+          {/* Change / Reset Password Option - Styled Pill Button */}
+          <div className="flex items-center justify-center pt-1.5">
+            <button
+              type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl border border-slate-800 hover:border-amber-400/40 bg-slate-950/60 hover:bg-slate-800 text-xs text-amber-400/90 hover:text-amber-300 font-semibold transition active:scale-95 flex items-center gap-1.5 shadow-2xs"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              <span>पासवर्ड बदलें</span>
+            </button>
+          </div>
+
+          {/* Option B: Subtle Seamless Official Notice without harsh grey box */}
+          <div className="pt-2 text-center">
+            <p className="text-[11px] text-slate-500 font-medium">
+              आधिकारिक आंतरिक पोर्टल • केवल अधिकृत कर्मियों हेतु
+            </p>
+          </div>
+        </form>
 
       </div>
 
       {/* Footer info below login card */}
       <footer className="mt-6 text-center z-10 select-none space-y-1">
-        <p className="text-xs sm:text-sm text-slate-400 font-medium tracking-wide">
-          &copy; {new Date().getFullYear()} Ayodhya Police. All Rights Reserved.
+        <p className="text-xs text-slate-500 font-medium tracking-wide">
+          &copy; {new Date().getFullYear()} अयोध्या पुलिस (Ayodhya Police) • सर्वाधिकार सुरक्षित
         </p>
-        <p className="text-xs sm:text-[13px] text-slate-500 font-normal">
-          Designed &amp; Developed by Rahul Yadav
+        <p className="text-xs text-amber-400 font-semibold tracking-wide">
+          Designed & Developed by Rahul Yadav
         </p>
       </footer>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        currentUser={null}
+      />
     </div>
   );
 };

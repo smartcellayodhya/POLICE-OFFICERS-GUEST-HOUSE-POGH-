@@ -3,6 +3,7 @@
 import React from 'react';
 import { Booking } from '@/lib/types';
 import { formatToISODate } from '@/lib/dateUtils';
+import { extractRatePerRoomFromNotes } from '@/lib/bookingUtils';
 import { Building2, Users, IndianRupee, CalendarCheck, BedDouble } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 
@@ -27,7 +28,42 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
   });
   const todayRoomsOccupied = occupiedSuitSet.size;
 
-  const totalRevenue = activeBookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
+  // Day-wise total revenue calculation: sums up rent for every active booking day
+  const totalRevenue = activeBookings.reduce((sum, b) => {
+    const metaRate = extractRatePerRoomFromNotes(b.notes);
+    const roomsCount =
+      (Number(b.suit_1) > 0 ? 1 : 0) +
+      (Number(b.suit_2) > 0 ? 1 : 0) +
+      (Number(b.suit_3) > 0 ? 1 : 0) +
+      (Number(b.suit_4) > 0 ? 1 : 0);
+
+    // If per-room rate is explicitly encoded in metadata
+    if (metaRate > 0) {
+      return sum + (metaRate * (roomsCount || 1));
+    }
+
+    const rawTotal = Number(b.total_amount) || 0;
+
+    // Sum of suit values if suit columns contain rates (e.g., 800, 1200)
+    const suitSum =
+      (Number(b.suit_1) > 1 ? Number(b.suit_1) : 0) +
+      (Number(b.suit_2) > 1 ? Number(b.suit_2) : 0) +
+      (Number(b.suit_3) > 1 ? Number(b.suit_3) : 0) +
+      (Number(b.suit_4) > 1 ? Number(b.suit_4) : 0);
+
+    if (suitSum > 0) {
+      return sum + Math.max(rawTotal, suitSum);
+    }
+
+    if (rawTotal <= 0) return sum;
+
+    // If rawTotal was stored as per-room rate (e.g. 800) for multiple rooms
+    if (roomsCount > 1 && rawTotal <= 1500) {
+      return sum + (rawTotal * roomsCount);
+    }
+
+    return sum + rawTotal;
+  }, 0);
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-6 font-sans">
@@ -41,7 +77,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
         </div>
         <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2">
           <span className="text-xl sm:text-2xl font-black text-slate-900">{activeBookings.length}</span>
-          <span className="text-[11px] sm:text-xs text-slate-500">{language === 'hi' ? 'दिन' : 'Days'}</span>
+          <span className="text-[11px] sm:text-xs text-slate-500">{language === 'hi' ? 'बुकिंग' : 'Bookings'}</span>
         </div>
       </div>
 

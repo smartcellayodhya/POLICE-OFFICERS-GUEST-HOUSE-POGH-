@@ -8,8 +8,11 @@ import {
   extractDispatchNoFromNotes,
   cleanNotesText,
   encodeNotesWithMeta,
+  extractCheckInDateFromNotes,
+  extractCheckOutDateFromNotes,
+  extractRatePerRoomFromNotes,
 } from '@/lib/bookingUtils';
-import { formatToDisplayDate } from '@/lib/dateUtils';
+import { formatToDisplayDate, calculateStayNights } from '@/lib/dateUtils';
 import {
   X,
   User,
@@ -48,6 +51,8 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [reference, setReference] = useState('SSP SIR');
   const [checkInTime, setCheckInTime] = useState('12:00 PM');
   const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
+  const [checkInDate, setCheckInDate] = useState('');
+  const [checkOutDate, setCheckOutDate] = useState('');
   const [selectedSuits, setSelectedSuits] = useState<Record<string, boolean>>({
     suit_1: false,
     suit_2: false,
@@ -68,13 +73,24 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       setReference(booking.reference || 'SSP SIR');
       setCheckInTime(booking.check_in_time || '12:00 PM');
       setCheckOutTime(booking.check_out_time || '12:00 PM');
+      
+      const noteCin = extractCheckInDateFromNotes(booking.notes);
+      const noteCout = extractCheckOutDateFromNotes(booking.notes);
+      setCheckInDate(noteCin || booking.booking_date);
+      setCheckOutDate(noteCout || booking.booking_date);
+
       setSelectedSuits({
         suit_1: Number(booking.suit_1) > 0,
         suit_2: Number(booking.suit_2) > 0,
         suit_3: Number(booking.suit_3) > 0,
         suit_4: Number(booking.suit_4) > 0,
       });
-      setManualAmount(Number(booking.total_amount) > 0 ? String(booking.total_amount) : '');
+
+      const noteRate = extractRatePerRoomFromNotes(booking.notes);
+      const suitRate = Math.max(Number(booking.suit_1) || 0, Number(booking.suit_2) || 0, Number(booking.suit_3) || 0, Number(booking.suit_4) || 0);
+      const activeRate = noteRate > 0 ? noteRate : (suitRate > 1 ? suitRate : Number(booking.total_amount) || 0);
+      setManualAmount(activeRate > 0 ? String(activeRate) : '');
+
       setMealStatus(booking.meal_type_status || 'PAID');
       setStatus(booking.status || 'CONFIRMED');
       // Clean notes so metadata JSON tag is hidden from user
@@ -163,19 +179,22 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     const conflicts = checkConflicts(datesToCheck);
     if (conflicts.length > 0) {
       alert(
-        (language === 'hi' ? 'कमरा आवंटन में टकराव (Double-Booking Conflict):\n' : 'Room Booking Conflict:\n') +
+        (language === 'hi' ? 'कमरा पहले से आरक्षित है:\n' : 'Room is already booked:\n') +
         conflicts.join('\n') +
-        (language === 'hi' ? '\n\nकृपया दूसरा सूट चुनें।' : '\n\nPlease choose another room.')
+        (language === 'hi' ? '\n\nकृपया अन्य कमरा अथवा तिथि चुनें।' : '\n\nPlease choose another room or date.')
       );
       return;
     }
 
     setSubmitting(true);
     try {
-      const finalAmount = manualAmount.trim() ? Number(manualAmount) : 0;
-      // Re-encode metadata safely so group_id & dispatch_no are NEVER lost
+      const perRoomRent = manualAmount.trim() ? Number(manualAmount) : 0;
+      const numRooms = Object.values(selectedSuits).filter(Boolean).length || 1;
+      const dayTotalAmount = perRoomRent * numRooms;
+
+      // Re-encode metadata safely so group_id, dispatch_no, checkInDate, checkOutDate & ratePerRoom are NEVER lost
       const finalNotes = (bookingRef || dispatchNo)
-        ? encodeNotesWithMeta(notes.trim(), bookingRef, dispatchNo)
+        ? encodeNotesWithMeta(notes.trim(), bookingRef, dispatchNo, checkInDate, checkOutDate, perRoomRent)
         : notes.trim();
 
       const updatedData: Partial<Booking> = {
@@ -184,11 +203,11 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         reference: reference.trim(),
         check_in_time: checkInTime.trim(),
         check_out_time: checkOutTime.trim(),
-        suit_1: selectedSuits.suit_1 ? 1 : 0,
-        suit_2: selectedSuits.suit_2 ? 1 : 0,
-        suit_3: selectedSuits.suit_3 ? 1 : 0,
-        suit_4: selectedSuits.suit_4 ? 1 : 0,
-        total_amount: finalAmount,
+        suit_1: selectedSuits.suit_1 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
+        suit_2: selectedSuits.suit_2 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
+        suit_3: selectedSuits.suit_3 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
+        suit_4: selectedSuits.suit_4 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
+        total_amount: dayTotalAmount > 0 ? dayTotalAmount : perRoomRent,
         meal_type_status: mealStatus,
         status: status,
         notes: finalNotes,
@@ -288,14 +307,14 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-slate-500" />
-                {language === 'hi' ? 'गेस्ट का नाम *' : 'Guest Name *'}
+                {language === 'hi' ? 'अतिथि का नाम *' : 'Guest Name *'}
               </label>
               <input
                 type="text"
                 required
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                placeholder={language === 'hi' ? 'उदा. राहुल यादव' : 'e.g. Rahul Yadav'}
+                placeholder={language === 'hi' ? 'अतिथि का नाम दर्ज करें' : 'Enter guest name'}
                 className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
               />
             </div>
@@ -357,41 +376,116 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             </div>
           </div>
 
-          {/* Check-In & Check-Out Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Stay Dates (Check-In & Check-Out Date) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                {language === 'hi' ? 'चेक-इन समय' : 'Check-In Time'}
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                {language === 'hi' ? 'आगमन तिथि' : 'Check-In Date'}
               </label>
               <input
-                type="text"
-                value={checkInTime}
-                onChange={(e) => setCheckInTime(e.target.value)}
-                placeholder="12:00 PM"
-                className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white font-mono"
+                type="date"
+                required
+                value={checkInDate}
+                onChange={(e) => {
+                  setCheckInDate(e.target.value);
+                  if (e.target.value > checkOutDate) {
+                    setCheckOutDate(e.target.value);
+                  }
+                }}
+                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                {language === 'hi' ? 'चेक-आउट समय' : 'Check-Out Time'}
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                {language === 'hi' ? 'प्रस्थान तिथि' : 'Check-Out Date'}
               </label>
+              <input
+                type="date"
+                required
+                min={checkInDate}
+                value={checkOutDate}
+                onChange={(e) => setCheckOutDate(e.target.value)}
+                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white"
+              />
+            </div>
+
+            {/* Check-In & Check-Out Time */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  {language === 'hi' ? 'चेक-इन समय' : 'Check-In Time'}
+                </label>
+                <div className="flex items-center gap-1">
+                  {['12:00 PM', '02:00 PM', '10:00 AM'].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setCheckInTime(t)}
+                      className={`text-[10px] px-1.5 py-0.5 rounded border transition font-mono ${
+                        checkInTime === t
+                          ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <input
+                type="text"
+                value={checkInTime}
+                onChange={(e) => setCheckInTime(e.target.value)}
+                placeholder="12:00 PM"
+                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  {language === 'hi' ? 'चेक-आउट समय' : 'Check-Out Time'}
+                </label>
+                <div className="flex items-center gap-1">
+                  {['12:00 PM', '02:00 PM', '10:00 AM'].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setCheckOutTime(t)}
+                      className={`text-[10px] px-1.5 py-0.5 rounded border transition font-mono ${
+                        checkOutTime === t
+                          ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <input
                 type="text"
                 value={checkOutTime}
                 onChange={(e) => setCheckOutTime(e.target.value)}
                 placeholder="12:00 PM"
-                className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white font-mono"
+                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
               />
+            </div>
+
+            <div className="col-span-full text-xs font-semibold text-slate-600 flex items-center justify-end pt-1 border-t border-slate-200">
+              <span>{language === 'hi' ? `कुल प्रवास: ${calculateStayNights(checkInDate, checkOutDate)} रात्रि (${calculateStayNights(checkInDate, checkOutDate)} दिवस)` : `Total Stay: ${calculateStayNights(checkInDate, checkOutDate)} Night(s)`}</span>
             </div>
           </div>
 
           {/* Suits Selection */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-2">
-              {language === 'hi' ? 'आवंटित किए जाने वाले कमरे चुनें:' : 'Select Room(s) to Allocate:'}
+              {language === 'hi' ? 'कमरा आवंटन (सूट चुनें):' : 'Select Room(s) to Allocate:'}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {SUITS.map((suit) => {
@@ -415,10 +509,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           </div>
 
           {/* Per Room Rent Input */}
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-            <label className="text-xs font-bold text-slate-800 block">
-              {language === 'hi' ? 'प्रति रूम प्रति दिन किराया (₹)' : 'Room Rent Per Day (₹)'}
-            </label>
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800">
+                {language === 'hi' ? 'प्रति कमरा दैनिक किराया (₹)' : 'Room Rent Per Day (₹)'}
+              </label>
+              <span className="text-[11px] text-slate-500 font-medium">
+                {Object.values(selectedSuits).filter(Boolean).length} {language === 'hi' ? 'सूट चयनित' : 'suits selected'}
+              </span>
+            </div>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
               <input
@@ -427,10 +526,18 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 inputMode="numeric"
                 value={manualAmount}
                 onChange={(e) => setManualAmount(e.target.value)}
-                placeholder="उदा. 800"
+                placeholder="800"
                 className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono"
               />
             </div>
+            {Number(manualAmount) > 0 && (
+              <div className="flex items-center justify-between text-xs font-semibold text-amber-900 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+                <span>{language === 'hi' ? 'कुल देय किराया:' : 'Total Payable Rent:'}</span>
+                <span className="font-mono font-bold">
+                  {Object.values(selectedSuits).filter(Boolean).length || 1} कमरा × ₹{Number(manualAmount)} × {calculateStayNights(checkInDate, checkOutDate)} दिन = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount) * calculateStayNights(checkInDate, checkOutDate)).toLocaleString('en-IN')}/-
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Booking Status Selector */}
@@ -453,13 +560,13 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           {/* Remarks / Notes */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              {language === 'hi' ? 'विशेष विवरण / टिप्पणी' : 'Notes / Remarks'}
+              {language === 'hi' ? 'विशेष टिप्पणी' : 'Remarks'}
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={language === 'hi' ? 'उदा. आधिकारिक प्रवास' : 'e.g. Official stay'}
+              placeholder={language === 'hi' ? 'आवश्यक टिप्पणी (वैकल्पिक)' : 'Remarks (optional)'}
               className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
             />
           </div>

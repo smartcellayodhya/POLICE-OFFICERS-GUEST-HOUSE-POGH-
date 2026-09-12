@@ -240,7 +240,6 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                         <FileText className="w-3 h-3" />
                         <span>{language === 'hi' ? 'विवरण देखें' : 'Details'}</span>
                       </span>
-                      <span className="text-purple-600 text-[10px]">BLOCKED</span>
                     </div>
                   </div>
                 );
@@ -288,15 +287,15 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   </div>
 
                   {/* Footer link */}
-                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
-                    <span className="text-blue-700 font-bold flex items-center gap-1">
-                      <FileText className="w-3 h-3" />
-                      <span>{t('allotmentLetter')}</span>
-                    </span>
-                    <span className="text-slate-400 text-[10px]">
-                      {booking.meal_type_status || 'PAID'}
-                    </span>
-                  </div>
+                    <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
+                      <span className="text-blue-700 font-bold flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        <span>{t('allotmentLetter')}</span>
+                      </span>
+                      <span className="text-slate-500 font-medium text-[11px]">
+                        {booking.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (booking.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (booking.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (language === 'hi' ? 'सशुल्क' : 'Paid')))}
+                      </span>
+                    </div>
                 </div>
               );
             }
@@ -322,16 +321,6 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       {t('available')}
                     </span>
                   </div>
-                </div>
-
-                {/* Status Footer */}
-                <div className="mt-3 pt-2 border-t border-emerald-200/70 flex items-center justify-between text-[11px]">
-                  <span className="text-emerald-700 font-semibold">
-                    {language === 'hi' ? 'आवंटन हेतु रिक्त' : 'Available for Booking'}
-                  </span>
-                  <span className="text-emerald-600 font-mono text-[10px]">
-                    VACANT
-                  </span>
                 </div>
               </div>
             );

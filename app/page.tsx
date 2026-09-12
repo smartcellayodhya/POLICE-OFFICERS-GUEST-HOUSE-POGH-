@@ -24,6 +24,7 @@ import { EditBookingModal } from '@/components/EditBookingModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
 import { ReceiptModal } from '@/components/ReceiptModal';
 import { AuditLogModal } from '@/components/AuditLogModal';
+import { SplashScreen } from '@/components/SplashScreen';
 import { LanguageProvider } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
 
@@ -31,6 +32,7 @@ export default function HomePage() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -174,36 +176,55 @@ export default function HomePage() {
       return;
     }
 
+    if (groupId) {
+      const confirmDelete = window.confirm(`क्या आप इस बुकिंग समूह (${groupId}) के सभी दिवस रिकॉर्ड हटाना चाहते हैं?`);
+      if (!confirmDelete) return;
+
+      if (isSupabaseConfigured()) {
+        const client = getSupabaseClient();
+        if (client) {
+          const { error } = await client
+            .from('pogh_bookings')
+            .delete()
+            .ilike('notes', `%${groupId}%`);
+          if (error) {
+            alert('त्रुटि: ' + error.message);
+            return;
+          }
+          logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
+          await fetchBookings();
+          return;
+        }
+      }
+
+      logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
+      const filtered = bookings.filter((b) => {
+        const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+        return bRef !== groupId && b.id !== id;
+      });
+      setBookings(filtered);
+      saveLocalBookings(filtered);
+      return;
+    }
+
+    const confirmSingle = window.confirm('क्या आप यह बुकिंग रिकॉर्ड स्थायी रूप से हटाना चाहते हैं?');
+    if (!confirmSingle) return;
+
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
       if (client) {
-        if (groupId) {
-          const confirmAll = window.confirm(
-            `क्या आप इस बुकिंग समूह (${groupId}) के सभी दिवस रिकॉर्ड हटाना चाहते हैं?`
-          );
-          if (confirmAll) {
-            const { error } = await client
-              .from('pogh_bookings')
-              .delete()
-              .ilike('notes', `%${groupId}%`);
-            if (error) alert('त्रुटि: ' + error.message);
-            await fetchBookings();
-            return;
-          }
-        }
-
         const { error } = await client.from('pogh_bookings').delete().eq('id', id);
         if (error) {
           alert('त्रुटि: ' + error.message);
           return;
         }
-        logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}, ग्रुप: ${groupId || 'Single'}`);
+        logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}`);
         await fetchBookings();
         return;
       }
     }
 
-    logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}, ग्रुप: ${groupId || 'Single'}`);
+    logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}`);
     const filtered = bookings.filter((b) => b.id !== id);
     setBookings(filtered);
     saveLocalBookings(filtered);
@@ -346,23 +367,25 @@ export default function HomePage() {
     : [];
 
   if (!authChecked) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white font-sans">
-        <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-3" />
-        <p className="text-xs font-bold text-amber-400 tracking-wider uppercase">Police Officers Guest House</p>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
+    return (
+      <>
+        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+        <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />
+      </>
+    );
   }
 
   const isAdmin = currentUser.role === 'admin';
 
   return (
-    <LanguageProvider>
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
+    <>
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+      <LanguageProvider>
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
         
         {/* 1. Side Navigation Menu */}
         <Sidebar
@@ -462,7 +485,11 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-slate-400 text-xs">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-slate-400 text-xs">
+              <span className="text-amber-400 font-semibold">
+                Designed & Developed by Rahul Yadav
+              </span>
+              <span className="hidden sm:inline text-slate-600">•</span>
               <span className="text-slate-300 font-medium">
                 {currentUser.displayName}
               </span>
@@ -534,6 +561,7 @@ export default function HomePage() {
         relatedBookings={
           selectedReceiptBooking
             ? bookings.filter((b) => {
+                if (b.status === 'CANCELLED') return false;
                 const targetRef = selectedReceiptBooking.group_id || extractGroupIdFromNotes(selectedReceiptBooking.notes);
                 const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
                 return (
@@ -546,11 +574,12 @@ export default function HomePage() {
         }
       />
 
-      <AuditLogModal
-        isOpen={isAuditModalOpen}
-        onClose={() => setIsAuditModalOpen(false)}
-      />
-      </div>
-    </LanguageProvider>
+        <AuditLogModal
+          isOpen={isAuditModalOpen}
+          onClose={() => setIsAuditModalOpen(false)}
+        />
+        </div>
+      </LanguageProvider>
+    </>
   );
 }

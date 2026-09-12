@@ -59,9 +59,24 @@ export function generateDispatchNumber(existingBookings: Booking[]): string {
 }
 
 // Helpers to encode/decode metadata inside notes safely
-export function encodeNotesWithMeta(notes: string, groupId: string, dispatchNo: string): string {
+export function encodeNotesWithMeta(
+  notes: string,
+  groupId: string,
+  dispatchNo: string,
+  checkInDate?: string,
+  checkOutDate?: string,
+  ratePerRoom?: number
+): string {
   const cleanNotes = (notes || '').replace(/\[META:.*?\]/g, '').trim();
-  const metaTag = `[META:{"group_id":"${groupId}","dispatch_no":"${dispatchNo}"}]`;
+  const metaObj: Record<string, any> = {
+    group_id: groupId,
+    dispatch_no: dispatchNo,
+  };
+  if (checkInDate) metaObj.check_in_date = checkInDate;
+  if (checkOutDate) metaObj.check_out_date = checkOutDate;
+  if (ratePerRoom && ratePerRoom > 0) metaObj.rate_per_room = ratePerRoom;
+
+  const metaTag = `[META:${JSON.stringify(metaObj)}]`;
   return cleanNotes ? `${cleanNotes} ${metaTag}` : metaTag;
 }
 
@@ -91,6 +106,48 @@ export function extractDispatchNoFromNotes(notes?: string): string {
     }
   }
   return '';
+}
+
+export function extractCheckInDateFromNotes(notes?: string): string {
+  if (!notes) return '';
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return parsed.check_in_date || '';
+    } catch {
+      // ignore
+    }
+  }
+  return '';
+}
+
+export function extractCheckOutDateFromNotes(notes?: string): string {
+  if (!notes) return '';
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return parsed.check_out_date || '';
+    } catch {
+      // ignore
+    }
+  }
+  return '';
+}
+
+export function extractRatePerRoomFromNotes(notes?: string): number {
+  if (!notes) return 0;
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return Number(parsed.rate_per_room) || 0;
+    } catch {
+      // ignore
+    }
+  }
+  return 0;
 }
 
 export function cleanNotesText(notes?: string): string {
