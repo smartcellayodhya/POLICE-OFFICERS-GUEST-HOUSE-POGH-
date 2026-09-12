@@ -16,9 +16,8 @@ import { formatToISODate } from '@/lib/dateUtils';
 import { LoginPage } from '@/components/LoginPage';
 import { Sidebar, NavTab } from '@/components/Sidebar';
 import { TopHeader } from '@/components/TopHeader';
-import { StatsCards } from '@/components/StatsCards';
-import { RoomMatrix } from '@/components/RoomMatrix';
 import { RoomStatus7Days } from '@/components/RoomStatus7Days';
+import { DateWiseRoomSchedule } from '@/components/DateWiseRoomSchedule';
 import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { EditBookingModal } from '@/components/EditBookingModal';
@@ -453,27 +452,14 @@ export default function HomePage() {
         {/* Dynamic Main Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           
-          {/* Tab 1: Dashboard (Stats + Matrix + Date Inspector) */}
+          {/* Tab 1: Dashboard (Date-Wise Room Booking & Vacancy Schedule - Past & Future) */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              <StatsCards bookings={bookings} />
-              
-              <RoomMatrix
+              <DateWiseRoomSchedule
                 bookings={bookings}
                 isAdmin={isAdmin}
-                selectedDate={selectedDate}
-                onSelectDate={(d) => setSelectedDate(d)}
                 onSelectBooking={handleOpenLetter}
-              />
-
-              <BookingsTable
-                bookings={bookings}
-                isAdmin={isAdmin}
-                onOpenLetter={handleOpenLetter}
-                onOpenReceipt={handleOpenReceipt}
-                onEditBooking={handleOpenEdit}
-                onDeleteBooking={handleDeleteBooking}
-                onUpdateStatus={handleUpdateStatus}
+                onQuickBook={handleQuickBook}
               />
             </div>
           )}
