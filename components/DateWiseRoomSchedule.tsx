@@ -320,46 +320,19 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
       {/* 1. Header & Filter Command Bar */}
       <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-xl border-t-2 border-amber-500">
         
-        {/* Top Title & Live Summary Badges */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 p-2 flex items-center justify-center border border-amber-500/30 shrink-0">
-                <Calendar className="w-full h-full stroke-[2.2]" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-black tracking-wide text-white">
-                  {language === 'hi'
-                    ? 'दैनिक कमरा स्थिति व उपलब्धता'
-                    : 'Daily Room Status & Availability'}
-                </h1>
-                <p className="text-xs text-slate-400 font-medium">
-                  {language === 'hi'
-                    ? 'प्रत्येक तारीख के अनुसार चारों कमरों (Suit 1 से 4) की बुकिंग एवं खाली स्थिति (भूतकाल एवं भविष्य)'
-                    : 'Occupancy and vacancy schedule for all 4 suits date-by-date (Past & Future)'}
-                </p>
-              </div>
+        {/* Top Title */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 p-2 flex items-center justify-center border border-amber-500/30 shrink-0">
+              <Calendar className="w-full h-full stroke-[2.2]" />
             </div>
-          </div>
-
-          {/* Quick Realtime Pills */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700/80 text-xs flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-slate-400">आज खाली:</span>
-              <span className="font-black text-emerald-400">{stats.todayAvailable} कमरा</span>
-            </div>
-
-            <div className="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700/80 text-xs flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-rose-400"></span>
-              <span className="text-slate-400">आज बुक:</span>
-              <span className="font-black text-rose-400">{stats.todayOccupied} कमरा</span>
-            </div>
-
-            <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-amber-200">आगामी आरक्षित दिन:</span>
-              <span className="font-black text-amber-400">{stats.upcomingBookedDaysCount}</span>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold tracking-wide text-white">
+                {language === 'hi' ? 'दैनिक कमरा स्थिति व उपलब्धता' : 'Daily Room Status & Availability'}
+              </h2>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {language === 'hi' ? 'भूतकाल एवं भविष्य की तारीख-वार आवंटन सूची' : 'Date-wise occupancy schedule (Past & Future)'}
+              </p>
             </div>
           </div>
         </div>
@@ -842,33 +815,6 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
           </button>
         </div>
       )}
-
-      {/* 4. Legend Footer */}
-      <div className="bg-white rounded-xl p-3.5 border border-slate-200 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-4 flex-wrap">
-          <span className="font-bold text-slate-800">संकेतक (Legend):</span>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span>खाली / उपलब्ध (Available)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-            <span>आरक्षित (Confirmed Booked)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            <span>इन-हाउस (In-House)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-            <span>मरम्मत (Maintenance)</span>
-          </div>
-        </div>
-
-        <span className="text-[11px] text-slate-400 font-mono">
-          पुलिस ऑफिसर्स गेस्ट हाउस (POGH) • अयोध्या
-        </span>
-      </div>
 
     </div>
   );

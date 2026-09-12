@@ -414,28 +414,10 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
             {/* Check-In & Check-Out Time */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  {language === 'hi' ? 'चेक-इन समय' : 'Check-In Time'}
-                </label>
-                <div className="flex items-center gap-1">
-                  {['12:00 PM', '02:00 PM', '10:00 AM'].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setCheckInTime(t)}
-                      className={`text-[10px] px-1.5 py-0.5 rounded border transition font-mono ${
-                        checkInTime === t
-                          ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                {language === 'hi' ? 'चेक-इन समय' : 'Check-In Time'}
+              </label>
               <input
                 type="text"
                 value={checkInTime}
@@ -446,28 +428,10 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  {language === 'hi' ? 'चेक-आउट समय' : 'Check-Out Time'}
-                </label>
-                <div className="flex items-center gap-1">
-                  {['12:00 PM', '02:00 PM', '10:00 AM'].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setCheckOutTime(t)}
-                      className={`text-[10px] px-1.5 py-0.5 rounded border transition font-mono ${
-                        checkOutTime === t
-                          ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                {language === 'hi' ? 'चेक-आउट समय' : 'Check-Out Time'}
+              </label>
               <input
                 type="text"
                 value={checkOutTime}

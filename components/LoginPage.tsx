@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { AuthUser, authenticate } from '@/lib/auth';
-import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, KeyRound, Loader2 } from 'lucide-react';
-import { ChangePasswordModal } from './ChangePasswordModal';
+import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser) => void;
@@ -15,7 +14,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,33 +69,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-slate-400" />
-              उपयोगकर्ता नाम
+              उपयोगकर्ता नाम (Username)
             </label>
             <input
               type="text"
               required
               autoFocus
-              autoComplete="off"
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2.5 text-sm bg-slate-950/90 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
+              placeholder="उपयोगकर्ता नाम दर्ज करें"
+              className="w-full px-4 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Lock className="w-3.5 h-3.5 text-slate-400" />
-              पासवर्ड
+              पासवर्ड (Password)
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                autoComplete="new-password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/90 text-white rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
+                placeholder="पासवर्ड दर्ज करें"
+                className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
               />
               <button
                 type="button"
@@ -120,7 +119,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 mt-2 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-500/20 transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 mt-3 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-500/20 transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {loading ? (
               <>
@@ -129,30 +128,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               </>
             ) : (
               <>
-                <span>सुरक्षित प्रवेश करें</span>
+                <span>प्रवेश करें (Login)</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
-
-          {/* Change / Reset Password Option - Styled Pill Button */}
-          <div className="flex items-center justify-center pt-1.5">
-            <button
-              type="button"
-              onClick={() => setIsPasswordModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-800 hover:border-amber-400/40 bg-slate-950/60 hover:bg-slate-800 text-xs text-amber-400/90 hover:text-amber-300 font-semibold transition active:scale-95 flex items-center gap-1.5 shadow-2xs"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-              <span>पासवर्ड बदलें</span>
-            </button>
-          </div>
-
-          {/* Option B: Subtle Seamless Official Notice without harsh grey box */}
-          <div className="pt-2 text-center">
-            <p className="text-[11px] text-slate-500 font-medium">
-              आधिकारिक आंतरिक पोर्टल • केवल अधिकृत कर्मियों हेतु
-            </p>
-          </div>
         </form>
 
       </div>
@@ -166,13 +146,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           Designed & Developed by Rahul Yadav
         </p>
       </footer>
-
-      {/* Change Password Modal */}
-      <ChangePasswordModal
-        isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
-        currentUser={null}
-      />
     </div>
   );
 };
