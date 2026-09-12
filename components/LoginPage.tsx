@@ -42,8 +42,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="w-full max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Top Header with Crest */}
-        <div className="p-6 sm:p-8 pb-5 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
-          <div className="w-24 h-24 mx-auto mb-3 rounded-full bg-white p-2.5 shadow-xl flex items-center justify-center border-2 border-amber-400/50">
+        <div className="p-5 sm:p-8 pb-4 sm:pb-5 text-center border-b border-slate-800 relative bg-gradient-to-b from-slate-800/60 to-transparent">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 rounded-full bg-white p-2 sm:p-2.5 shadow-xl flex items-center justify-center border-2 border-amber-400/50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/up_police_logo.png"
@@ -52,7 +52,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
           </div>
           
-          <h1 className="text-xl font-black text-white tracking-wide">
+          <h1 className="text-lg sm:text-xl font-black text-white tracking-wide">
             POLICE OFFICERS GUEST HOUSE
           </h1>
           <p className="text-amber-400 font-bold text-xs tracking-widest mt-0.5">
@@ -64,7 +64,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-8 space-y-3.5 sm:space-y-4">
           
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">

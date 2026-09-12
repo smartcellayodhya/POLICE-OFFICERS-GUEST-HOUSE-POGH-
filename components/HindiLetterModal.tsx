@@ -219,9 +219,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
             {/* In-Charge / Contact Person Editor (No-Print) */}
-            <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+            <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 w-full sm:w-auto">
               <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">प्रभारी:</span>
               <input
                 type="text"
@@ -233,52 +233,53 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                   }
                 }}
                 placeholder="प्रभारी का नाम व संपर्क"
-                className="bg-slate-950 text-amber-300 text-xs px-2.5 py-1 rounded border border-slate-700 focus:border-amber-400 outline-none w-48 sm:w-56 font-sans font-semibold"
+                className="bg-slate-950 text-amber-300 text-xs px-2.5 py-1 rounded border border-slate-700 focus:border-amber-400 outline-none flex-1 sm:w-56 font-sans font-semibold"
                 title="प्रभारी का नाम व मोबाइल नंबर"
               />
             </div>
 
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                onClick={handleWhatsApp}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm"
+                title="व्हाट्सएप पर शेयर करें"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>WhatsApp</span>
+              </button>
 
-            <button
-              onClick={handleWhatsApp}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm"
-              title="व्हाट्सएप पर शेयर करें"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>WhatsApp</span>
-            </button>
+              <button
+                onClick={handleDownloadPDF}
+                disabled={downloading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50"
+                title="पीडीएफ डाउनलोड करें"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{downloading ? '...' : 'PDF'}</span>
+              </button>
 
-            <button
-              onClick={handleDownloadPDF}
-              disabled={downloading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50"
-              title="पीडीएफ डाउनलोड करें"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF'}</span>
-            </button>
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm"
+                title="दस्तावेज़ प्रिंट करें"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
 
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm"
-              title="दस्तावेज़ प्रिंट करें"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
-            </button>
-
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="बंद करें"
-            >
-              <X className="w-5 h-5" />
-            </button>
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition ml-auto"
+                title="बंद करें"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Scrollable Letter Preview Area */}
-        <div className="p-2 sm:p-6 md:p-8 overflow-y-auto bg-slate-100 flex justify-center">
+        <div className="p-1 sm:p-6 md:p-8 overflow-y-auto overflow-x-auto bg-slate-100 flex justify-center">
           
           {/* A4 Printable Document Paper */}
           <div

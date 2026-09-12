@@ -104,7 +104,6 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
           <span className="text-xl sm:text-2xl font-black text-slate-900">{activeBookings.length}</span>
           <span className="text-[11px] sm:text-xs text-slate-500">{language === 'hi' ? 'बुकिंग' : 'Bookings'}</span>
         </div>
-        <p className="mt-1 text-[10px] text-slate-400 truncate">कुल दर्ज आवंटन</p>
       </div>
 
       {/* Card 2: Today's Occupancy */}
@@ -133,7 +132,6 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
               : 'All Available'}
           </span>
         </div>
-        <p className="mt-1 text-[10px] text-slate-400 truncate">आज के आरक्षित सूट</p>
       </div>
 
       {/* Card 3: Last Month Collection (गत माह कलेक्शन) */}
@@ -182,8 +180,8 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
         </div>
       </div>
 
-      {/* Card 5: Total Revenue (Clean Card without popup button) */}
-      <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
+      {/* Card 5: Total Revenue (Balanced full-width on mobile 2-col layout) */}
+      <div className="col-span-2 sm:col-span-1 bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
         <div className="flex items-center justify-between">
           <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
             {t('totalRevenue')}
@@ -198,7 +196,6 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
           </span>
           <span className="text-[11px] sm:text-xs text-slate-500">{language === 'hi' ? 'किराया' : 'Revenue'}</span>
         </div>
-        <p className="mt-1 text-[10px] text-slate-400 truncate">कुल निर्धारित किराया</p>
       </div>
 
     </div>

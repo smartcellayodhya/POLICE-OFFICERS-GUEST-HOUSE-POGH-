@@ -1,5 +1,12 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: 'POGH Ayodhya - Police Officers Guest House Portal',
@@ -9,7 +16,6 @@ export const metadata: Metadata = {
     icon: '/favicon.png',
     apple: '/apple-touch-icon.png',
   },
-  themeColor: '#0f172a',
 };
 
 export default function RootLayout({
