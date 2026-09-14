@@ -690,21 +690,29 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         <div style={{ padding: '24px 30px', background: '#FFFFFF', color: '#0F172A', fontFamily: `'Noto Sans Devanagari', 'Inter', sans-serif`, fontSize: '12px', lineHeight: 1.5 }}>
           
           {/* 1. Official Letterhead Header */}
-          <div style={{ textAlign: 'center', borderBottom: '2px solid #0F172A', paddingBottom: '12px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '6px' }}>
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #0F172A', paddingBottom: '14px', marginBottom: '16px' }}>
+            {/* Top Centered Logo */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px', textAlign: 'center' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/up_police_logo.png" alt="UP Police" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
-              <div>
-                <h1 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
-                </h1>
-                <h2 style={{ margin: '2px 0 0', fontSize: '14px', fontWeight: 700, color: '#B45309' }}>
-                  पुलिस ऑफिसर्स गेस्ट हाउस (POGH), सिविल लाइंस, अयोध्या (उ0प्र0)
-                </h2>
-              </div>
+              <img
+                src="/up_police_logo.png"
+                alt="UP Police"
+                style={{ width: '56px', height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
+              />
+            </div>
+
+            {/* Office & Guest House Text Below Logo */}
+            <div>
+              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.3 }}>
+                कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
+              </h1>
+              <h2 style={{ margin: '3px 0 0', fontSize: '14px', fontWeight: 700, color: '#B45309', lineHeight: 1.4 }}>
+                पुलिस ऑफिसर्स गेस्ट हाउस (POGH), सिविल लाइंस, अयोध्या (उ0प्र0)
+              </h2>
             </div>
             
-            <div style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 14px', borderRadius: '6px', display: 'inline-block', marginTop: '6px' }}>
+            {/* Report Title Badge Box */}
+            <div style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 16px', borderRadius: '6px', display: 'inline-block', marginTop: '10px' }}>
               <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '0.5px' }}>
                 {singleMonthPrintData
                   ? `★ माह ${formatMonthKey(singleMonthPrintData.monthKey, 'hi')} - किराया संग्रह एवं आवंटन विवरण आख्या ★`
