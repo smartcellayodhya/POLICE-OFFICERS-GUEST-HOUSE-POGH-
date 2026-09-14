@@ -8,7 +8,6 @@ import {
   getLocalBookings,
   saveLocalBookings,
 } from '@/lib/supabase';
-import { exportBookingsToExcel } from '@/lib/excel';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
 import { AuthUser, getLoggedInUser, logoutUser } from '@/lib/auth';
 import { formatToISODate } from '@/lib/dateUtils';
@@ -18,6 +17,7 @@ import { Sidebar, NavTab } from '@/components/Sidebar';
 import { TopHeader } from '@/components/TopHeader';
 import { StatsCards } from '@/components/StatsCards';
 import { RoomMatrix } from '@/components/RoomMatrix';
+import { TodayActivityWidget } from '@/components/TodayActivityWidget';
 import { RoomStatus7Days } from '@/components/RoomStatus7Days';
 import { DateWiseRoomSchedule } from '@/components/DateWiseRoomSchedule';
 import { BookingsTable } from '@/components/BookingsTable';
@@ -35,10 +35,11 @@ export default function HomePage() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
 
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [matrixViewMode, setMatrixViewMode] = useState<'7days' | 'schedule'>('7days');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Date Selection State (Default: Today)
@@ -68,6 +69,9 @@ export default function HomePage() {
     const user = getLoggedInUser();
     if (user) {
       setCurrentUser(user);
+      setShowSplash(false);
+    } else {
+      setShowSplash(true);
     }
     setAuthChecked(true);
 
@@ -99,6 +103,7 @@ export default function HomePage() {
   const handleLogout = () => {
     logoutUser();
     setCurrentUser(null);
+    setShowSplash(false);
   };
 
   // Load Bookings
@@ -407,14 +412,19 @@ export default function HomePage() {
     : [];
 
   if (!authChecked) {
-    return <SplashScreen />;
+    return null;
   }
 
   if (!currentUser) {
     return (
       <>
         {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-        <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />
+        <LoginPage
+          onLoginSuccess={(user) => {
+            setShowSplash(false);
+            setCurrentUser(user);
+          }}
+        />
       </>
     );
   }
@@ -423,7 +433,6 @@ export default function HomePage() {
 
   return (
     <>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
       <LanguageProvider>
         <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
         
@@ -459,13 +468,11 @@ export default function HomePage() {
         {/* Dynamic Main Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           
-          {/* Tab 1: Dashboard (Stats + Room Matrix Inspector + Date-Wise Past & Future Schedule) */}
+          {/* Tab 1: Executive Dashboard (Stats + Room Matrix + Today's Active Guests Widget) */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              {/* Upar ka hissa: Stats Cards */}
               <StatsCards bookings={bookings} />
               
-              {/* Upar ka hissa: Room Status Matrix Inspector (Selected Date) */}
               <RoomMatrix
                 bookings={bookings}
                 isAdmin={isAdmin}
@@ -474,25 +481,67 @@ export default function HomePage() {
                 onSelectBooking={handleOpenLetter}
               />
 
-              {/* Niche ka hissa: Har date par kaun sa room book ya khali hai (Past & Future list) */}
-              <DateWiseRoomSchedule
+              <TodayActivityWidget
                 bookings={bookings}
                 isAdmin={isAdmin}
                 onSelectBooking={handleOpenLetter}
                 onQuickBook={handleQuickBook}
+                onViewAllSchedule={() => handleSelectTab('matrix')}
+                onViewBookings={() => handleSelectTab('bookings')}
               />
             </div>
           )}
 
-          {/* Tab 2: Room Occupancy Matrix Focus (7 Days Forecast) */}
+          {/* Tab 2: Dedicated Room Occupancy & Forecast Matrix */}
           {activeTab === 'matrix' && (
-            <div className="space-y-6">
-              <RoomStatus7Days
-                bookings={bookings}
-                isAdmin={isAdmin}
-                onSelectBooking={handleOpenLetter}
-                onQuickBook={handleQuickBook}
-              />
+            <div className="space-y-4">
+              {/* Clean View Mode Toggle */}
+              <div className="flex items-center justify-between pb-1">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    {matrixViewMode === '7days' ? 'कमरा आवंटन व पूर्वानुमान (7-दिवसीय)' : 'दैनिक कमरा उपलब्धता पंजिका'}
+                  </h2>
+                </div>
+
+                <div className="bg-slate-200/90 p-1 rounded-xl flex items-center gap-1 text-xs font-bold shadow-2xs">
+                  <button
+                    onClick={() => setMatrixViewMode('7days')}
+                    className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                      matrixViewMode === '7days'
+                        ? 'bg-white text-slate-950 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    7-दिवसीय दृश्य (7 Days)
+                  </button>
+                  <button
+                    onClick={() => setMatrixViewMode('schedule')}
+                    className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                      matrixViewMode === 'schedule'
+                        ? 'bg-white text-slate-950 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    दैनिक सूची (Daily List)
+                  </button>
+                </div>
+              </div>
+
+              {matrixViewMode === '7days' ? (
+                <RoomStatus7Days
+                  bookings={bookings}
+                  isAdmin={isAdmin}
+                  onSelectBooking={handleOpenLetter}
+                  onQuickBook={handleQuickBook}
+                />
+              ) : (
+                <DateWiseRoomSchedule
+                  bookings={bookings}
+                  isAdmin={isAdmin}
+                  onSelectBooking={handleOpenLetter}
+                  onQuickBook={handleQuickBook}
+                />
+              )}
             </div>
           )}
 

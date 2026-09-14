@@ -9,6 +9,7 @@ import {
   formatToISODate,
   getDayOfWeekName,
 } from '@/lib/dateUtils';
+import { formatGuestDisplayName } from '@/lib/bookingUtils';
 import {
   Calendar,
   ChevronLeft,
@@ -507,7 +508,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                           ) : (
                             <div className="space-y-1">
                               <p className="text-xs font-black text-slate-900 leading-tight truncate">
-                                {group.booking?.guest_name}
+                                {formatGuestDisplayName(group.booking?.guest_name || '')}
                               </p>
                               {group.booking?.reference && (
                                 <p className="text-[11px] font-semibold text-slate-600 truncate flex items-center gap-1">

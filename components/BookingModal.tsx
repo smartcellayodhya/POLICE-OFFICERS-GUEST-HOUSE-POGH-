@@ -256,9 +256,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-300">
-              {language === 'hi' ? 'पुलिस ऑफिसर्स गेस्ट हाउस - अयोध्या' : 'Police Officers Guest House - Ayodhya'}
-            </p>
           </div>
           <button
             onClick={onClose}
@@ -439,13 +436,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
 
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <div className="flex items-center justify-between">
+            <div>
               <label className="text-xs font-bold text-slate-800">
                 {language === 'hi' ? 'प्रति कमरा दैनिक किराया (₹)' : 'Room Rent Per Day (₹)'}
               </label>
-              <span className="text-[11px] text-slate-500 font-medium">
-                {language === 'hi' ? `${Object.values(selectedSuits).filter(Boolean).length} सूट चयनित` : `${Object.values(selectedSuits).filter(Boolean).length} suits selected`}
-              </span>
             </div>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>

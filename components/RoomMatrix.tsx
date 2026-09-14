@@ -4,8 +4,7 @@ import React from 'react';
 import { Booking, BookingStatus } from '@/lib/types';
 import { SUITS } from '@/lib/constants';
 import { formatToDisplayDate, formatToHindiDate, formatToISODate } from '@/lib/dateUtils';
-import { getWhatsAppUrl } from '@/lib/whatsapp';
-import { extractGroupIdFromNotes, cleanNotesText } from '@/lib/bookingUtils';
+import { extractGroupIdFromNotes, cleanNotesText, formatGuestDisplayName } from '@/lib/bookingUtils';
 import {
   Calendar,
   ChevronLeft,
@@ -279,7 +278,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
 
                     {/* Guest Name */}
                     <div className="text-xs font-bold text-slate-800 truncate">
-                      {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
+                      {formatGuestDisplayName(booking.guest_name)}
                     </div>
                     <div className="text-[11px] text-slate-500 font-mono truncate">
                       {booking.mobile_number} {booking.reference ? `• ${booking.reference}` : ''}

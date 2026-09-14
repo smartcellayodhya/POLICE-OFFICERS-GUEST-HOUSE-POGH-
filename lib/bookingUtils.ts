@@ -1,23 +1,13 @@
 import { Booking } from './types';
 
-const STAFF_PIN_KEY = 'pogh_staff_pin';
-const DEFAULT_PIN = '1122';
-
-export function getStaffPin(): string {
-  if (typeof window === 'undefined') return DEFAULT_PIN;
-  return localStorage.getItem(STAFF_PIN_KEY) || DEFAULT_PIN;
-}
-
-export function setStaffPin(newPin: string): boolean {
-  if (typeof window !== 'undefined' && newPin.trim().length >= 4) {
-    localStorage.setItem(STAFF_PIN_KEY, newPin.trim());
-    return true;
-  }
-  return false;
-}
-
-export function verifyStaffPin(inputPin: string): boolean {
-  return inputPin.trim() === getStaffPin();
+/**
+ * Formats guest name cleanly for display without awkward duplicate honorifics.
+ */
+export function formatGuestDisplayName(rawName: string): string {
+  if (!rawName) return '';
+  const trimmed = rawName.trim();
+  const hasHonorific = /^(श्री|श्रीमती|सुश्री|डॉ०|डाॅ०|डा०|डॉक्टर|Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Shri|Prof\.?|Capt\.?|Col\.?)/i.test(trimmed);
+  return hasHonorific ? trimmed : `श्री ${trimmed}`;
 }
 
 // Generate unique sequential reference number e.g. POGH-2026-003

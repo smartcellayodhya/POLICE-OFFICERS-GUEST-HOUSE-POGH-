@@ -64,8 +64,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 leading-tight truncate">
               {getTitle()}
             </h1>
-            <p className="text-[11px] text-slate-500 hidden sm:block truncate">
-              {t('sspOffice')} • {todayFormatted}
+            <p className="text-[11px] text-slate-500 hidden sm:block truncate font-medium">
+              {todayFormatted}
             </p>
           </div>
         </div>

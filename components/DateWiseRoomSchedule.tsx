@@ -9,6 +9,7 @@ import {
   formatToISODate,
   getDayOfWeekName,
 } from '@/lib/dateUtils';
+import { formatGuestDisplayName } from '@/lib/bookingUtils';
 import {
   Calendar,
   CheckCircle2,
@@ -616,19 +617,19 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                               </span>
                             </div>
 
-                            <div className={`my-2.5 flex items-center gap-1.5 ${isPast ? 'text-slate-500' : 'text-emerald-700'}`}>
+                            <div className={`my-2 flex items-center gap-1.5 ${isPast ? 'text-slate-500' : 'text-emerald-700'}`}>
                               <CheckCircle2 className="w-4 h-4 shrink-0" />
-                              <span className="text-xs font-extrabold">
+                              <span className="text-xs font-bold">
                                 {language === 'hi'
                                   ? isPast
                                     ? allFourEmpty
-                                      ? 'सभी 4 कमरे खाली रहे थे (कोई बुकिंग नहीं)'
-                                      : `${group.suitNames} खाली रहे थे`
+                                      ? 'सभी 4 कमरे खाली रहे'
+                                      : `${group.suitNames} खाली रहे`
                                     : allFourEmpty
-                                    ? 'सभी 4 कमरे खाली (उपलब्ध)'
-                                    : `${group.suitNames} खाली (उपलब्ध)`
+                                    ? 'सभी 4 कमरे उपलब्ध'
+                                    : `${group.suitNames} उपलब्ध`
                                   : isPast
-                                  ? `${group.suitNames} was unoccupied`
+                                  ? `${group.suitNames} unoccupied`
                                   : `${group.suitNames} Available`}
                               </span>
                             </div>
@@ -641,7 +642,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                                 {group.suitIds.length === 1 ? (
                                   <button
                                     onClick={() => onQuickBook(dateStr, group.suitIds[0])}
-                                    className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
+                                    className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
                                     title={`${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें`}
                                   >
                                     <Plus className="w-3 h-3" />
@@ -654,7 +655,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                                       <button
                                         key={sid}
                                         onClick={() => onQuickBook(dateStr, sid)}
-                                        className="flex-1 min-w-[75px] py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95"
+                                        className="flex-1 min-w-[75px] py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
                                         title={`${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें`}
                                       >
                                         <Plus className="w-2.5 h-2.5" />
@@ -666,9 +667,9 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                               </div>
                             ) : null
                           ) : (
-                            <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400">
-                              <span>बीती तारीख (Past Date)</span>
+                            <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400 font-medium">
                               <span>अनावंटित</span>
+                              <span>बीती तारीख</span>
                             </div>
                           )}
                         </div>
@@ -747,7 +748,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                           {/* Guest Name & Reference */}
                           <div className="my-2">
                             <h4 className="text-xs font-black text-slate-900 truncate leading-snug">
-                              {group.booking?.guest_name}
+                              {formatGuestDisplayName(group.booking?.guest_name || '')}
                             </h4>
                             <div className="flex items-center justify-between text-[11px] text-slate-600 mt-0.5 font-medium">
                               <span className="font-mono">{group.booking?.mobile_number}</span>
