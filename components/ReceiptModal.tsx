@@ -184,39 +184,22 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {/* Payment Mode Selector */}
             <select
               value={paymentMode}
               onChange={(e) => setPaymentMode(e.target.value)}
-              className="bg-slate-800 text-amber-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none font-semibold"
+              className="bg-slate-800 text-amber-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none font-semibold cursor-pointer"
               title="Payment Mode"
             >
               <option value="CASH">नकद (Cash)</option>
-              <option value="UPI">ऑनलाइन (UPI/Netbanking)</option>
-              <option value="GOVT">शासकीय कटौती (Govt Allotment)</option>
+              <option value="UPI">ऑनलाइन (UPI)</option>
+              <option value="GOVT">शासकीय (Govt)</option>
             </select>
 
             <button
-              onClick={handleDownloadPDF}
-              disabled={downloading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF'}</span>
-            </button>
-
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
-            </button>
-
-            <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -339,7 +322,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <tr className="bg-rose-50/60">
                       <td className="p-2 border border-slate-300 text-center font-bold text-rose-700">3</td>
                       <td className="p-2 border border-slate-300 text-rose-800 font-medium">
-                        घटाएं: व्यय / खर्च (Booking Expenditure Deduction)
+                        घटाएं: व्यय / खर्च कटौती
                       </td>
                       <td className="p-2 border border-slate-300 text-center text-rose-700">-</td>
                       <td className="p-2 border border-slate-300 text-right font-mono text-rose-700">
@@ -353,8 +336,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <tr className="bg-amber-50/80 font-bold text-sm">
                     <td colSpan={4} className="p-2.5 border border-slate-300 text-right text-slate-900">
                       {expenditure > 0
-                        ? 'सर्वकुल शुद्ध प्राप्त धनराशि (Net Received Grand Total):'
-                        : 'कुल प्राप्त धनराशि (Total Received Amount):'}
+                        ? 'सर्वकुल शुद्ध प्राप्त धनराशि:'
+                        : 'कुल प्राप्त धनराशि:'}
                     </td>
                     <td className="p-2.5 border border-slate-300 text-right font-mono text-base font-bold text-blue-900">
                       {grandTotal > 0
@@ -388,6 +371,34 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
 
           </div>
+        </div>
+
+        {/* Fixed Footer Action Bar */}
+        <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2.5 text-xs no-print shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="h-8.5 px-3.5 rounded-xl text-xs font-bold bg-blue-700 hover:bg-blue-600 text-white transition shadow-2xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF रसीद'}</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="h-8.5 px-3.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <Printer className="w-3.5 h-3.5 text-amber-400" />
+              <span>प्रिंट करें</span>
+            </button>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="h-8.5 px-4 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold transition cursor-pointer"
+          >
+            बंद करें
+          </button>
         </div>
 
       </div>

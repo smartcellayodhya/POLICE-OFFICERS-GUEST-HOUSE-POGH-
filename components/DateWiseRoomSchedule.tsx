@@ -543,20 +543,20 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
 
                     {/* Relative Date Tags */}
                     {isToday && (
-                      <span className="px-2.5 py-0.5 text-[10px] font-black rounded-full bg-amber-400 text-slate-950 shadow-xs uppercase tracking-wider">
-                        आज (Today)
+                      <span className="px-2.5 py-0.5 text-[10px] font-black rounded-full bg-amber-400 text-slate-950 shadow-2xs uppercase tracking-wider">
+                        {language === 'hi' ? 'आज' : 'Today'}
                       </span>
                     )}
 
                     {isTomorrow && (
-                      <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-900 border border-blue-300">
-                        कल (Tomorrow)
+                      <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                        {language === 'hi' ? 'कल' : 'Tomorrow'}
                       </span>
                     )}
 
                     {isPast && (
                       <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                        बीती तारीख (Past)
+                        {language === 'hi' ? 'बीती तारीख' : 'Past'}
                       </span>
                     )}
                   </div>
@@ -579,8 +579,8 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                       <span className="text-slate-300">•</span>
                       <span className="font-extrabold">
                         {occupiedCount === 4
-                          ? 'सभी कमरे बुक (Full)'
-                          : `${availableCount} खाली (Available)`}
+                          ? (language === 'hi' ? 'सभी कमरे बुक' : 'All Rooms Booked')
+                          : (language === 'hi' ? `${availableCount} खाली` : `${availableCount} Available`)}
                       </span>
                     </span>
                   </div>

@@ -253,15 +253,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   return (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs flex items-start justify-center"
+      className="fixed inset-0 z-50 p-2 sm:p-4 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center animate-in fade-in duration-150"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-1 sm:my-6 animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150"
       >
         
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-amber-500">
+        <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-amber-500 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold">
@@ -277,14 +277,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {/* Apply to all group dates checkbox */}
           {relatedBookings.length > 1 && (
             <div className="pb-1">
@@ -537,19 +538,21 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             />
           </div>
 
-          {/* Footer Actions */}
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+          </div>
+
+          {/* Fixed Footer Actions */}
+          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-100 transition"
+              className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
             >
               {language === 'hi' ? 'रद्द करें' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition disabled:opacity-50"
+              className="flex items-center gap-1.5 px-5 py-2 text-xs md:text-sm font-bold rounded-xl text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-xs transition disabled:opacity-50 cursor-pointer active:scale-95"
             >
               <Save className="w-4 h-4" />
               <span>

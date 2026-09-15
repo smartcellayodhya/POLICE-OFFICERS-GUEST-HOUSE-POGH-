@@ -220,9 +220,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
             {/* In-Charge / Contact Person Editor (No-Print) */}
-            <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700 w-full sm:w-auto">
               <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">प्रभारी:</span>
               <input
                 type="text"
@@ -234,48 +234,18 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                   }
                 }}
                 placeholder="प्रभारी का नाम व संपर्क"
-                className="bg-slate-950 text-amber-300 text-xs px-2.5 py-1 rounded border border-slate-700 focus:border-amber-400 outline-none flex-1 sm:w-56 font-sans font-semibold"
+                className="bg-slate-950 text-amber-300 text-xs px-2 py-1 rounded-lg border border-slate-700 focus:border-amber-400 outline-none flex-1 sm:w-56 font-sans font-semibold"
                 title="प्रभारी का नाम व मोबाइल नंबर"
               />
             </div>
 
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                onClick={handleWhatsApp}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm"
-                title="व्हाट्सएप पर शेयर करें"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>WhatsApp</span>
-              </button>
-
-              <button
-                onClick={handleDownloadPDF}
-                disabled={downloading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50"
-                title="पीडीएफ डाउनलोड करें"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>{downloading ? '...' : 'PDF'}</span>
-              </button>
-
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm"
-                title="दस्तावेज़ प्रिंट करें"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print</span>
-              </button>
-
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition ml-auto"
-                title="बंद करें"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              title="बंद करें"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -550,37 +520,37 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         </div>
 
         {/* Modal Bottom Footer */}
-        <div className="px-6 py-3 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 no-print">
+        <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5 text-xs no-print shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleDownloadPDF}
               disabled={downloading}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50"
+              className="h-8.5 px-3.5 rounded-xl text-xs font-bold bg-blue-700 hover:bg-blue-600 text-white transition shadow-2xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
-              <Download className="w-4 h-4" />
-              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF डाउनलोड करें (Download PDF)'}</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF डाउनलोड'}</span>
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm"
+              className="h-8.5 px-3.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
-              <Printer className="w-4 h-4" />
-              <span>प्रिंट करें (Print)</span>
+              <Printer className="w-3.5 h-3.5 text-amber-400" />
+              <span>प्रिंट करें</span>
             </button>
             <button
               onClick={handleWhatsApp}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm"
+              className="h-8.5 px-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-3.5 h-3.5" />
               <span>WhatsApp</span>
             </button>
           </div>
 
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition shadow-xs"
+            className="h-8.5 px-4 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold transition cursor-pointer"
           >
-            बंद करें (Close)
+            बंद करें
           </button>
         </div>
 

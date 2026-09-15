@@ -265,15 +265,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   return (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs flex items-start justify-center"
+      className="fixed inset-0 z-50 p-2 sm:p-4 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center animate-in fade-in duration-150"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-1 sm:my-6 animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150"
       >
         
         {/* Header with Reference and Dispatch */}
-        <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-amber-500">
+        <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-amber-500 shrink-0">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-base sm:text-lg font-bold">
@@ -293,13 +293,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -540,18 +541,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
+          </div>
+
+          {/* Fixed Footer */}
+          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+              className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 bg-slate-100 rounded-xl transition cursor-pointer"
             >
               {language === 'hi' ? 'रद्द करें' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 text-xs md:text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 rounded-lg shadow-md transition disabled:opacity-50"
+              className="px-5 py-2 text-xs md:text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer active:scale-95"
             >
               {submitting
                 ? (language === 'hi' ? 'पुष्टि की जा रही है...' : 'Confirming...')

@@ -338,10 +338,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8 font-sans">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8 font-sans max-w-full">
       
       {/* 1. Header Bar with Real Excel Export & Search Bar */}
-      <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white flex flex-col md:flex-row items-center justify-between gap-4 border-b border-amber-500/50">
+      <div className="p-3.5 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5 border-b border-amber-500/50">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5 text-amber-400 stroke-[2.2]" />
@@ -358,26 +358,26 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         </div>
 
         {/* Excel Export Button & Search Bar */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold transition shadow-xs whitespace-nowrap active:scale-95 cursor-pointer"
-            title="पूरी पंजिका Excel (.xlsx) में डाउनलोड करें"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>{language === 'hi' ? 'एक्सेल (.xlsx)' : 'Export Excel'}</span>
-          </button>
-
-          <div className="relative flex-1 sm:w-64">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 sm:w-64 min-w-0">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={language === 'hi' ? 'नाम, मोबाइल, संदर्भ या तिथि खोजें...' : 'Search by name, phone, ref...'}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-800 text-white placeholder-slate-400 border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition"
+              className="w-full pl-8 pr-3 py-2 sm:py-1.5 text-xs rounded-xl bg-slate-800 text-white placeholder-slate-400 border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition"
             />
           </div>
+
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold transition shadow-xs whitespace-nowrap active:scale-95 cursor-pointer shrink-0"
+            title="पूरी पंजिका Excel (.xlsx) में डाउनलोड करें"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{language === 'hi' ? 'एक्सेल (.xlsx)' : 'Export Excel'}</span>
+          </button>
         </div>
       </div>
 
@@ -469,7 +469,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       </div>
 
       {/* 3. Consolidated Stay Records List */}
-      <div className="p-4 sm:p-6">
+      <div className="p-3 sm:p-6">
         {filteredStays.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-30 text-amber-500" />
@@ -478,7 +478,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
             {filteredStays.map((stay) => {
               const isInHouse = stay.status === 'CHECKED_IN';
               const isCheckedOut = stay.status === 'CHECKED_OUT';
@@ -490,7 +490,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
               return (
                 <div
                   key={stay.id}
-                  className={`p-4 sm:p-5 rounded-2xl border transition shadow-xs flex flex-col justify-between ${
+                  className={`min-w-0 p-3.5 sm:p-5 rounded-2xl border transition shadow-xs flex flex-col justify-between ${
                     isCancelled
                       ? 'bg-slate-50/70 border-slate-200 opacity-60'
                       : isInHouse
@@ -502,8 +502,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                 >
                   <div>
                     {/* Header: Ref Code & Clean Stay Range */}
-                    <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-slate-100">
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5 pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
                           {stay.groupId}
                         </span>
@@ -515,7 +515,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       </div>
 
                       {/* Stay Duration Display */}
-                      <span className="text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
+                      <span className="text-[11px] sm:text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
                         {stay.checkInDate === stay.checkOutDate
                           ? `${formatToDisplayDate(stay.checkInDate)} (1 दिन)`
                           : `${formatToDisplayDate(stay.checkInDate)} से ${formatToDisplayDate(stay.checkOutDate)} (${stay.stayNights} रात्रि)`}
@@ -524,13 +524,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
 
                     {/* Guest Name, Mobile & Status Pill */}
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="text-base font-bold text-slate-900 leading-tight">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight break-words">
                           {cleanGuestName}
                         </h3>
                         <div className="text-xs text-slate-500 font-mono mt-1 flex items-center gap-1.5 flex-wrap">
                           <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-slate-400" />
+                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                             <span>{stay.mobileNumber}</span>
                           </span>
                           {stay.reference && stay.reference !== '-' && (
@@ -543,7 +543,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
 
                       {/* Status Pill */}
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 shadow-2xs ${
+                        className={`px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold shrink-0 shadow-2xs ${
                           isCancelled
                             ? 'bg-rose-100 text-rose-800 border border-rose-200'
                             : isInHouse
@@ -576,91 +576,53 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                     </div>
                   </div>
 
-                  {/* Clean Footer: Total Amount & Streamlined Action Buttons */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                  {/* Clean Footer: Amount Display & Standardized Action Bar */}
+                  <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     
-                    {/* Amount & Meal Tag */}
+                    {/* Amount Display */}
                     <div className="text-xs">
                       {stay.foodAmount > 0 || stay.expenditure > 0 ? (
-                        <div className="space-y-0.5">
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                        <div>
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
                             <span className="font-mono text-emerald-700 font-extrabold text-sm">
                               ₹{stay.totalCollection.toLocaleString('en-IN')}/-
                             </span>
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold">
-                              {stay.expenditure > 0 ? (language === 'hi' ? 'शुद्ध संग्रह' : 'Net Total') : (language === 'hi' ? 'कुल संग्रह' : 'Total')}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
+                              {stay.expenditure > 0 ? (language === 'hi' ? 'शुद्ध' : 'Net') : (language === 'hi' ? 'कुल' : 'Total')}
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 flex-wrap">
+                          <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1.5">
                             <span>किराया: ₹{stay.totalRent}</span>
-                            {stay.foodAmount > 0 && (
-                              <>
-                                <span>+</span>
-                                <span className="text-blue-600 font-bold">भोजन: ₹{stay.foodAmount}</span>
-                              </>
-                            )}
-                            {stay.expenditure > 0 && (
-                              <>
-                                <span>-</span>
-                                <span className="text-rose-600 font-bold">खर्च: ₹{stay.expenditure}</span>
-                              </>
-                            )}
-                            {stay.paymentMode && (
-                              <span className="ml-1 px-1 rounded bg-slate-100 text-slate-600 font-sans text-[9px] uppercase font-semibold">
-                                {stay.paymentMode}
-                              </span>
-                            )}
+                            {stay.foodAmount > 0 && <span className="text-blue-600 font-semibold">+ भोजन: ₹{stay.foodAmount}</span>}
+                            {stay.expenditure > 0 && <span className="text-rose-600 font-semibold">- खर्च: ₹{stay.expenditure}</span>}
                           </div>
                         </div>
                       ) : (
-                        <div className="font-bold text-slate-900">
-                          {stay.totalRent > 0 ? (
-                            <>₹{stay.totalRent.toLocaleString('en-IN')}/- </>
-                          ) : (
-                            <span className="text-slate-500 font-medium text-[11px]">As per applicable </span>
-                          )}
-                          <span className="text-[10px] font-normal text-slate-500">
-                            ({stay.mealStatus === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (stay.mealStatus === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (stay.mealStatus === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (stay.mealStatus === 'AS PER APPLICABLE' || stay.mealStatus === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))})
-                          </span>
+                        <div>
+                          <div className="font-bold text-slate-900 font-mono text-sm">
+                            {stay.totalRent > 0 ? (
+                              `₹${stay.totalRent.toLocaleString('en-IN')}/-`
+                            ) : (
+                              <span className="text-slate-500 font-medium text-xs">निःशुल्क / शासकीय</span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Primary Actions + Dropdown Menu */}
-                    <div className="flex items-center gap-1.5 relative card-action-menu">
+                    {/* Standardized Action Strip */}
+                    <div className="flex items-center gap-1.5 shrink-0 relative card-action-menu">
                       
-                      {/* 1. Primary Action: View Allotment Letter */}
-                      <button
-                        onClick={() => onOpenLetter(stay.primaryBooking)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition border border-blue-200 active:scale-95 cursor-pointer"
-                        title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Allotment Letter'}
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>{t('allotmentLetter')}</span>
-                      </button>
-
-                      {/* 2. Collection & Food Settlement Action (Admin & Operator) */}
-                      {(isAdmin || isOperator) && onOpenRecordCollection && (
-                        <button
-                          onClick={() => onOpenRecordCollection(stay.primaryBooking)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 text-xs font-bold transition border border-amber-500/40 active:scale-95 cursor-pointer shadow-2xs"
-                          title={language === 'hi' ? 'कमरा किराया व खान-पान कलेक्शन दर्ज करें' : 'Record Room Rent & Food Collection'}
-                        >
-                          <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
-                          <span>{language === 'hi' ? 'कलेक्शन दर्ज करें' : 'Collection'}</span>
-                        </button>
-                      )}
-
-                      {/* 3. Quick Lifecycle Action: Check-in / Check-out (Admin & Operator) */}
+                      {/* 1. Quick Status / Lifecycle Action */}
                       {(isAdmin || isOperator) && (
                         <button
                           onClick={() => handleLifecycleClick(stay)}
-                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition shadow-2xs active:scale-95 cursor-pointer ${
+                          className={`h-8 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap ${
                             isInHouse
-                              ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-400'
+                              ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
                               : isCheckedOut
-                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                              : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
+                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                              : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                           }`}
                           title={isInHouse ? 'चेक-आउट दर्ज करें' : isCheckedOut ? 'पुनः सक्रिय करें' : 'चेक-इन दर्ज करें'}
                         >
@@ -678,33 +640,41 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         </button>
                       )}
 
-                      {/* 4. More Actions Dropdown (⋮) */}
+                      {/* 2. Collection Action */}
+                      {(isAdmin || isOperator) && onOpenRecordCollection && (
+                        <button
+                          onClick={() => onOpenRecordCollection(stay.primaryBooking)}
+                          className="h-8 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
+                          title={language === 'hi' ? 'किराया व भोजन कलेक्शन दर्ज करें' : 'Record Collection'}
+                        >
+                          <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
+                          <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
+                        </button>
+                      )}
+
+                      {/* 3. Allotment Letter */}
+                      <button
+                        onClick={() => onOpenLetter(stay.primaryBooking)}
+                        className="h-8 px-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
+                        title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Letter'}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
+                      </button>
+
+                      {/* 4. More Options Dropdown (⋮) */}
                       <div className="relative">
                         <button
                           onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
-                          className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer"
                           title="अधिक विकल्प"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
 
                         {isMenuOpen && (
-                          <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
+                          <div className="absolute right-0 bottom-full mb-1.5 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
                             
-                            {/* Record Collection in Dropdown */}
-                            {(isAdmin || isOperator) && onOpenRecordCollection && (
-                              <button
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  onOpenRecordCollection(stay.primaryBooking);
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-50 transition text-left cursor-pointer"
-                              >
-                                <IndianRupee className="w-3.5 h-3.5 text-amber-600" />
-                                <span>{language === 'hi' ? 'कलेक्शन एवं बिलिंग' : 'Collection & Billing'}</span>
-                              </button>
-                            )}
-
                             {/* Receipt */}
                             <button
                               onClick={() => {

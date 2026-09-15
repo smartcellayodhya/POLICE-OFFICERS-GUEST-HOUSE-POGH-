@@ -268,10 +268,10 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       </span>
                     </div>
 
-                    {/* Status Pill */}
-                    <div className="my-2.5">
+                    {/* Status Pill & Meal Tag */}
+                    <div className="my-2 flex items-center justify-between gap-1">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shadow-xs ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shadow-2xs ${
                           isInHouse
                             ? 'bg-emerald-600 text-white'
                             : 'bg-rose-600 text-white'
@@ -279,43 +279,47 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       >
                         {isInHouse ? `● ${t('checkedIn')}` : `● ${t('confirmed')}`}
                       </span>
+
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
+                        {booking.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (booking.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (booking.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
+                      </span>
                     </div>
 
                     {/* Guest Name */}
                     <div className="text-xs font-bold text-slate-800 truncate">
                       {formatGuestDisplayName(booking.guest_name)}
                     </div>
-                    <div className="text-[11px] text-slate-500 font-mono truncate">
+                    <div className="text-[11px] text-slate-500 font-mono truncate mt-0.5">
                       {booking.mobile_number} {booking.reference ? `• ${booking.reference}` : ''}
                     </div>
                   </div>
 
-                  {/* Footer links */}
-                    <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px] gap-1">
-                      <span className="text-blue-700 font-bold flex items-center gap-1">
-                        <FileText className="w-3 h-3" />
-                        <span>{t('allotmentLetter')}</span>
-                      </span>
+                  {/* Clean Footer Action Bar */}
+                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onSelectBooking(booking)}
+                      className="h-7.5 px-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{language === 'hi' ? 'पत्र देखें' : 'View Letter'}</span>
+                    </button>
 
-                      {(isAdmin || isOperator) && onOpenRecordCollection && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenRecordCollection(booking);
-                          }}
-                          className="px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 font-bold flex items-center gap-0.5 border border-amber-500/40 transition cursor-pointer active:scale-95"
-                          title="कलेक्शन व भोजन बिल दर्ज करें"
-                        >
-                          <IndianRupee className="w-3 h-3 text-amber-800" />
-                          <span>{language === 'hi' ? 'कलेक्शन' : 'Collect'}</span>
-                        </button>
-                      )}
-
-                      <span className="text-slate-500 font-medium text-[10px]">
-                        {booking.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (booking.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (booking.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
-                      </span>
-                    </div>
+                    {(isAdmin || isOperator) && onOpenRecordCollection && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenRecordCollection(booking);
+                        }}
+                        className="h-7.5 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95"
+                        title="कलेक्शन व भोजन बिल दर्ज करें"
+                      >
+                        <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
+                        <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             }

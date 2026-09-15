@@ -593,7 +593,7 @@ export default function HomePage() {
   return (
     <>
       <LanguageProvider>
-        <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans overflow-x-hidden max-w-full">
         
         {/* 1. Side Navigation Menu */}
         <Sidebar
@@ -606,7 +606,7 @@ export default function HomePage() {
         />
 
         {/* 2. Main Content Layout (Padded for Desktop Sidebar) */}
-        <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all duration-300">
+        <div className="flex-1 flex flex-col min-w-0 max-w-full lg:pl-64 transition-all duration-300 overflow-x-hidden">
           
           {/* Top Header */}
           <TopHeader
@@ -625,7 +625,7 @@ export default function HomePage() {
           />
 
         {/* Dynamic Main Body Content */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 min-w-0">
           
           {/* Tab 1: Executive Dashboard (Stats + Room Matrix + Today's Active Guests Widget) */}
           {activeTab === 'dashboard' && (
