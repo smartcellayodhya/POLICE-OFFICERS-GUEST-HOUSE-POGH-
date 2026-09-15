@@ -544,18 +544,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
 
           {/* Fixed Footer */}
-          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
+          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 bg-slate-100 rounded-xl transition cursor-pointer"
+              className="h-10 sm:h-11 px-5 text-sm font-semibold text-slate-700 hover:bg-slate-200 bg-slate-100 rounded-xl transition cursor-pointer"
             >
               {language === 'hi' ? 'रद्द करें' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 text-xs md:text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer active:scale-95"
+              className="h-10 sm:h-11 px-6 text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer active:scale-95 flex items-center gap-2"
             >
               {submitting
                 ? (language === 'hi' ? 'पुष्टि की जा रही है...' : 'Confirming...')

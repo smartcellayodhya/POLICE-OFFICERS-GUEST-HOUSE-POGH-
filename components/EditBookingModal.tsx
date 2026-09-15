@@ -541,18 +541,18 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           </div>
 
           {/* Fixed Footer Actions */}
-          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
+          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+              className="h-10 sm:h-11 px-5 text-sm font-semibold rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
             >
               {language === 'hi' ? 'रद्द करें' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-1.5 px-5 py-2 text-xs md:text-sm font-bold rounded-xl text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-xs transition disabled:opacity-50 cursor-pointer active:scale-95"
+              className="flex items-center gap-2 h-10 sm:h-11 px-6 text-sm font-bold rounded-xl text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition disabled:opacity-50 cursor-pointer active:scale-95"
             >
               <Save className="w-4 h-4" />
               <span>

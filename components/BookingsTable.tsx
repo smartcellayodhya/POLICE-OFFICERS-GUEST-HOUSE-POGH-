@@ -611,13 +611,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                     </div>
 
                     {/* Standardized Action Strip */}
-                    <div className="flex items-center gap-1.5 shrink-0 relative card-action-menu">
+                    <div className="flex items-center gap-2 shrink-0 relative card-action-menu">
                       
                       {/* 1. Quick Status / Lifecycle Action */}
                       {(isAdmin || isOperator) && (
                         <button
                           onClick={() => handleLifecycleClick(stay)}
-                          className={`h-8 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap ${
+                          className={`h-9 px-3.5 rounded-lg text-xs sm:text-[13px] font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-xs whitespace-nowrap ${
                             isInHouse
                               ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
                               : isCheckedOut
@@ -628,12 +628,12 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         >
                           {isInHouse ? (
                             <>
-                              <LogOut className="w-3.5 h-3.5" />
+                              <LogOut className="w-4 h-4" />
                               <span>{language === 'hi' ? 'चेक-आउट' : 'Check-Out'}</span>
                             </>
                           ) : (
                             <>
-                              <LogIn className="w-3.5 h-3.5" />
+                              <LogIn className="w-4 h-4" />
                               <span>{language === 'hi' ? 'चेक-इन' : 'Check-In'}</span>
                             </>
                           )}
@@ -644,10 +644,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       {(isAdmin || isOperator) && onOpenRecordCollection && (
                         <button
                           onClick={() => onOpenRecordCollection(stay.primaryBooking)}
-                          className="h-8 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
+                          className="h-9 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs sm:text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
                           title={language === 'hi' ? 'किराया व भोजन कलेक्शन दर्ज करें' : 'Record Collection'}
                         >
-                          <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
+                          <IndianRupee className="w-4 h-4 text-amber-700" />
                           <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
                         </button>
                       )}
@@ -655,10 +655,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       {/* 3. Allotment Letter */}
                       <button
                         onClick={() => onOpenLetter(stay.primaryBooking)}
-                        className="h-8 px-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
+                        className="h-9 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs sm:text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
                         title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Letter'}
                       >
-                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        <FileText className="w-4 h-4 text-slate-500" />
                         <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
                       </button>
 
@@ -666,7 +666,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       <div className="relative">
                         <button
                           onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
-                          className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer"
+                          className="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer"
                           title="अधिक विकल्प"
                         >
                           <MoreVertical className="w-4 h-4" />
