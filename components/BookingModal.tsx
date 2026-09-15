@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Booking } from '@/lib/types';
 import { SUITS, REFERENCES, MEAL_STATUSES, DEFAULT_RATES } from '@/lib/constants';
 import { formatToISODate, getDatesInRange, getStayDates, calculateStayNights, formatToDisplayDate } from '@/lib/dateUtils';
@@ -65,14 +65,42 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [autoRef, setAutoRef] = useState('');
   const [autoDispatch, setAutoDispatch] = useState('');
 
+  const resetForm = useCallback(() => {
+    setGuestName('');
+    setMobileNumber('');
+    setReference('SSP SIR');
+    const baseDate = initialDate || formatToISODate(new Date());
+    setCheckInDate(baseDate);
+    const d = new Date(baseDate + (baseDate.length === 10 ? 'T00:00:00' : ''));
+    if (!isNaN(d.getTime())) {
+      d.setDate(d.getDate() + 1);
+      setCheckOutDate(formatToISODate(d));
+    } else {
+      setCheckOutDate(baseDate);
+    }
+    setSelectedSuits({
+      suit_1: initialSuit === 'suit_1',
+      suit_2: initialSuit === 'suit_2',
+      suit_3: initialSuit === 'suit_3',
+      suit_4: initialSuit === 'suit_4',
+    });
+    setCheckInTime('12:00 PM');
+    setCheckOutTime('12:00 PM');
+    setIsMaintenance(false);
+    setManualAmount('');
+    setMealStatus('PAID');
+    setNotes('');
+  }, [initialDate, initialSuit]);
+
   useEffect(() => {
     if (isOpen) {
+      resetForm();
       const ref = generateBookingRef(existingBookings);
       const disp = generateDispatchNumber(existingBookings);
       setAutoRef(ref);
       setAutoDispatch(disp);
     }
-  }, [isOpen, existingBookings]);
+  }, [isOpen, existingBookings, resetForm]);
 
   useEffect(() => {
     if (initialDate) {
@@ -202,8 +230,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         `अतिथि: ${guestName}, तारीख: ${checkInDate} से ${checkOutDate}, स्थिति: ${isMaintenance ? 'MAINTENANCE' : 'CONFIRMED'}`
       );
 
-      alert(language === 'hi' ? 'बुकिंग सफलतापूर्वक दर्ज की गई!' : 'Booking created successfully!');
+      resetForm();
       onClose();
+
+      if (isMaintenance) {
+        alert(language === 'hi' ? 'कमरा मरम्मत ब्लॉक सफलतापूर्वक दर्ज किया गया!' : 'Maintenance block saved successfully!');
+      }
     } catch (err: any) {
       console.error('Error saving booking:', err);
       alert('Failed to save booking: ' + (err?.message || 'Unknown error'));

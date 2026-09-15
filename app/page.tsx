@@ -191,6 +191,12 @@ export default function HomePage() {
           throw new Error(error.message);
         }
         await fetchBookings();
+
+        // Redirect to Letter Modal with Print & PDF options
+        if (newBookings.length > 0 && !newBookings[0].is_maintenance) {
+          setSelectedLetterBooking(newBookings[0]);
+          setIsLetterModalOpen(true);
+        }
         return;
       }
     }
@@ -199,6 +205,12 @@ export default function HomePage() {
     const updated = [...newBookings, ...bookings];
     setBookings(updated);
     saveLocalBookings(updated);
+
+    // Redirect to Letter Modal with Print & PDF options
+    if (newBookings.length > 0 && !newBookings[0].is_maintenance) {
+      setSelectedLetterBooking(newBookings[0]);
+      setIsLetterModalOpen(true);
+    }
   };
 
   // Handle Delete Booking (Admin Only)
@@ -400,7 +412,17 @@ export default function HomePage() {
     : '';
 
   const relatedBookings = selectedLetterBooking
-    ? bookings.filter((b) => {
+    ? (bookings.some((b) => {
+        const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+        return (
+          (refCode && bRef && refCode === bRef) ||
+          (b.guest_name.toLowerCase() === selectedLetterBooking.guest_name.toLowerCase() &&
+            b.mobile_number === selectedLetterBooking.mobile_number)
+        );
+      })
+        ? bookings
+        : [selectedLetterBooking, ...bookings]
+      ).filter((b) => {
         if (b.status === 'CANCELLED') return false;
         const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
         if (refCode && bRef && refCode === bRef) return true;
@@ -604,7 +626,11 @@ export default function HomePage() {
       {isAdmin && (
         <BookingModal
           isOpen={isBookingModalOpen}
-          onClose={() => setIsBookingModalOpen(false)}
+          onClose={() => {
+            setIsBookingModalOpen(false);
+            setInitialBookingDate(null);
+            setInitialBookingSuit(undefined);
+          }}
           onSave={handleSaveBookings}
           existingBookings={bookings}
           initialDate={initialBookingDate || selectedDate}

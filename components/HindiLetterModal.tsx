@@ -279,6 +279,19 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
           </div>
         </div>
 
+        {/* Action / Guidance Banner */}
+        <div className="bg-emerald-50 border-b border-emerald-200 px-5 py-2.5 flex items-center justify-between text-xs text-emerald-900 no-print">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <span className="font-bold">
+              ✓ बुकिंग सुरक्षित हो चुकी है! यहाँ से पत्र का PDF डाउनलोड करें अथवा प्रिंट निकालें।
+            </span>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-emerald-800 text-[11px] font-mono font-semibold">
+            <span>आवंटन संदर्भ: {bookingRef}</span>
+          </div>
+        </div>
+
         {/* Scrollable Letter Preview Area */}
         <div className="p-1 sm:p-6 md:p-8 overflow-y-auto overflow-x-auto bg-slate-100 flex justify-center">
           
@@ -537,7 +550,32 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         </div>
 
         {/* Modal Bottom Footer */}
-        <div className="px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-end text-xs text-slate-500 no-print">
+        <div className="px-6 py-3 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 no-print">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF डाउनलोड करें (Download PDF)'}</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm"
+            >
+              <Printer className="w-4 h-4" />
+              <span>प्रिंट करें (Print)</span>
+            </button>
+            <button
+              onClick={handleWhatsApp}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>WhatsApp</span>
+            </button>
+          </div>
+
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition shadow-xs"
