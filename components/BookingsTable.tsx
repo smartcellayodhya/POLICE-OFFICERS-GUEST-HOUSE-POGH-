@@ -301,7 +301,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   };
 
   const handleCancelClick = (stay: GroupedStay) => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isOperator) return;
     const isCurrentlyCancelled = stay.status === 'CANCELLED';
     const newStatus: BookingStatus = isCurrentlyCancelled ? 'CONFIRMED' : 'CANCELLED';
     const actionText = isCurrentlyCancelled ? 'बहाल (Restore)' : 'निरस्त (Cancel)';
@@ -727,6 +727,29 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                               <span>{language === 'hi' ? 'व्हाट्सएप भेजें' : 'Share WhatsApp'}</span>
                             </button>
 
+                            {/* Cancel / Restore (Admin & Operator) */}
+                            {(isAdmin || isOperator) && (
+                              <button
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  handleCancelClick(stay);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition text-left cursor-pointer"
+                              >
+                                {isCancelled ? (
+                                  <>
+                                    <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>{language === 'hi' ? 'बुकिंग बहाल करें' : 'Restore Booking'}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>{language === 'hi' ? 'बुकिंग निरस्त करें' : 'Cancel Booking'}</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+
                             {isAdmin && (
                               <>
                                 <div className="my-1 border-t border-slate-100" />
@@ -741,27 +764,6 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                                 >
                                   <Edit3 className="w-3.5 h-3.5 text-slate-600" />
                                   <span>{language === 'hi' ? 'विवरण संशोधित करें' : 'Edit Booking'}</span>
-                                </button>
-
-                                {/* Cancel / Restore */}
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handleCancelClick(stay);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition text-left cursor-pointer"
-                                >
-                                  {isCancelled ? (
-                                    <>
-                                      <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>{language === 'hi' ? 'बुकिंग बहाल करें' : 'Restore Booking'}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <XCircle className="w-3.5 h-3.5 text-amber-600" />
-                                      <span>{language === 'hi' ? 'बुकिंग निरस्त करें' : 'Cancel Booking'}</span>
-                                    </>
-                                  )}
                                 </button>
 
                                 {/* Delete Record */}
