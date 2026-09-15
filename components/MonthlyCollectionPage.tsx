@@ -210,38 +210,68 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     const summaryRows = monthlyData.map((m) => {
       const monthLabel =
         language === 'hi' ? formatMonthKey(m.monthKey, 'hi') : formatMonthKey(m.monthKey, 'en');
-      return {
-        'माह / वर्ष (Month)': monthLabel,
-        'माह कोड (Code)': m.monthKey,
-        'कुल आवंटन संख्या (Bookings)': m.bookings.length,
-        'कुल कक्ष दिवस (Room Days)': m.roomsCount,
-        'कमरा किराया संग्रह (Room Rent ₹)': m.totalRent,
-        'भोजन संग्रह (Food Amount ₹)': m.totalFood,
-        'व्यय / खर्च (Expenditure ₹)': m.totalExpenditure,
-        'कुल शुद्ध संग्रह (Net Collection ₹)': m.grandTotal,
-        'औसत संग्रह प्रति आवंटन (Avg ₹)':
-          m.bookings.length > 0 ? Math.round(m.grandTotal / m.bookings.length) : 0,
-      };
+      return language === 'hi'
+        ? {
+            'माह / वर्ष': monthLabel,
+            'माह कोड': m.monthKey,
+            'कुल आवंटन संख्या': m.bookings.length,
+            'कुल कक्ष दिवस': m.roomsCount,
+            'कमरा किराया संग्रह (₹)': m.totalRent,
+            'भोजन संग्रह (₹)': m.totalFood,
+            'व्यय / खर्च (₹)': m.totalExpenditure,
+            'कुल शुद्ध संग्रह (₹)': m.grandTotal,
+            'औसत संग्रह प्रति आवंटन (₹)':
+              m.bookings.length > 0 ? Math.round(m.grandTotal / m.bookings.length) : 0,
+          }
+        : {
+            'Month / Year': monthLabel,
+            'Month Code': m.monthKey,
+            'Total Bookings': m.bookings.length,
+            'Room Days': m.roomsCount,
+            'Room Rent Collection (₹)': m.totalRent,
+            'Food Collection (₹)': m.totalFood,
+            'Expenditure (₹)': m.totalExpenditure,
+            'Net Collection (₹)': m.grandTotal,
+            'Avg Collection per Booking (₹)':
+              m.bookings.length > 0 ? Math.round(m.grandTotal / m.bookings.length) : 0,
+          };
     });
 
     // Add Grand Total row to summary
-    summaryRows.push({
-      'माह / वर्ष (Month)': 'कुल महायोग (GRAND TOTAL)',
-      'माह कोड (Code)': '-',
-      'कुल आवंटन संख्या (Bookings)': overallStats.totalBookingsCount,
-      'कुल कक्ष दिवस (Room Days)': overallStats.totalRoomsCount,
-      'कमरा किराया संग्रह (Room Rent ₹)': overallStats.grandTotalRent,
-      'भोजन संग्रह (Food Amount ₹)': overallStats.grandTotalFood,
-      'व्यय / खर्च (Expenditure ₹)': overallStats.grandTotalExpenditure,
-      'कुल शुद्ध संग्रह (Net Collection ₹)': overallStats.grandTotalRevenue,
-      'औसत संग्रह प्रति आवंटन (Avg ₹)':
-        overallStats.totalBookingsCount > 0
-          ? Math.round(overallStats.grandTotalRevenue / overallStats.totalBookingsCount)
-          : 0,
-    });
+    if (language === 'hi') {
+      summaryRows.push({
+        'माह / वर्ष': 'कुल महायोग',
+        'माह कोड': '-',
+        'कुल आवंटन संख्या': overallStats.totalBookingsCount,
+        'कुल कक्ष दिवस': overallStats.totalRoomsCount,
+        'कमरा किराया संग्रह (₹)': overallStats.grandTotalRent,
+        'भोजन संग्रह (₹)': overallStats.grandTotalFood,
+        'व्यय / खर्च (₹)': overallStats.grandTotalExpenditure,
+        'कुल शुद्ध संग्रह (₹)': overallStats.grandTotalRevenue,
+        'औसत संग्रह प्रति आवंटन (₹)':
+          overallStats.totalBookingsCount > 0
+            ? Math.round(overallStats.grandTotalRevenue / overallStats.totalBookingsCount)
+            : 0,
+      });
+    } else {
+      summaryRows.push({
+        'Month / Year': 'GRAND TOTAL',
+        'Month Code': '-',
+        'Total Bookings': overallStats.totalBookingsCount,
+        'Room Days': overallStats.totalRoomsCount,
+        'Room Rent Collection (₹)': overallStats.grandTotalRent,
+        'Food Collection (₹)': overallStats.grandTotalFood,
+        'Expenditure (₹)': overallStats.grandTotalExpenditure,
+        'Net Collection (₹)': overallStats.grandTotalRevenue,
+        'Avg Collection per Booking (₹)':
+          overallStats.totalBookingsCount > 0
+            ? Math.round(overallStats.grandTotalRevenue / overallStats.totalBookingsCount)
+            : 0,
+      });
+    }
 
     const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
-    XLSX.utils.book_append_sheet(wb, summaryWs, 'माह-वार सारांश');
+    XLSX.utils.book_append_sheet(wb, summaryWs, language === 'hi' ? 'माह-वार सारांश' : 'Monthly Summary');
 
     // Sheet 2: All Active Bookings Details
     const detailRows: any[] = [];
@@ -257,26 +287,44 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
         const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
 
-        detailRows.push({
-          'माह (Month)': monthLabel,
-          'दिनांक (Stay Date)': b.booking_date,
-          'पत्र क्रमांक (Dispatch No)': dispatchNo,
-          'अतिथि/अधिकारी का नाम (Officer Name)': b.guest_name,
-          'पदनाम/संदर्भ (Reference)': b.reference || '-',
-          'आवंटित सूट (Suits)': suits,
-          'कमरे (Room Count)': getBookingRoomsCount(b),
-          'कमरा किराया (Room Rent ₹)': rent,
-          'भोजन संग्रह (Food Amount ₹)': food,
-          'व्यय / खर्च (Expenditure ₹)': exp,
-          'कुल शुद्ध संग्रह (Net Collection ₹)': net,
-          'भुगतान माध्यम (Payment Mode)': payMode,
-          'स्थिति (Status)': b.status,
-        });
+        if (language === 'hi') {
+          detailRows.push({
+            'माह': monthLabel,
+            'दिनांक': b.booking_date,
+            'पत्र क्रमांक': dispatchNo,
+            'अतिथि/अधिकारी का नाम': b.guest_name,
+            'पदनाम/संदर्भ': b.reference || '-',
+            'आवंटित सूट': suits,
+            'कमरे': getBookingRoomsCount(b),
+            'कमरा किराया (₹)': rent,
+            'भोजन संग्रह (₹)': food,
+            'व्यय / खर्च (₹)': exp,
+            'कुल शुद्ध संग्रह (₹)': net,
+            'भुगतान माध्यम': payMode === 'CASH' ? 'नकद' : payMode,
+            'स्थिति': b.status === 'CHECKED_IN' ? 'उपस्थित' : (b.status === 'CHECKED_OUT' ? 'चेक-आउट' : (b.status === 'CANCELLED' ? 'निरस्त' : 'आरक्षित')),
+          });
+        } else {
+          detailRows.push({
+            'Month': monthLabel,
+            'Stay Date': b.booking_date,
+            'Dispatch No': dispatchNo,
+            'Officer / Guest Name': b.guest_name,
+            'Reference / Designation': b.reference || '-',
+            'Allocated Suits': suits,
+            'Room Count': getBookingRoomsCount(b),
+            'Room Rent (₹)': rent,
+            'Food Amount (₹)': food,
+            'Expenditure (₹)': exp,
+            'Net Collection (₹)': net,
+            'Payment Mode': payMode,
+            'Status': b.status || 'CONFIRMED',
+          });
+        }
       });
     });
 
     const detailWs = XLSX.utils.json_to_sheet(detailRows);
-    XLSX.utils.book_append_sheet(wb, detailWs, 'विस्तृत आवंटन विवरण');
+    XLSX.utils.book_append_sheet(wb, detailWs, language === 'hi' ? 'विस्तृत आवंटन विवरण' : 'Allotment Details');
 
     // Write file
     XLSX.writeFile(
@@ -355,7 +403,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           <button
             onClick={handleExportExcel}
             className="h-9 flex items-center justify-center gap-1.5 px-3.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer"
-            title="Download Full Excel Statement"
+            title={language === 'hi' ? 'सम्पूर्ण एक्सेल आख्या डाउनलोड करें' : 'Download Full Excel Statement'}
           >
             <Download className="w-3.5 h-3.5" />
             <span>{language === 'hi' ? 'एक्सेल डाउनलोड' : 'Export Excel'}</span>
@@ -367,9 +415,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
               value={selectedPrintMonth}
               onChange={(e) => setSelectedPrintMonth(e.target.value)}
               className="bg-transparent text-xs font-semibold text-slate-800 py-1 px-2 focus:outline-hidden cursor-pointer"
-              title="प्रिंट हेतु माह चुनें"
+              title={language === 'hi' ? 'प्रिंट हेतु माह चुनें' : 'Select Month to Print'}
             >
-              <option value="ALL">समस्त माह</option>
+              <option value="ALL">{language === 'hi' ? 'समस्त माह' : 'All Months'}</option>
               {monthlyData.map((m) => (
                 <option key={m.monthKey} value={m.monthKey}>
                   {formatMonthKey(m.monthKey, language === 'hi' ? 'hi' : 'en')}
@@ -380,10 +428,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             <button
               onClick={() => handlePrint(selectedPrintMonth)}
               className="h-7 flex items-center justify-center gap-1 px-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer"
-              title="चयनित माह की स्टेटमेंट प्रिंट करें"
+              title={language === 'hi' ? 'चयनित माह की स्टेटमेंट प्रिंट करें' : 'Print Statement for Selected Month'}
             >
               <Printer className="w-3 h-3 text-amber-400" />
-              <span>प्रिंट</span>
+              <span>{language === 'hi' ? 'प्रिंट' : 'Print'}</span>
             </button>
           </div>
         </div>
@@ -595,9 +643,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       ₹{m.grandTotal.toLocaleString('en-IN')}
                     </div>
                     <div className="text-[11px] text-slate-500 font-semibold">
-                      कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')}
+                      {language === 'hi' ? 'कमरा' : 'Rent'}: ₹{m.totalRent.toLocaleString('en-IN')} • {language === 'hi' ? 'भोजन' : 'Food'}: ₹{m.totalFood.toLocaleString('en-IN')}
                       {m.totalExpenditure > 0 && (
-                        <span className="text-rose-600 font-bold"> • खर्च: -₹{m.totalExpenditure.toLocaleString('en-IN')}</span>
+                        <span className="text-rose-600 font-bold"> • {language === 'hi' ? 'खर्च' : 'Exp'}: -₹{m.totalExpenditure.toLocaleString('en-IN')}</span>
                       )}
                     </div>
                   </div>
@@ -736,8 +784,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                               </td>
                               <td className="py-3 px-2.5 text-center whitespace-nowrap">
                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                                  <span>{b.status || 'CONFIRMED'}</span>
-                                  <span className="text-[9px] text-slate-500">({payMode})</span>
+                                  <span>{language === 'hi' ? (b.status === 'CHECKED_IN' ? 'उपस्थित' : (b.status === 'CHECKED_OUT' ? 'चेक-आउट' : (b.status === 'CANCELLED' ? 'निरस्त' : 'आरक्षित'))) : (b.status || 'CONFIRMED')}</span>
+                                  <span className="text-[9px] text-slate-500">({payMode === 'CASH' ? (language === 'hi' ? 'नकद' : 'CASH') : payMode})</span>
                                 </span>
                               </td>
                             </tr>
@@ -755,15 +803,15 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         {filteredMonths.length === 0 && (
           <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
             <FileText className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-            <p className="text-base font-bold text-slate-700">कोई रिकॉर्ड नहीं मिला</p>
-            <p className="text-xs text-slate-500 mt-1">खोज शब्द बदल कर पुनः प्रयास करें</p>
+            <p className="text-base font-bold text-slate-700">{language === 'hi' ? 'कोई रिकॉर्ड नहीं मिला' : 'No records found'}</p>
+            <p className="text-xs text-slate-500 mt-1">{language === 'hi' ? 'खोज शब्द बदल कर पुनः प्रयास करें' : 'Try adjusting your search criteria'}</p>
           </div>
         )}
       </div>
 
       {/* Page Footer Note */}
       <div className="text-center text-xs text-slate-400 py-3">
-        पुलिस ऑफिसर्स गेस्ट हाउस (POGH), अयोध्या • सम्पूर्ण संकलित किराया: ₹{overallStats.grandTotal.toLocaleString('en-IN')}
+        {language === 'hi' ? 'पुलिस ऑफिसर्स गेस्ट हाउस (POGH), अयोध्या • सम्पूर्ण संकलित किराया:' : 'Police Officers Guest House (POGH), Ayodhya • Total Collected Rent:'} ₹{overallStats.grandTotal.toLocaleString('en-IN')}
       </div>
 
       {/* ========================================================================= */}

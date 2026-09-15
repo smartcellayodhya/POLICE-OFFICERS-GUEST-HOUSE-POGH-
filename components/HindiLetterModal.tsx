@@ -13,6 +13,7 @@ import {
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Share2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
+import { useLanguage } from '@/lib/languageContext';
 
 interface HindiLetterModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   booking,
   relatedBookings = [],
 }) => {
+  const { language } = useLanguage();
   const printRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
 
@@ -210,20 +212,20 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         <div className="px-5 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-amber-500 no-print">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold">आधिकारिक कक्ष आवंटन पत्र</h3>
+              <h3 className="text-base font-bold">{language === 'hi' ? 'आधिकारिक कक्ष आवंटन पत्र' : 'Official Room Allotment Letter'}</h3>
               <span className="text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold font-mono">
                 {bookingRef}
               </span>
             </div>
             <p className="text-xs text-slate-300 font-hindi">
-              वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या - आधिकारिक आवंटन पत्र (पत्रांक: {dispatchNo})
+              {language === 'hi' ? `वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या - आधिकारिक आवंटन पत्र (पत्रांक: ${dispatchNo})` : `Senior Superintendent of Police, Ayodhya - Official Allotment Letter (Dispatch: ${dispatchNo})`}
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
             {/* In-Charge / Contact Person Editor (No-Print) */}
             <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700 w-full sm:w-auto">
-              <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">प्रभारी:</span>
+              <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">{language === 'hi' ? 'प्रभारी:' : 'In-Charge:'}</span>
               <input
                 type="text"
                 value={contactPerson}
@@ -233,16 +235,16 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                     localStorage.setItem('pogh_contact_person', e.target.value);
                   }
                 }}
-                placeholder="प्रभारी का नाम व संपर्क"
+                placeholder={language === 'hi' ? 'प्रभारी का नाम व संपर्क' : 'In-Charge Name & Contact'}
                 className="bg-slate-950 text-amber-300 text-xs px-2 py-1 rounded-lg border border-slate-700 focus:border-amber-400 outline-none flex-1 sm:w-56 font-sans font-semibold"
-                title="प्रभारी का नाम व मोबाइल नंबर"
+                title={language === 'hi' ? 'प्रभारी का नाम व मोबाइल नंबर' : 'In-Charge Name & Mobile'}
               />
             </div>
 
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-              title="बंद करें"
+              title={language === 'hi' ? 'बंद करें' : 'Close'}
             >
               <X className="w-5 h-5" />
             </button>
@@ -254,11 +256,11 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
             <span className="font-bold">
-              ✓ बुकिंग सुरक्षित हो चुकी है! यहाँ से पत्र का PDF डाउनलोड करें अथवा प्रिंट निकालें।
+              ✓ {language === 'hi' ? 'बुकिंग सुरक्षित हो चुकी है! यहाँ से पत्र का PDF डाउनलोड करें अथवा प्रिंट निकालें।' : 'Booking saved! Download PDF or print official letter below.'}
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-2 text-emerald-800 text-[11px] font-mono font-semibold">
-            <span>आवंटन संदर्भ: {bookingRef}</span>
+            <span>{language === 'hi' ? 'आवंटन संदर्भ:' : 'Allotment Ref:'} {bookingRef}</span>
           </div>
         </div>
 
@@ -528,14 +530,14 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
               className="h-10 sm:h-11 px-2.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
             >
               <Download className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
-              <span className="truncate">{downloading ? 'डाउनलोड...' : 'PDF'}</span>
+              <span className="truncate">{downloading ? (language === 'hi' ? 'डाउनलोड...' : 'Downloading...') : 'PDF'}</span>
             </button>
             <button
               onClick={handlePrint}
               className="h-10 sm:h-11 px-2.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white transition shadow-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
             >
               <Printer className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400 shrink-0" />
-              <span>प्रिंट</span>
+              <span>{language === 'hi' ? 'प्रिंट' : 'Print'}</span>
             </button>
             <button
               onClick={handleWhatsApp}
@@ -550,7 +552,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             onClick={onClose}
             className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs sm:text-sm font-semibold transition cursor-pointer w-full sm:w-auto"
           >
-            बंद करें
+            {language === 'hi' ? 'बंद करें' : 'Close'}
           </button>
         </div>
 

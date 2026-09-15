@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/lib/languageContext';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -11,6 +12,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   onFinish,
   minDurationMs = 1500,
 }) => {
+  const { language } = useLanguage();
   const [fadingOut, setFadingOut] = useState(false);
   const [removed, setRemoved] = useState(false);
 
@@ -30,7 +32,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 select-none font-sans transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 transition-opacity duration-500 ease-out select-none font-sans ${
         fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
@@ -52,13 +54,13 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         {/* Title and Branding */}
         <div className="mt-5 space-y-1 animate-in fade-in slide-in-from-bottom-3 duration-700 delay-200 fill-mode-forwards">
           <h1 className="text-lg sm:text-xl font-black text-white tracking-wider">
-            POLICE OFFICERS GUEST HOUSE
+            {language === 'hi' ? 'पुलिस ऑफिसर्स गेस्ट हाउस' : 'POLICE OFFICERS GUEST HOUSE'}
           </h1>
           <p className="text-xs sm:text-sm font-bold text-amber-400 tracking-widest">
-            अयोध्या पुलिस • Ayodhya Police
+            {language === 'hi' ? 'अयोध्या पुलिस' : 'Ayodhya Police'}
           </p>
           <p className="text-[11px] text-slate-400 font-hindi mt-1">
-            कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
+            {language === 'hi' ? 'कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या' : 'Office of SSP, Ayodhya District'}
           </p>
         </div>
 

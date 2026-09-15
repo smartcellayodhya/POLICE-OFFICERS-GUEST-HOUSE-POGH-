@@ -418,10 +418,10 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                 type="button"
                 onClick={handleOpenCalendarPicker}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-amber-500/40 hover:border-amber-400 text-amber-300 rounded-xl text-xs font-bold transition shadow-xs"
-                title="सीधे किसी तारीख पर जाएं"
+                title={language === 'hi' ? 'सीधे किसी तारीख पर जाएं' : 'Jump directly to date'}
               >
                 <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">तारीख चुनें</span>
+                <span className="hidden sm:inline">{language === 'hi' ? 'तारीख चुनें' : 'Select Date'}</span>
               </button>
               <input
                 ref={datePickerRef}
@@ -437,7 +437,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
             <button
               onClick={() => setSortAscending(!sortAscending)}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition"
-              title={sortAscending ? 'क्रम: पुराना से नया' : 'क्रम: नया से पुराना'}
+              title={sortAscending ? (language === 'hi' ? 'क्रम: पुराना से नया' : 'Order: Oldest first') : (language === 'hi' ? 'क्रम: नया से पुराना' : 'Order: Newest first')}
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
               <span className="text-[11px] font-mono">{sortAscending ? 'ASC' : 'DESC'}</span>
@@ -458,8 +458,12 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
             </h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
               {searchQuery
-                ? `"${searchQuery}" के लिए कोई रिकॉर्ड उपलब्ध नहीं है। खोज फ़िल्टर रीसेट करें।`
-                : 'चयनित फ़िल्टर के लिए कोई तारीख उपलब्ध नहीं है।'}
+                ? (language === 'hi'
+                    ? `"${searchQuery}" के लिए कोई रिकॉर्ड उपलब्ध नहीं है। खोज फ़िल्टर रीसेट करें।`
+                    : `No records found for "${searchQuery}". Reset search filter to view dates.`)
+                : (language === 'hi'
+                    ? 'चयनित फ़िल्टर के लिए कोई तारीख उपलब्ध नहीं है।'
+                    : 'No dates available for the selected filter.')}
             </p>
             {(searchQuery || activeFilter !== 'upcoming') && (
               <button
@@ -470,7 +474,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                 }}
                 className="mt-4 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black transition shadow-xs"
               >
-                डिफ़ॉल्ट फ़िल्टर पर लौटें
+                {language === 'hi' ? 'डिफ़ॉल्ट फ़िल्टर पर लौटें' : 'Reset to Default Filter'}
               </button>
             )}
           </div>
@@ -536,10 +540,12 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                       {dayLabel}
                     </span>
 
-                    {/* Hindi Date Text */}
-                    <span className="text-xs text-slate-500 font-medium hidden md:inline">
-                      ({formatToHindiDate(dateStr)})
-                    </span>
+                    {/* Hindi Date Text (Only in Hindi view) */}
+                    {language === 'hi' && (
+                      <span className="text-xs text-slate-500 font-medium hidden md:inline">
+                        ({formatToHindiDate(dateStr)})
+                      </span>
+                    )}
 
                     {/* Relative Date Tags */}
                     {isToday && (
@@ -609,9 +615,13 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                                 <span>{group.suitNames}</span>
                               </span>
                               <span className="text-[10px] font-bold text-slate-500 font-mono">
-                                {isPast
-                                  ? `${group.suitIds.length} कमरे खाली रहे`
-                                  : `${group.suitIds.length} कमरा उपलब्ध`}
+                                {language === 'hi'
+                                  ? isPast
+                                    ? `${group.suitIds.length} कमरे खाली रहे`
+                                    : `${group.suitIds.length} कमरा उपलब्ध`
+                                  : isPast
+                                  ? `${group.suitIds.length} unoccupied`
+                                  : `${group.suitIds.length} available`}
                               </span>
                             </div>
 
@@ -641,7 +651,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                                   <button
                                     onClick={() => onQuickBook(dateStr, group.suitIds[0])}
                                     className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
-                                    title={`${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें`}
+                                    title={language === 'hi' ? `${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें` : `Book ${group.suitNames} for ${formatToDisplayDate(dateStr)}`}
                                   >
                                     <Plus className="w-3 h-3" />
                                     <span>{language === 'hi' ? '+ बुक करें' : '+ Quick Book'}</span>
@@ -654,7 +664,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                                         key={sid}
                                         onClick={() => onQuickBook(dateStr, sid)}
                                         className="flex-1 min-w-[75px] py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
-                                        title={`${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें`}
+                                        title={language === 'hi' ? `${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें` : `Book ${sObj?.name || sid} for ${formatToDisplayDate(dateStr)}`}
                                       >
                                         <Plus className="w-2.5 h-2.5" />
                                         <span>{sObj?.name || sid}</span>
@@ -666,8 +676,8 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                             ) : null
                           ) : (
                             <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                              <span>अनावंटित</span>
-                              <span>बीती तारीख</span>
+                              <span>{language === 'hi' ? 'अनावंटित' : 'Unallocated'}</span>
+                              <span>{language === 'hi' ? 'बीती तारीख' : 'Past Date'}</span>
                             </div>
                           )}
                         </div>
@@ -688,16 +698,18 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                                 {group.suitNames}
                               </span>
                               <span className="text-[10px] font-bold text-purple-700">
-                                ब्लॉक
+                                {language === 'hi' ? 'ब्लॉक' : 'Blocked'}
                               </span>
                             </div>
                             <div className="my-2 flex items-center gap-1.5 text-purple-800">
                               <Wrench className="w-3.5 h-3.5 shrink-0" />
-                              <span className="text-xs font-bold">मरम्मत / रखरखाव</span>
+                              <span className="text-xs font-bold">
+                                {language === 'hi' ? 'मरम्मत / रखरखाव' : 'Maintenance / Repair'}
+                              </span>
                             </div>
                           </div>
                           <p className="text-[10px] text-purple-600 truncate mt-1">
-                            {group.booking?.notes || 'कमरा मरम्मत कार्य हेतु बंद है'}
+                            {group.booking?.notes || (language === 'hi' ? 'कमरा मरम्मत कार्य हेतु बंद है' : 'Room is closed for maintenance')}
                           </p>
                         </div>
                       );
@@ -722,7 +734,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                               </span>
                               {group.suitIds.length > 1 && (
                                 <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
-                                  {group.suitIds.length} कमरे
+                                  {group.suitIds.length} {language === 'hi' ? 'कमरे' : (group.suitIds.length > 1 ? 'Suits' : 'Suit')}
                                 </span>
                               )}
                             </div>
@@ -763,7 +775,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                           <button
                             onClick={() => group.booking && onSelectBooking(group.booking)}
                             className="w-full py-1.5 px-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs hover:text-amber-700 active:scale-95"
-                            title="आधिकारिक पत्र देखें एवं प्रिंट करें"
+                            title={language === 'hi' ? 'आधिकारिक पत्र देखें एवं प्रिंट करें' : 'View and print official letter'}
                           >
                             <FileText className="w-3 h-3 text-amber-600" />
                             <span>{language === 'hi' ? 'पत्र देखें' : 'View Letter'}</span>

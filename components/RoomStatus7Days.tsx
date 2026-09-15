@@ -246,7 +246,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
             <button
               onClick={handlePrev7Days}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs active:scale-95"
-              title="पिछले 7 दिन देखें"
+              title={language === 'hi' ? 'पिछले 7 दिन देखें' : 'View Previous 7 Days'}
             >
               <ChevronLeft className="w-4 h-4" />
               <span className="hidden sm:inline">{language === 'hi' ? 'पिछला' : 'Prev'}</span>
@@ -271,7 +271,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                   if (e.target.value) setStartDateStr(e.target.value);
                 }}
                 className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
-                aria-label="Select start date"
+                aria-label={language === 'hi' ? 'प्रारंभ तिथि चुनें' : 'Select start date'}
               />
             </div>
 
@@ -284,14 +284,14 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
               }`}
             >
-              {language === 'hi' ? 'आज (Today)' : 'Today'}
+              {language === 'hi' ? 'आज' : 'Today'}
             </button>
 
             {/* Next 7 Days */}
             <button
               onClick={handleNext7Days}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs active:scale-95"
-              title="अगले 7 दिन देखें"
+              title={language === 'hi' ? 'अगले 7 दिन देखें' : 'View Next 7 Days'}
             >
               <span className="hidden sm:inline">{language === 'hi' ? 'अगला' : 'Next'}</span>
               <ChevronRight className="w-4 h-4" />
@@ -404,13 +404,13 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
 
                   {isToday && (
                     <span className="px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-400 text-slate-950 shadow-2xs">
-                      {language === 'hi' ? 'आज (Today)' : 'Today'}
+                      {language === 'hi' ? 'आज' : 'Today'}
                     </span>
                   )}
 
                   {isTomorrow && (
                     <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-900 border border-blue-300">
-                      {language === 'hi' ? 'कल (Tomorrow)' : 'Tomorrow'}
+                      {language === 'hi' ? 'कल' : 'Tomorrow'}
                     </span>
                   )}
                 </div>
@@ -469,7 +469,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                             </span>
                             {group.suitIds.length > 1 && (
                               <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700">
-                                {group.suitIds.length} कमरे
+                                {group.suitIds.length} {language === 'hi' ? 'कमरे' : (group.suitIds.length > 1 ? 'Suits' : 'Suit')}
                               </span>
                             )}
                           </div>
@@ -488,7 +488,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                               }`}
                             >
                               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                              <span>{group.isInHouse ? 'IN HOUSE' : 'CONFIRMED'}</span>
+                              <span>{group.isInHouse ? (language === 'hi' ? 'इन-हाउस' : 'IN HOUSE') : (language === 'hi' ? 'आरक्षित' : 'CONFIRMED')}</span>
                             </span>
                           )}
                         </div>

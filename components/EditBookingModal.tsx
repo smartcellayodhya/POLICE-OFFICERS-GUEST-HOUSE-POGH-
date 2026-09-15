@@ -143,7 +143,9 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           );
           if (conflictingBooking) {
             conflicts.push(
-              `${s.name} दिनांक ${formatToDisplayDate(dateStr)} को ${conflictingBooking.guest_name} के लिए पहले से आरक्षित है।`
+              language === 'hi'
+                ? `${s.name} दिनांक ${formatToDisplayDate(dateStr)} को ${conflictingBooking.guest_name} के लिए पहले से आरक्षित है।`
+                : `${s.name} is already booked on ${formatToDisplayDate(dateStr)} for ${conflictingBooking.guest_name}.`
             );
           }
         }
@@ -225,7 +227,11 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Error updating booking:', err);
-      alert(`संशोधन विफल: ${err.message || 'त्रुटि उत्पन्न हुई'}`);
+      alert(
+        language === 'hi'
+          ? `संशोधन विफल: ${err.message || 'त्रुटि उत्पन्न हुई'}`
+          : `Update failed: ${err.message || 'Error occurred'}`
+      );
     } finally {
       setSubmitting(false);
     }
@@ -235,7 +241,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     if (language === 'hi') {
       if (st === 'PAID') return 'सशुल्क';
       if (st === 'COMPLIMENTARY') return 'शासकीय / वीआईपी';
-      if (st === 'AS PER APPLICABLE' || st === 'AS_PER_APPLICABLE') return 'As per Applicable';
+      if (st === 'AS PER APPLICABLE' || st === 'AS_PER_APPLICABLE') return 'नियमानुसार';
       if (st === 'NOT REQUIRED') return 'लागू नहीं';
       if (st === 'FREE') return 'निःशुल्क';
       if (st === 'PENDING') return 'लंबित';
@@ -501,7 +507,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               <div className="flex items-center justify-between text-xs font-semibold text-amber-900 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
                 <span>{language === 'hi' ? 'कुल देय किराया:' : 'Total Payable Rent:'}</span>
                 <span className="font-mono font-bold">
-                  {Object.values(selectedSuits).filter(Boolean).length || 1} कमरा × ₹{Number(manualAmount)} × {calculateStayNights(checkInDate, checkOutDate)} दिन = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount) * calculateStayNights(checkInDate, checkOutDate)).toLocaleString('en-IN')}/-
+                  {Object.values(selectedSuits).filter(Boolean).length || 1} {language === 'hi' ? 'कमरा' : 'Room(s)'} × ₹{Number(manualAmount)} × {calculateStayNights(checkInDate, checkOutDate)} {language === 'hi' ? 'दिन' : 'Day(s)'} = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount) * calculateStayNights(checkInDate, checkOutDate)).toLocaleString('en-IN')}/-
                 </span>
               </div>
             )}

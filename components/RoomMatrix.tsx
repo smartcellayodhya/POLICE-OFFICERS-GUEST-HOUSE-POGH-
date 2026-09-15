@@ -136,7 +136,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
           <button
             onClick={handlePrevDay}
             className="p-2 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition"
-            title="Previous Day"
+            title={language === 'hi' ? 'पिछला दिन' : 'Previous Day'}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -189,7 +189,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
           <button
             onClick={handleNextDay}
             className="p-2 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition"
-            title="Next Day"
+            title={language === 'hi' ? 'अगला दिन' : 'Next Day'}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -235,7 +235,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                         {booking.guest_name}
                       </div>
                       <div className="text-[11px] text-purple-700 font-mono truncate">
-                        {cleanNotesText(booking.notes) || 'Out of Service'}
+                        {cleanNotesText(booking.notes) || (language === 'hi' ? 'सेवा से बाहर' : 'Out of Service')}
                       </div>
                     </div>
 
@@ -281,7 +281,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       </span>
 
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
-                        {booking.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (booking.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (booking.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
+                        {booking.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (booking.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (booking.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? (language === 'hi' ? 'नियमानुसार' : 'As per Applicable') : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
                       </span>
                     </div>
 
@@ -313,7 +313,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                           onOpenRecordCollection(booking);
                         }}
                         className="flex-1 h-8 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer active:scale-95"
-                        title="कलेक्शन व भोजन बिल दर्ज करें"
+                        title={language === 'hi' ? 'कलेक्शन व भोजन बिल दर्ज करें' : 'Record Collection & Food Bill'}
                       >
                         <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
                         <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>

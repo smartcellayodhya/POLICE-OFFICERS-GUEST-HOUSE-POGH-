@@ -55,7 +55,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <button
             onClick={onOpenMobileMenu}
             className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 lg:hidden transition border border-slate-200 shrink-0"
-            aria-label="Open Sidebar Menu"
+            aria-label={language === 'hi' ? 'साइडबार मेन्यू खोलें' : 'Open Sidebar Menu'}
           >
             <Menu className="w-5 h-5" />
           </button>

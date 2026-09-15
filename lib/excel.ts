@@ -15,9 +15,13 @@ import {
   getBookingSuitsList,
 } from './bookingUtils';
 
-export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayodhya_Bookings.xlsx') {
+export function exportBookingsToExcel(
+  bookings: Booking[],
+  fileName = 'POGH_Ayodhya_Bookings.xlsx',
+  lang: 'hi' | 'en' = 'en'
+) {
   if (!bookings || bookings.length === 0) {
-    alert('एक्सपोर्ट करने के लिए कोई रिकॉर्ड उपलब्ध नहीं है।');
+    alert(lang === 'hi' ? 'एक्सपोर्ट करने के लिए कोई रिकॉर्ड उपलब्ध नहीं है।' : 'No records available to export.');
     return;
   }
 
@@ -45,39 +49,64 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
     const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (netCollection > 0 ? 'CASH' : '-');
     const collectedBy = extractCollectedByFromNotes(b.notes) || b.collected_by || '-';
 
-    let mealLabel = 'सशुल्क (PAID)';
-    if (b.meal_type_status === 'COMPLIMENTARY') mealLabel = 'शासकीय / वीआईपी';
-    else if (b.meal_type_status === 'FREE') mealLabel = 'निःशुल्क (FREE)';
-    else if (b.meal_type_status === 'NOT REQUIRED') mealLabel = 'लागू नहीं';
-    else if (b.meal_type_status === 'AS PER APPLICABLE' || b.meal_type_status === 'AS_PER_APPLICABLE') mealLabel = 'As per Applicable';
+    let mealLabel = lang === 'hi' ? 'सशुल्क' : 'Paid';
+    if (b.meal_type_status === 'COMPLIMENTARY') mealLabel = lang === 'hi' ? 'शासकीय / वीआईपी' : 'Complimentary';
+    else if (b.meal_type_status === 'FREE') mealLabel = lang === 'hi' ? 'निःशुल्क' : 'Free';
+    else if (b.meal_type_status === 'NOT REQUIRED') mealLabel = lang === 'hi' ? 'लागू नहीं' : 'Not Required';
+    else if (b.meal_type_status === 'AS PER APPLICABLE' || b.meal_type_status === 'AS_PER_APPLICABLE') mealLabel = lang === 'hi' ? 'नियमानुसार' : 'As per Applicable';
 
-    let statusLabel = 'कन्फर्म (CONFIRMED)';
-    if (b.status === 'CHECKED_IN') statusLabel = 'इन-हाउस (CHECKED-IN)';
-    else if (b.status === 'CHECKED_OUT') statusLabel = 'चेक-आउट (CHECKED-OUT)';
-    else if (b.status === 'CANCELLED') statusLabel = 'निरस्त (CANCELLED)';
-    else if (b.status === 'MAINTENANCE') statusLabel = 'मरम्मत ब्लॉक (MAINTENANCE)';
+    let statusLabel = lang === 'hi' ? 'आरक्षित' : 'Confirmed';
+    if (b.status === 'CHECKED_IN') statusLabel = lang === 'hi' ? 'उपस्थित' : 'In-House';
+    else if (b.status === 'CHECKED_OUT') statusLabel = lang === 'hi' ? 'चेक-आउट' : 'Checked-Out';
+    else if (b.status === 'CANCELLED') statusLabel = lang === 'hi' ? 'निरस्त' : 'Cancelled';
+    else if (b.status === 'MAINTENANCE') statusLabel = lang === 'hi' ? 'मरम्मत ब्लॉक' : 'Maintenance';
+
+    if (lang === 'hi') {
+      return {
+        'संदर्भ सं०': refNo,
+        'पत्र क्रमांक': dispatchNo,
+        'आगमन तिथि': formatToDisplayDate(checkIn),
+        'प्रस्थान तिथि': formatToDisplayDate(checkOut),
+        'अवधि': `${stayNights} रात्रि (${stayNights} दिन)`,
+        'अतिथि का नाम': b.guest_name,
+        'मोबाइल नंबर': b.mobile_number,
+        'संदर्भ': b.reference || '-',
+        'आवंटित सूट': suits.join(', ') || 'Suit 1',
+        'कमरों की संख्या': numRooms,
+        'दैनिक किराया (₹)': perRoomRent > 0 ? perRoomRent : 'नियमानुसार',
+        'कमरा किराया (₹)': totalRent > 0 ? totalRent : 0,
+        'खान-पान संग्रह (₹)': foodAmount > 0 ? foodAmount : 0,
+        'व्यय / खर्च (₹)': expenditure > 0 ? expenditure : 0,
+        'कुल शुद्ध संग्रह (₹)': netCollection > 0 ? netCollection : 0,
+        'भुगतान माध्यम': paymentMode === 'CASH' ? 'नकद' : paymentMode,
+        'कलेक्शन कर्ता': collectedBy,
+        'भोजन व्यवस्था': mealLabel,
+        'स्थिति': statusLabel,
+        'टिप्पणी': cleanNotesText(b.notes) || '-',
+      };
+    }
 
     return {
-      'संदर्भ सं० (Ref No)': refNo,
-      'पत्र क्रमांक (Dispatch No)': dispatchNo,
-      'आगमन तिथि (Check-In)': formatToDisplayDate(checkIn),
-      'प्रस्थान तिथि (Check-Out)': formatToDisplayDate(checkOut),
-      'अवधि (Stay Duration)': `${stayNights} रात्रि (${stayNights} दिन)`,
-      'अतिथि का नाम (Guest Name)': b.guest_name,
-      'मोबाइल नंबर (Mobile)': b.mobile_number,
-      'संदर्भ (Reference)': b.reference || '-',
-      'आवंटित सूट (Suits)': suits.join(', ') || 'Suit 1',
-      'कमरों की संख्या (Rooms)': numRooms,
-      'दैनिक किराया ₹ (Room Rate)': perRoomRent > 0 ? perRoomRent : 'As per applicable',
-      'कमरा किराया ₹ (Room Rent)': totalRent > 0 ? totalRent : 0,
-      'खान-पान संग्रह ₹ (Food Bill)': foodAmount > 0 ? foodAmount : 0,
-      'व्यय / खर्च ₹ (Expenditure)': expenditure > 0 ? expenditure : 0,
-      'कुल शुद्ध संग्रह ₹ (Net Collection)': netCollection > 0 ? netCollection : 0,
-      'भुगतान माध्यम (Mode)': paymentMode,
-      'कलेक्शन कर्ता (Collected By)': collectedBy,
-      'भोजन व्यवस्था (Meal Status)': mealLabel,
-      'स्थिति (Status)': statusLabel,
-      'विवरण / रिमार्क्स (Remarks)': cleanNotesText(b.notes) || '-',
+      'Ref No': refNo,
+      'Dispatch No': dispatchNo,
+      'Check-In Date': formatToDisplayDate(checkIn),
+      'Check-Out Date': formatToDisplayDate(checkOut),
+      'Stay Duration': `${stayNights} Night(s)`,
+      'Guest Name': b.guest_name,
+      'Mobile Number': b.mobile_number,
+      'Reference': b.reference || '-',
+      'Allocated Suits': suits.join(', ') || 'Suit 1',
+      'Number of Rooms': numRooms,
+      'Daily Rate (₹)': perRoomRent > 0 ? perRoomRent : 'As per applicable',
+      'Room Rent (₹)': totalRent > 0 ? totalRent : 0,
+      'Food Bill (₹)': foodAmount > 0 ? foodAmount : 0,
+      'Expenditure (₹)': expenditure > 0 ? expenditure : 0,
+      'Net Collection (₹)': netCollection > 0 ? netCollection : 0,
+      'Payment Mode': paymentMode,
+      'Collected By': collectedBy,
+      'Meal Status': mealLabel,
+      'Status': statusLabel,
+      'Remarks': cleanNotesText(b.notes) || '-',
     };
   });
 
@@ -108,7 +137,7 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
   ];
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'POGH Bookings');
+  XLSX.utils.book_append_sheet(workbook, worksheet, lang === 'hi' ? 'बुकिंग पंजिका' : 'Bookings Directory');
 
   XLSX.writeFile(workbook, fileName);
 }

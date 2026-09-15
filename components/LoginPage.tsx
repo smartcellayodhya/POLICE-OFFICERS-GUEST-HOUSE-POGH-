@@ -2,13 +2,15 @@
 
 import React, { useState } from 'react';
 import { AuthUser, authenticate } from '@/lib/auth';
-import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, Loader2, Globe } from 'lucide-react';
+import { useLanguage } from '@/lib/languageContext';
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+  const { language, setLanguage } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +27,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       if (user) {
         onLoginSuccess(user);
       } else {
-        setError('अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है।');
+        setError(
+          language === 'hi'
+            ? 'अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है।'
+            : 'Invalid username or password entered.'
+        );
         setLoading(false);
       }
     }, 400);
@@ -34,6 +40,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden font-sans">
       
+      {/* Top Right Language Switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <div className="flex items-center gap-1 bg-slate-900/80 backdrop-blur-md p-1 rounded-xl border border-slate-700">
+          <button
+            type="button"
+            onClick={() => setLanguage('en')}
+            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+              language === 'en'
+                ? 'bg-amber-400 text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            onClick={() => setLanguage('hi')}
+            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+              language === 'hi'
+                ? 'bg-amber-400 text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            हिन्दी
+          </button>
+        </div>
+      </div>
+
       {/* Background Decorative Rings */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -53,13 +87,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
           
           <h1 className="text-lg sm:text-xl font-black text-white tracking-wide">
-            POLICE OFFICERS GUEST HOUSE
+            {language === 'hi' ? 'पुलिस ऑफिसर्स गेस्ट हाउस' : 'POLICE OFFICERS GUEST HOUSE'}
           </h1>
           <p className="text-amber-400 font-bold text-xs tracking-widest mt-0.5">
-            अयोध्या पुलिस • Ayodhya Police
+            {language === 'hi' ? 'अयोध्या पुलिस' : 'Ayodhya Police'}
           </p>
           <p className="text-slate-400 text-xs font-hindi mt-1">
-            कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
+            {language === 'hi' ? 'कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या' : 'Office of SSP, Ayodhya District'}
           </p>
         </div>
 
@@ -69,7 +103,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-slate-400" />
-              उपयोगकर्ता नाम
+              {language === 'hi' ? 'उपयोगकर्ता नाम' : 'Username'}
             </label>
             <input
               type="text"
@@ -78,7 +112,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="उपयोगकर्ता नाम दर्ज करें"
+              placeholder={language === 'hi' ? 'उपयोगकर्ता नाम दर्ज करें' : 'Enter username'}
               className="w-full px-4 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
             />
           </div>
@@ -86,7 +120,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Lock className="w-3.5 h-3.5 text-slate-400" />
-              पासवर्ड
+              {language === 'hi' ? 'पासवर्ड' : 'Password'}
             </label>
             <div className="relative">
               <input
@@ -95,13 +129,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="पासवर्ड दर्ज करें"
+                placeholder={language === 'hi' ? 'पासवर्ड दर्ज करें' : 'Enter password'}
                 className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                title={showPassword ? 'पासवर्ड छुपाएं' : 'पासवर्ड देखें'}
+                title={showPassword ? (language === 'hi' ? 'पासवर्ड छुपाएं' : 'Hide password') : (language === 'hi' ? 'पासवर्ड देखें' : 'Show password')}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -124,11 +158,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                <span>सत्यापित किया जा रहा है...</span>
+                <span>{language === 'hi' ? 'सत्यापित किया जा रहा है...' : 'Authenticating...'}</span>
               </>
             ) : (
               <>
-                <span>लॉगिन करें</span>
+                <span>{language === 'hi' ? 'लॉगिन करें' : 'Sign In'}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -140,7 +174,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       {/* Footer info below login card */}
       <footer className="mt-6 text-center z-10 select-none space-y-1">
         <p className="text-xs text-slate-500 font-medium tracking-wide">
-          &copy; {new Date().getFullYear()} अयोध्या पुलिस (Ayodhya Police) • सर्वाधिकार सुरक्षित
+          &copy; {new Date().getFullYear()} {language === 'hi' ? 'अयोध्या पुलिस • सर्वाधिकार सुरक्षित' : 'Ayodhya Police • All Rights Reserved'}
         </p>
         <p className="text-xs text-amber-400 font-semibold tracking-wide">
           Designed & Developed by Rahul Yadav

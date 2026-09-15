@@ -142,7 +142,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             (b) => b.booking_date === d && b.status !== 'CANCELLED' && Number(b[s.id as keyof Booking]) > 0
           );
           if (booked) {
-            conflicts.push(`${s.name} is already booked on ${formatToDisplayDate(d)} for ${booked.guest_name}`);
+            conflicts.push(
+              language === 'hi'
+                ? `${s.name} दिनांक ${formatToDisplayDate(d)} को ${booked.guest_name} के लिए पहले से आरक्षित है।`
+                : `${s.name} is already booked on ${formatToDisplayDate(d)} for ${booked.guest_name}.`
+            );
           }
         }
       });
@@ -238,7 +242,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       }
     } catch (err: any) {
       console.error('Error saving booking:', err);
-      alert('Failed to save booking: ' + (err?.message || 'Unknown error'));
+      alert(
+        language === 'hi'
+          ? 'बुकिंग सुरक्षित करने में विफल: ' + (err?.message || 'अज्ञात त्रुटि')
+          : 'Failed to save booking: ' + (err?.message || 'Unknown error')
+      );
     } finally {
       setSubmitting(false);
     }
@@ -248,7 +256,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (language === 'hi') {
       if (status === 'PAID') return 'सशुल्क';
       if (status === 'COMPLIMENTARY') return 'शासकीय / वीआईपी';
-      if (status === 'AS PER APPLICABLE' || status === 'AS_PER_APPLICABLE') return 'As per Applicable';
+      if (status === 'AS PER APPLICABLE' || status === 'AS_PER_APPLICABLE') return 'नियमानुसार';
       if (status === 'NOT REQUIRED') return 'लागू नहीं';
       if (status === 'FREE') return 'निःशुल्क';
       if (status === 'PENDING') return 'लंबित';
@@ -491,7 +499,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <div className="flex items-center justify-between text-xs font-semibold text-amber-900 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
                 <span>{language === 'hi' ? 'कुल देय किराया:' : 'Total Payable Rent:'}</span>
                 <span className="font-mono font-bold">
-                  {Object.values(selectedSuits).filter(Boolean).length || 1} कमरा × ₹{Number(manualAmount)} × {totalDays} दिन = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount) * totalDays).toLocaleString('en-IN')}/-
+                  {Object.values(selectedSuits).filter(Boolean).length || 1} {language === 'hi' ? 'कमरा' : 'Room(s)'} × ₹{Number(manualAmount)} × {totalDays} {language === 'hi' ? 'दिन' : 'Day(s)'} = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount) * totalDays).toLocaleString('en-IN')}/-
                 </span>
               </div>
             )}
@@ -507,7 +515,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   const checked = e.target.checked;
                   setIsMaintenance(checked);
                   if (checked) {
-                    setGuestName('कमरा मरम्मत / ब्लॉक');
+                    setGuestName(language === 'hi' ? 'कमरा मरम्मत / ब्लॉक' : 'Room Maintenance / Block');
                     setMobileNumber('8317041684');
                     setReference('MAINTENANCE');
                     setMealStatus('NOT REQUIRED');

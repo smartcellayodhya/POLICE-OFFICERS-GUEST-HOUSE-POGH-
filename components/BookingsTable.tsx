@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, BookingStatus } from '@/lib/types';
-import { formatToDisplayDate, calculateStayNights, formatToISODate } from '@/lib/dateUtils';
+import { formatToDisplayDate, calculateStayNights, formatToISODate, formatToHindiDate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
 import {
   extractGroupIdFromNotes,
@@ -314,16 +314,23 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     if (!isAdmin && !isOperator) return;
     const isCurrentlyCancelled = stay.status === 'CANCELLED';
     const newStatus: BookingStatus = isCurrentlyCancelled ? 'CONFIRMED' : 'CANCELLED';
-    const actionText = isCurrentlyCancelled ? 'बहाल (Restore)' : 'निरस्त (Cancel)';
+    const confirmMsg =
+      language === 'hi'
+        ? `क्या आप ${stay.guestName} की बुकिंग (${stay.groupId}) को ${isCurrentlyCancelled ? 'बहाल' : 'निरस्त'} करना चाहते हैं?`
+        : `Are you sure you want to ${isCurrentlyCancelled ? 'restore' : 'cancel'} the booking (${stay.groupId}) for ${stay.guestName}?`;
 
-    if (window.confirm(`क्या आप ${stay.guestName} की बुकिंग (${stay.groupId}) को ${actionText} करना चाहते हैं?`)) {
+    if (window.confirm(confirmMsg)) {
       onUpdateStatus(stay.primaryBooking, newStatus, true);
     }
   };
 
   const handleDeleteClick = (stay: GroupedStay) => {
     if (!isAdmin) return;
-    if (window.confirm(`क्या आप ${stay.guestName} का बुकिंग रिकॉर्ड (${stay.groupId}) स्थायी रूप से हटाना चाहते हैं?`)) {
+    const confirmMsg =
+      language === 'hi'
+        ? `क्या आप ${stay.guestName} का बुकिंग रिकॉर्ड (${stay.groupId}) स्थायी रूप से हटाना चाहते हैं?`
+        : `Are you sure you want to permanently delete the booking record (${stay.groupId}) for ${stay.guestName}?`;
+    if (window.confirm(confirmMsg)) {
       onDeleteBooking(stay.primaryBooking.id, stay.groupId);
     }
   };
@@ -334,7 +341,11 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     filteredStays.forEach((stay) => {
       stay.allBookings.forEach((b) => recordsToExport.push(b));
     });
-    exportBookingsToExcel(recordsToExport, `POGH_Ayodhya_Bookings_${formatToISODate(new Date())}.xlsx`);
+    exportBookingsToExcel(
+      recordsToExport,
+      `POGH_Ayodhya_Bookings_${formatToISODate(new Date())}.xlsx`,
+      language
+    );
   };
 
   return (
@@ -373,7 +384,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
           <button
             onClick={handleExportExcel}
             className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold transition shadow-xs whitespace-nowrap active:scale-95 cursor-pointer shrink-0"
-            title="पूरी पंजिका Excel (.xlsx) में डाउनलोड करें"
+            title={language === 'hi' ? 'पूरी पंजिका Excel (.xlsx) में डाउनलोड करें' : 'Download Bookings in Excel (.xlsx)'}
           >
             <Download className="w-3.5 h-3.5" />
             <span>{language === 'hi' ? 'एक्सेल (.xlsx)' : 'Export Excel'}</span>
@@ -517,8 +528,12 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       {/* Stay Duration Display */}
                       <span className="text-[11px] sm:text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
                         {stay.checkInDate === stay.checkOutDate
-                          ? `${formatToDisplayDate(stay.checkInDate)} (1 दिन)`
-                          : `${formatToDisplayDate(stay.checkInDate)} से ${formatToDisplayDate(stay.checkOutDate)} (${stay.stayNights} रात्रि)`}
+                          ? (language === 'hi'
+                              ? `${formatToHindiDate(stay.checkInDate)} (1 दिन)`
+                              : `${formatToDisplayDate(stay.checkInDate)} (1 Day)`)
+                          : (language === 'hi'
+                              ? `${formatToHindiDate(stay.checkInDate)} से ${formatToHindiDate(stay.checkOutDate)} (${stay.stayNights} रात्रि)`
+                              : `${formatToDisplayDate(stay.checkInDate)} to ${formatToDisplayDate(stay.checkOutDate)} (${stay.stayNights} ${stay.stayNights > 1 ? 'Nights' : 'Night'})`)}
                       </span>
                     </div>
 
@@ -592,9 +607,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                             </span>
                           </div>
                           <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1.5">
-                            <span>किराया: ₹{stay.totalRent}</span>
-                            {stay.foodAmount > 0 && <span className="text-blue-600 font-semibold">+ भोजन: ₹{stay.foodAmount}</span>}
-                            {stay.expenditure > 0 && <span className="text-rose-600 font-semibold">- खर्च: ₹{stay.expenditure}</span>}
+                            <span>{language === 'hi' ? 'किराया:' : 'Rent:'} ₹{stay.totalRent}</span>
+                            {stay.foodAmount > 0 && <span className="text-blue-600 font-semibold">+ {language === 'hi' ? 'भोजन:' : 'Food:'} ₹{stay.foodAmount}</span>}
+                            {stay.expenditure > 0 && <span className="text-rose-600 font-semibold">- {language === 'hi' ? 'खर्च:' : 'Exp:'} ₹{stay.expenditure}</span>}
                           </div>
                         </div>
                       ) : (
@@ -603,7 +618,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                             {stay.totalRent > 0 ? (
                               `₹${stay.totalRent.toLocaleString('en-IN')}/-`
                             ) : (
-                              <span className="text-slate-500 font-medium text-xs">निःशुल्क / शासकीय</span>
+                              <span className="text-slate-500 font-medium text-xs">
+                                {language === 'hi' ? 'निःशुल्क / शासकीय' : 'Complimentary / Official'}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -624,7 +641,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                               ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
                               : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                           }`}
-                          title={isInHouse ? 'चेक-आउट दर्ज करें' : isCheckedOut ? 'पुनः सक्रिय करें' : 'चेक-इन दर्ज करें'}
+                          title={
+                            isInHouse
+                              ? (language === 'hi' ? 'चेक-आउट दर्ज करें' : 'Record Check-Out')
+                              : isCheckedOut
+                              ? (language === 'hi' ? 'पुनः सक्रिय करें' : 'Reactivate Stay')
+                              : (language === 'hi' ? 'चेक-इन दर्ज करें' : 'Record Check-In')
+                          }
                         >
                           {isInHouse ? (
                             <>
@@ -669,7 +692,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           <button
                             onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
                             className="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer"
-                            title="अधिक विकल्प"
+                            title={language === 'hi' ? 'अधिक विकल्प' : 'More Options'}
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>

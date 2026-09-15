@@ -150,7 +150,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  एडमिन (SSP Office)
+                  {language === 'hi' ? 'एडमिन (एसएसपी कार्यालय)' : 'Admin (SSP Office)'}
                 </button>
                 <button
                   type="button"
@@ -164,7 +164,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  ड्यूटी अधिकारी (Officer)
+                  {language === 'hi' ? 'ड्यूटी अधिकारी (ऑपरेटर)' : 'Duty Officer (Counter)'}
                 </button>
               </div>
             </div>

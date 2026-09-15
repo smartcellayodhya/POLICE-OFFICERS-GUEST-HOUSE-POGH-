@@ -36,10 +36,11 @@ import { ReceiptModal } from '@/components/ReceiptModal';
 import { AuditLogModal } from '@/components/AuditLogModal';
 import { MonthlyCollectionPage } from '@/components/MonthlyCollectionPage';
 import { SplashScreen } from '@/components/SplashScreen';
-import { LanguageProvider } from '@/lib/languageContext';
+import { LanguageProvider, useLanguage } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
 
-export default function HomePage() {
+function HomePageContent() {
+  const { language } = useLanguage();
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -420,7 +421,11 @@ export default function HomePage() {
   // Open Collection Modal (Admin & Operator)
   const handleOpenCollection = (booking: Booking) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'operator') {
-      alert('केवल एडमिन व ऑपरेटर को कलेक्शन दर्ज करने की अनुमति है।');
+      alert(
+        language === 'hi'
+          ? 'केवल एडमिन व ऑपरेटर को कलेक्शन दर्ज करने की अनुमति है।'
+          : 'Only Admin and Counter Operator are authorized to record collection.'
+      );
       return;
     }
     setSelectedCollectionBooking(booking);
@@ -592,8 +597,7 @@ export default function HomePage() {
 
   return (
     <>
-      <LanguageProvider>
-        <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans overflow-x-hidden max-w-full">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans overflow-x-hidden max-w-full">
         
         {/* 1. Side Navigation Menu */}
         <Sidebar
@@ -660,7 +664,9 @@ export default function HomePage() {
               <div className="flex items-center justify-between pb-1">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">
-                    {matrixViewMode === '7days' ? 'कमरा आवंटन व पूर्वानुमान (7-दिवसीय)' : 'दैनिक कमरा उपलब्धता पंजिका'}
+                    {matrixViewMode === '7days'
+                      ? (language === 'hi' ? 'कमरा आवंटन व पूर्वानुमान (7-दिवसीय)' : 'Room Allotment & 7-Day Forecast')
+                      : (language === 'hi' ? 'दैनिक कमरा उपलब्धता पंजिका' : 'Daily Room Availability Schedule')}
                   </h2>
                 </div>
 
@@ -673,7 +679,7 @@ export default function HomePage() {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    7-दिवसीय दृश्य (7 Days)
+                    {language === 'hi' ? '7-दिवसीय दृश्य' : '7 Days View'}
                   </button>
                   <button
                     onClick={() => setMatrixViewMode('schedule')}
@@ -683,7 +689,7 @@ export default function HomePage() {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    दैनिक सूची (Daily List)
+                    {language === 'hi' ? 'दैनिक सूची' : 'Daily Schedule'}
                   </button>
                 </div>
               </div>
@@ -738,10 +744,10 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-center sm:text-left">
               <p className="font-bold text-slate-200">
-                पुलिस ऑफिसर्स गेस्ट हाउस (POGH) • अयोध्या पुलिस
+                {language === 'hi' ? 'पुलिस ऑफिसर्स गेस्ट हाउस (POGH) • अयोध्या पुलिस' : 'Police Officers Guest House (POGH) • Ayodhya Police'}
               </p>
               <p className="text-[11px] text-slate-500 font-hindi mt-0.5">
-                कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या (उ0प्र0)
+                {language === 'hi' ? 'कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या (उ0प्र0)' : 'Office of SSP, Ayodhya District (U.P.)'}
               </p>
             </div>
 
@@ -755,7 +761,7 @@ export default function HomePage() {
               </span>
               <span>•</span>
               <span className="text-amber-400/90 font-semibold">
-                {isAdmin ? 'एडमिन' : (isOperator ? 'काउंटर ऑपरेटर' : 'ड्यूटी अधिकारी')}
+                {isAdmin ? (language === 'hi' ? 'एडमिन' : 'Admin') : (isOperator ? (language === 'hi' ? 'काउंटर ऑपरेटर' : 'Counter Operator') : (language === 'hi' ? 'ड्यूटी अधिकारी' : 'Duty Officer'))}
               </span>
             </div>
           </div>
@@ -867,8 +873,15 @@ export default function HomePage() {
           isOpen={isAuditModalOpen}
           onClose={() => setIsAuditModalOpen(false)}
         />
-        </div>
-      </LanguageProvider>
+      </div>
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <LanguageProvider>
+      <HomePageContent />
+    </LanguageProvider>
   );
 }

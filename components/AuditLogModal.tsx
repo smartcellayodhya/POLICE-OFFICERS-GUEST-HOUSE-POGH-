@@ -37,10 +37,11 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
 
-  const handleClear = () => {
-    if (window.confirm('क्या आप सभी एक्टिविटी लॉग हटाना चाहते हैं?')) {
+  const handleClearLogs = () => {
+    const msg = language === 'hi' ? 'क्या आप सभी एक्टिविटी लॉग हटाना चाहते हैं?' : 'Are you sure you want to clear all activity logs?';
+    if (window.confirm(msg)) {
       clearActivityLogs();
-      refreshLogs();
+      setLogs([]);
     }
   };
 
@@ -93,7 +94,22 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
           return action;
       }
     }
-    return action;
+    switch (action) {
+      case 'CREATE':
+        return 'New Entry';
+      case 'UPDATE':
+        return 'Modified';
+      case 'DELETE':
+        return 'Deleted';
+      case 'STATUS_CHANGE':
+        return 'Status Changed';
+      case 'MAINTENANCE':
+        return 'Maintenance';
+      case 'LOGIN':
+        return 'Sign In';
+      default:
+        return action;
+    }
   };
 
   return (
@@ -131,7 +147,7 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
               <RefreshCw className="w-4 h-4" />
             </button>
             <button
-              onClick={handleClear}
+              onClick={handleClearLogs}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
               title={language === 'hi' ? 'सभी लॉग हटाएं' : 'Clear all logs'}
             >

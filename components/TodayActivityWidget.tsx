@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { Booking } from '@/lib/types';
 import { SUITS } from '@/lib/constants';
-import { formatToISODate, formatToDisplayDate } from '@/lib/dateUtils';
+import { formatToISODate, formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
 import { formatGuestDisplayName, cleanNotesText } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import {
@@ -75,7 +75,7 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                 {language === 'hi' ? 'आज की गतिविधि व अतिथि' : "Today's Occupants & Activity"}
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
-                {formatToDisplayDate(todayStr)} • {todayBookings.length} {language === 'hi' ? 'आरक्षण सक्रिय' : 'active bookings'}
+                {language === 'hi' ? formatToHindiDate(todayStr) : formatToDisplayDate(todayStr)} • {todayBookings.length} {language === 'hi' ? 'आरक्षण सक्रिय' : 'active bookings'}
               </p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                         onSelectBooking(b);
                       }}
                       className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-blue-700 transition"
-                      title="आवंटन पत्र देखें"
+                      title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Allotment Letter'}
                     >
                       <FileText className="w-3.5 h-3.5" />
                     </button>
@@ -210,17 +210,17 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                         onClick={() => onQuickBook(todayStr, suit.id)}
                         className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition shadow-2xs"
                       >
-                        + बुक करें
+                        {language === 'hi' ? '+ बुक करें' : '+ Book'}
                       </button>
                     ) : (
                       <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
-                        <span>उपलब्ध</span>
+                        <span>{language === 'hi' ? 'उपलब्ध' : 'Available'}</span>
                       </span>
                     )
                   ) : (
                     <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 truncate max-w-[110px]">
-                      {booking?.guest_name ? formatGuestDisplayName(booking.guest_name).split(' ')[1] || booking.guest_name : 'आरक्षित'}
+                      {booking?.guest_name ? formatGuestDisplayName(booking.guest_name).split(' ')[1] || booking.guest_name : (language === 'hi' ? 'आरक्षित' : 'Reserved')}
                     </span>
                   )}
                 </div>

@@ -59,7 +59,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition shadow-2xs group"
-        title="यूज़र मेन्यू एवं भाषा विकल्प"
+        title={language === 'hi' ? 'यूज़र मेन्यू एवं भाषा विकल्प' : 'User Menu & Language Options'}
       >
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
           isAdmin
@@ -110,7 +110,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <div className="px-3 py-2 border-b border-slate-100">
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5 flex items-center gap-1.5">
               <Languages className="w-3.5 h-3.5 text-slate-400" />
-              <span>{language === 'hi' ? 'भाषा (Language)' : 'Language'}</span>
+              <span>{language === 'hi' ? 'भाषा' : 'Language'}</span>
             </p>
 
             <div className="grid grid-cols-2 gap-1 bg-slate-100/80 p-1 rounded-xl">

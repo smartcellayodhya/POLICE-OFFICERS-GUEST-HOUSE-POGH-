@@ -16,6 +16,7 @@ import {
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Receipt, CheckCircle2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
+import { useLanguage } from '@/lib/languageContext';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   booking,
   relatedBookings = [],
 }) => {
+  const { language } = useLanguage();
   const printRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
   const [paymentMode, setPaymentMode] = useState<string>('CASH'); // CASH | UPI | GOVT
@@ -177,9 +179,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <Receipt className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold">आधिकारिक किराया भुगतान रसीद</h3>
+              <h3 className="text-base font-bold">{language === 'hi' ? 'आधिकारिक किराया भुगतान रसीद' : 'Official Rent Payment Receipt'}</h3>
               <p className="text-xs text-slate-300">
-                रसीद सं०: <span className="font-mono text-amber-400 font-bold">{receiptNo}</span>
+                {language === 'hi' ? 'रसीद सं०:' : 'Receipt No:'} <span className="font-mono text-amber-400 font-bold">{receiptNo}</span>
               </p>
             </div>
           </div>
@@ -190,11 +192,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               value={paymentMode}
               onChange={(e) => setPaymentMode(e.target.value)}
               className="bg-slate-800 text-amber-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none font-semibold cursor-pointer"
-              title="Payment Mode"
+              title={language === 'hi' ? 'भुगतान माध्यम' : 'Payment Mode'}
             >
-              <option value="CASH">नकद (Cash)</option>
-              <option value="UPI">ऑनलाइन (UPI)</option>
-              <option value="GOVT">शासकीय (Govt)</option>
+              <option value="CASH">{language === 'hi' ? 'नकद' : 'Cash'}</option>
+              <option value="UPI">{language === 'hi' ? 'ऑनलाइन (UPI)' : 'Online (UPI)'}</option>
+              <option value="GOVT">{language === 'hi' ? 'शासकीय' : 'Govt'}</option>
             </select>
 
             <button
@@ -382,14 +384,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               className="h-10 sm:h-11 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
             >
               <Download className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
-              <span className="truncate">{downloading ? 'डाउनलोड...' : 'PDF रसीद'}</span>
+              <span className="truncate">{downloading ? (language === 'hi' ? 'डाउनलोड...' : 'Downloading...') : (language === 'hi' ? 'PDF रसीद' : 'PDF Receipt')}</span>
             </button>
             <button
               onClick={handlePrint}
               className="h-10 sm:h-11 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white transition shadow-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
             >
               <Printer className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400 shrink-0" />
-              <span>प्रिंट करें</span>
+              <span>{language === 'hi' ? 'प्रिंट करें' : 'Print'}</span>
             </button>
           </div>
 
@@ -397,7 +399,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             onClick={onClose}
             className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs sm:text-sm font-semibold transition cursor-pointer w-full sm:w-auto"
           >
-            बंद करें
+            {language === 'hi' ? 'बंद करें' : 'Close'}
           </button>
         </div>
 

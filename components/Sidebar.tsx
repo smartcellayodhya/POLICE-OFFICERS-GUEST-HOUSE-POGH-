@@ -97,7 +97,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div>
                 <h2 className="text-sm font-extrabold text-white tracking-wide leading-tight">
-                  POLICE OFFICERS<br />GUEST HOUSE
+                  {language === 'hi' ? (
+                    <>पुलिस ऑफिसर्स<br />गेस्ट हाउस</>
+                  ) : (
+                    <>POLICE OFFICERS<br />GUEST HOUSE</>
+                  )}
                 </h2>
                 <p className="text-[11px] text-amber-400 font-bold mt-0.5">
                   {t('ayodhyaPolice')}

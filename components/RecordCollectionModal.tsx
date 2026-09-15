@@ -15,7 +15,7 @@ import {
   getBookingSuitsList,
   formatGuestDisplayName,
 } from '@/lib/bookingUtils';
-import { calculateStayNights, formatToDisplayDate } from '@/lib/dateUtils';
+import { calculateStayNights, formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
 import {
   X,
   IndianRupee,
@@ -164,7 +164,10 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Error recording collection:', err);
-      alert('कलेक्शन सुरक्षित करने में त्रुटि: ' + (err?.message || 'अज्ञात त्रुटि'));
+      alert(
+        (language === 'hi' ? 'कलेक्शन सुरक्षित करने में त्रुटि: ' : 'Error saving collection: ') +
+          (err?.message || (language === 'hi' ? 'अज्ञात त्रुटि' : 'Unknown error'))
+      );
     } finally {
       setSubmitting(false);
     }
@@ -215,12 +218,18 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
                   <span>{formatGuestDisplayName(booking.guest_name)}</span>
                 </div>
                 <div className="text-slate-500 font-mono text-[11px] mt-0.5">
-                  {booking.mobile_number} • {suitsDisplay} ({numRooms} कमरा)
+                  {booking.mobile_number} • {suitsDisplay} ({numRooms} {language === 'hi' ? 'कमरा' : (numRooms > 1 ? 'Rooms' : 'Room')})
                 </div>
               </div>
               <div className="text-right text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200 font-medium">
-                <div>{formatToDisplayDate(checkInDate)} से {formatToDisplayDate(checkOutDate)}</div>
-                <div className="font-bold text-slate-800 font-mono">{stayNights} रात्रि / दिन</div>
+                <div>
+                  {language === 'hi'
+                    ? `${formatToHindiDate(checkInDate)} से ${formatToHindiDate(checkOutDate)}`
+                    : `${formatToDisplayDate(checkInDate)} to ${formatToDisplayDate(checkOutDate)}`}
+                </div>
+                <div className="font-bold text-slate-800 font-mono">
+                  {language === 'hi' ? `${stayNights} रात्रि / दिन` : `${stayNights} ${stayNights > 1 ? 'Nights' : 'Night'}`}
+                </div>
               </div>
             </div>
 
@@ -357,9 +366,9 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
                   {language === 'hi' ? 'कुल संकलित धनराशि (नेट):' : 'Net Total Amount:'}
                 </div>
                 <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2">
-                  <span>किराया: ₹{totalRoomRent.toLocaleString('en-IN')}</span>
-                  {parsedFood > 0 && <span className="text-blue-300">+ भोजन: ₹{parsedFood}</span>}
-                  {parsedExp > 0 && <span className="text-rose-300">- खर्च: ₹{parsedExp}</span>}
+                  <span>{language === 'hi' ? 'किराया:' : 'Rent:'} ₹{totalRoomRent.toLocaleString('en-IN')}</span>
+                  {parsedFood > 0 && <span className="text-blue-300">+ {language === 'hi' ? 'भोजन:' : 'Food:'} ₹{parsedFood}</span>}
+                  {parsedExp > 0 && <span className="text-rose-300">- {language === 'hi' ? 'खर्च:' : 'Exp:'} ₹{parsedExp}</span>}
                 </div>
               </div>
               <div className="text-right">
