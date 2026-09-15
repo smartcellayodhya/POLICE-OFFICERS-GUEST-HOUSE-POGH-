@@ -49,8 +49,16 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
   document.body.appendChild(container);
 
   try {
+    // Wait for fonts to be completely ready before taking canvas snapshot
+    if (typeof document !== 'undefined' && (document as any).fonts && (document as any).fonts.ready) {
+      try {
+        await (document as any).fonts.ready;
+      } catch (e) {
+        // Fallback if fonts.ready rejects
+      }
+    }
     // Allow paint cycle for fonts and layout
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     // Strip any borders or filters from images inside clone before capturing
     clone.querySelectorAll('img').forEach((img) => {

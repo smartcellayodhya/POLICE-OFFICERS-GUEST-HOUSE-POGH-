@@ -369,14 +369,14 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                     style={{ backgroundColor: '#1e3a8a', color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
                   >
                     <th
-                      className="w-[34%] py-2.5 px-3.5 text-left font-bold border-r border-blue-800"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#1e40af', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 text-left font-bold border-r border-blue-800"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#1e40af', paddingTop: '6px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       विवरण
                     </th>
                     <th
-                      className="w-[66%] py-2.5 px-3.5 text-left font-bold"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 text-left font-bold"
+                      style={{ verticalAlign: 'middle', paddingTop: '6px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       सूचना
                     </th>
@@ -385,98 +385,98 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                 <tbody className="divide-y divide-slate-200">
                   <tr className="hover:bg-slate-50">
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       गेस्ट का नाम
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 font-bold text-slate-900"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 font-bold text-slate-900"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       कब से कब तक
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {isSingleDay ? `दि० ${cinHindi} (01 दिवस)` : `दि० ${cinHindi} से ${coutHindi} तक (${totalDays > 9 ? totalDays : `0${totalDays}`} दिवस)`}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       रूम की संख्या
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {numRooms} रूम
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       सूट नम्बर
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 font-bold text-blue-900"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 font-bold text-blue-900"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {suitsDisplay}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       चेक-इन / चेक-आउट
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {cinHindi} ({checkInTime}) / {coutHindi} ({checkOutTime})
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       कुल दिन
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {totalDays} दिन ({totalDays} रात्रि)
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       भोजन व्यवस्था स्थिति
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 font-semibold text-emerald-700"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 font-semibold text-emerald-700"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {getMealLabel(booking.meal_type_status)}
                     </td>
@@ -486,14 +486,14 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                     style={{ backgroundColor: '#fef3c7', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
                   >
                     <td
-                      className="w-[34%] py-2.5 px-3.5 font-semibold text-amber-900 border-r border-amber-300"
-                      style={{ verticalAlign: 'middle', borderRightColor: '#fde68a', lineHeight: '1.4' }}
+                      className="w-[34%] px-3.5 font-semibold text-amber-900 border-r border-amber-300"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#fde68a', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       प्रति रूम प्रति दिन किराया
                     </td>
                     <td
-                      className="w-[66%] py-2.5 px-3.5 text-amber-950 font-sans text-sm font-bold"
-                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                      className="w-[66%] px-3.5 text-amber-950 font-sans text-sm font-bold"
+                      style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
                       {rentDisplay}
                     </td>
