@@ -100,7 +100,7 @@ def generate_whatsapp_link(details: dict) -> str:
     cin_h = to_hindi_date(details.get('check_in_date'))
     cout_h = to_hindi_date(details.get('check_out_date'))
     raw_rate = clean_and_format_rate(details.get("rate_per_day", ""))
-    rate_line = f"- प्रति रूम प्रति दिन किराया: ₹{raw_rate}/-\n" if raw_rate else ""
+    rate_line = f"- प्रति रूम प्रति दिन किराया: ₹{raw_rate}/-\n" if raw_rate else "- प्रति रूम प्रति दिन किराया: As per applicable\n"
 
     hindi_msg = (
         f"सेवा में,\n"

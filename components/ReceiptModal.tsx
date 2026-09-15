@@ -278,10 +278,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     </td>
                     <td className="p-2 border border-slate-300 text-center">{totalDays}</td>
                     <td className="p-2 border border-slate-300 text-right font-mono">
-                      {singleRoomRent > 0 ? (numRooms > 1 ? `₹${singleRoomRent} × ${numRooms} = ₹${dailyTotalRent}` : `₹${singleRoomRent}`) : 'लागू अनुसार'}
+                      {singleRoomRent > 0 ? (numRooms > 1 ? `₹${singleRoomRent} × ${numRooms} = ₹${dailyTotalRent}` : `₹${singleRoomRent}`) : 'As per applicable'}
                     </td>
                     <td className="p-2 border border-slate-300 text-right font-bold font-mono">
-                      {totalRentAmount > 0 ? `₹${totalRentAmount}` : 'लागू अनुसार'}
+                      {totalRentAmount > 0 ? `₹${totalRentAmount}` : 'As per applicable'}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
@@ -302,7 +302,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       कुल प्राप्त धनराशि (Total Amount):
                     </td>
                     <td className="p-2.5 border border-slate-300 text-right font-mono text-base font-bold text-blue-900">
-                      {totalRentAmount > 0 ? `₹${totalRentAmount.toLocaleString('en-IN')}/-` : 'लागू नियमानुसार'}
+                      {totalRentAmount > 0 ? `₹${totalRentAmount.toLocaleString('en-IN')}/-` : 'As per applicable'}
                     </td>
                   </tr>
                 </tbody>

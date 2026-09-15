@@ -546,7 +546,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       {stay.totalRent > 0 ? (
                         <>₹{stay.totalRent.toLocaleString('en-IN')}/- </>
                       ) : (
-                        <span className="text-slate-500 font-medium text-[11px]">{language === 'hi' ? 'लागू नियमानुसार' : 'Standard Rate'} </span>
+                        <span className="text-slate-500 font-medium text-[11px]">As per applicable </span>
                       )}
                       <span className="text-[10px] font-normal text-slate-500">
                         ({stay.mealStatus === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (stay.mealStatus === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (stay.mealStatus === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (language === 'hi' ? 'सशुल्क' : 'Paid')))})

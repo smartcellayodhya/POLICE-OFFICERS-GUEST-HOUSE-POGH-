@@ -221,6 +221,8 @@ def generate_hindi_letter_pdf(details: dict) -> bytes:
     ]
     if raw_rate:
         rows.append(("प्रति रूम प्रति दिन किराया", f"₹{raw_rate}/-"))
+    else:
+        rows.append(("प्रति रूम प्रति दिन किराया", "As per applicable"))
     
     pdf.set_font(font_name, "", 10)
     for desc, val in rows:
