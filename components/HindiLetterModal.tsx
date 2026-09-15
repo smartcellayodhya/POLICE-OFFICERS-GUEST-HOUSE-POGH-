@@ -362,56 +362,144 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
 
             {/* Structured Booking Details Table */}
             <div className="mb-4 overflow-hidden rounded-lg border border-slate-300 shadow-xs">
-              <div
-                className="bg-blue-900 text-white font-bold text-xs grid grid-cols-3 p-2.5 items-center"
-                style={{ backgroundColor: '#1e3a8a', color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-              >
-                <span className="col-span-1 text-white border-r border-blue-800 pr-3 self-stretch flex items-center">विवरण</span>
-                <span className="col-span-2 text-white pl-3 self-stretch flex items-center">सूचना</span>
-              </div>
-              <div className="divide-y divide-slate-200 text-xs text-slate-800 bg-white">
-                <div className="grid grid-cols-3 p-2 hover:bg-slate-50 items-center">
-                  <span className="col-span-1 font-semibold text-slate-700 border-r border-slate-200 pr-3 self-stretch flex items-center">गेस्ट का नाम</span>
-                  <span className="col-span-2 font-bold text-slate-900 pl-3 self-stretch flex items-center">
-                    {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 p-2 hover:bg-slate-50 items-center">
-                  <span className="col-span-1 font-semibold text-slate-700 border-r border-slate-200 pr-3 self-stretch flex items-center">कब से कब तक</span>
-                  <span className="col-span-2 pl-3 self-stretch flex items-center">
-                    {isSingleDay ? `दि० ${cinHindi} (01 दिवस)` : `दि० ${cinHindi} से ${coutHindi} तक (${totalDays > 9 ? totalDays : `0${totalDays}`} दिवस)`}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 p-2 hover:bg-slate-50 items-center">
-                  <span className="col-span-1 font-semibold text-slate-700 border-r border-slate-200 pr-3 self-stretch flex items-center">रूम की संख्या</span>
-                  <span className="col-span-2 pl-3 self-stretch flex items-center">{numRooms} रूम</span>
-                </div>
-                <div className="grid grid-cols-3 p-2 hover:bg-slate-50 items-center">
-                  <span className="col-span-1 font-semibold text-slate-700 border-r border-slate-200 pr-3 self-stretch flex items-center">सूट नम्बर</span>
-                  <span className="col-span-2 font-bold text-blue-900 pl-3 self-stretch flex items-center">{suitsDisplay}</span>
-                </div>
-                <div className="grid grid-cols-3 p-2 hover:bg-slate-50 items-center">
-                  <span className="col-span-1 font-semibold text-slate-700 border-r border-slate-200 pr-3 self-stretch flex items-center">चेक-इन / चेक-आउट</span>
-                  <span className="col-span-2 pl-3 self-stretch flex items-center">{cinHindi} ({checkInTime}) / {coutHindi} ({checkOutTime})</span>
-                </div>
-                <div className="grid grid-cols-3 p-2 hover:bg-slate-50 items-center">
-                  <span className="col-span-1 font-semibold text-slate-700 border-r border-slate-200 pr-3 self-stretch flex items-center">कुल दिन</span>
-                  <span className="col-span-2 pl-3 self-stretch flex items-center">{totalDays} दिन ({totalDays} रात्रि)</span>
-                </div>
-                <div className="grid grid-cols-3 p-2 hover:bg-slate-50 items-center">
-                  <span className="col-span-1 font-semibold text-slate-700 border-r border-slate-200 pr-3 self-stretch flex items-center">भोजन व्यवस्था स्थिति</span>
-                  <span className="col-span-2 font-semibold text-emerald-700 pl-3 self-stretch flex items-center">{getMealLabel(booking.meal_type_status)}</span>
-                </div>
-                <div
-                  className="grid grid-cols-3 p-2 bg-amber-50/60 font-bold text-slate-900 items-center"
-                  style={{ backgroundColor: '#fef3c7', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-                >
-                  <span className="col-span-1 font-semibold text-amber-900 border-r border-amber-300 pr-3 self-stretch flex items-center">प्रति रूम प्रति दिन किराया</span>
-                  <span className="col-span-2 text-amber-950 font-sans text-sm font-bold pl-3 self-stretch flex items-center">
-                    {rentDisplay}
-                  </span>
-                </div>
-              </div>
+              <table className="w-full border-collapse text-xs text-slate-800 bg-white" style={{ tableLayout: 'fixed', borderSpacing: 0 }}>
+                <thead>
+                  <tr
+                    className="bg-blue-900 text-white font-bold"
+                    style={{ backgroundColor: '#1e3a8a', color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                  >
+                    <th
+                      className="w-[34%] py-2.5 px-3.5 text-left font-bold border-r border-blue-800"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#1e40af', lineHeight: '1.4' }}
+                    >
+                      विवरण
+                    </th>
+                    <th
+                      className="w-[66%] py-2.5 px-3.5 text-left font-bold"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      सूचना
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  <tr className="hover:bg-slate-50">
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                    >
+                      गेस्ट का नाम
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 font-bold text-slate-900"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                    >
+                      कब से कब तक
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {isSingleDay ? `दि० ${cinHindi} (01 दिवस)` : `दि० ${cinHindi} से ${coutHindi} तक (${totalDays > 9 ? totalDays : `0${totalDays}`} दिवस)`}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                    >
+                      रूम की संख्या
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {numRooms} रूम
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                    >
+                      सूट नम्बर
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 font-bold text-blue-900"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {suitsDisplay}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                    >
+                      चेक-इन / चेक-आउट
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {cinHindi} ({checkInTime}) / {coutHindi} ({checkOutTime})
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                    >
+                      कुल दिन
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 text-slate-800"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {totalDays} दिन ({totalDays} रात्रि)
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-slate-700 border-r border-slate-200"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', lineHeight: '1.4' }}
+                    >
+                      भोजन व्यवस्था स्थिति
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 font-semibold text-emerald-700"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {getMealLabel(booking.meal_type_status)}
+                    </td>
+                  </tr>
+                  <tr
+                    className="bg-amber-50/60 font-bold text-slate-900"
+                    style={{ backgroundColor: '#fef3c7', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                  >
+                    <td
+                      className="w-[34%] py-2.5 px-3.5 font-semibold text-amber-900 border-r border-amber-300"
+                      style={{ verticalAlign: 'middle', borderRightColor: '#fde68a', lineHeight: '1.4' }}
+                    >
+                      प्रति रूम प्रति दिन किराया
+                    </td>
+                    <td
+                      className="w-[66%] py-2.5 px-3.5 text-amber-950 font-sans text-sm font-bold"
+                      style={{ verticalAlign: 'middle', lineHeight: '1.4' }}
+                    >
+                      {rentDisplay}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* Contact Person (Clean text without any buttons inside letter) */}
