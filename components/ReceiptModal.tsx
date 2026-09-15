@@ -291,10 +291,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     </td>
                     <td className="p-2 border border-slate-300 text-center">-</td>
                     <td className="p-2 border border-slate-300 text-right font-medium">
-                      {booking.meal_type_status === 'FREE' ? 'निःशुल्क' : (booking.meal_type_status === 'COMPLIMENTARY' ? 'शासकीय' : (booking.meal_type_status === 'NOT REQUIRED' ? 'लागू नहीं' : 'सशुल्क'))}
+                      {booking.meal_type_status === 'FREE' ? 'निःशुल्क' : (booking.meal_type_status === 'COMPLIMENTARY' ? 'शासकीय' : (booking.meal_type_status === 'NOT REQUIRED' ? 'लागू नहीं' : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : 'सशुल्क')))}
                     </td>
                     <td className="p-2 border border-slate-300 text-right font-bold">
-                      {booking.meal_type_status === 'FREE' || booking.meal_type_status === 'COMPLIMENTARY' || booking.meal_type_status === 'NOT REQUIRED' ? 'निःशुल्क' : 'सशुल्क'}
+                      {booking.meal_type_status === 'FREE' || booking.meal_type_status === 'COMPLIMENTARY' || booking.meal_type_status === 'NOT REQUIRED' ? 'निःशुल्क' : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : 'सशुल्क')}
                     </td>
                   </tr>
                   <tr className="bg-amber-50/80 font-bold text-sm">

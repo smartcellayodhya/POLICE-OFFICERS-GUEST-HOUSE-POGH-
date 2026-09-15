@@ -216,12 +216,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (language === 'hi') {
       if (status === 'PAID') return 'सशुल्क';
       if (status === 'COMPLIMENTARY') return 'शासकीय / वीआईपी';
+      if (status === 'AS PER APPLICABLE' || status === 'AS_PER_APPLICABLE') return 'As per Applicable';
       if (status === 'NOT REQUIRED') return 'लागू नहीं';
       if (status === 'FREE') return 'निःशुल्क';
       if (status === 'PENDING') return 'लंबित';
     } else {
       if (status === 'PAID') return 'Paid';
       if (status === 'COMPLIMENTARY') return 'Complimentary (Govt/VIP)';
+      if (status === 'AS PER APPLICABLE' || status === 'AS_PER_APPLICABLE') return 'As per Applicable';
       if (status === 'NOT REQUIRED') return 'Not Required';
       if (status === 'FREE') return 'Free';
       if (status === 'PENDING') return 'Pending';

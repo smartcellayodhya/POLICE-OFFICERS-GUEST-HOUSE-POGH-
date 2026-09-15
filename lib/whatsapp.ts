@@ -30,6 +30,8 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
     ? 'शासकीय / वीआईपी'
     : details.meal_type_status === 'NOT REQUIRED'
     ? 'लागू नहीं'
+    : details.meal_type_status === 'AS PER APPLICABLE' || details.meal_type_status === 'AS_PER_APPLICABLE'
+    ? 'As per Applicable'
     : 'सशुल्क';
 
   return (

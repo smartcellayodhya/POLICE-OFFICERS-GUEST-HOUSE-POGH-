@@ -24,7 +24,7 @@ export const REFERENCES = [
   'OTHER',
 ];
 
-export const MEAL_STATUSES = ['PAID', 'COMPLIMENTARY', 'NOT REQUIRED', 'FREE', 'PENDING'] as const;
+export const MEAL_STATUSES = ['PAID', 'COMPLIMENTARY', 'AS PER APPLICABLE', 'NOT REQUIRED', 'FREE', 'PENDING'] as const;
 
 export const INITIAL_DEMO_BOOKINGS = [
   {

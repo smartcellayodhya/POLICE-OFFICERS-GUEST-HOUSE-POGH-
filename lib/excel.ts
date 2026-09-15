@@ -37,6 +37,7 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
     if (b.meal_type_status === 'COMPLIMENTARY') mealLabel = 'शासकीय / वीआईपी';
     else if (b.meal_type_status === 'FREE') mealLabel = 'निःशुल्क (FREE)';
     else if (b.meal_type_status === 'NOT REQUIRED') mealLabel = 'लागू नहीं';
+    else if (b.meal_type_status === 'AS PER APPLICABLE' || b.meal_type_status === 'AS_PER_APPLICABLE') mealLabel = 'As per Applicable';
 
     let statusLabel = 'कन्फर्म (CONFIRMED)';
     if (b.status === 'CHECKED_IN') statusLabel = 'इन-हाउस (CHECKED-IN)';

@@ -549,7 +549,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         <span className="text-slate-500 font-medium text-[11px]">As per applicable </span>
                       )}
                       <span className="text-[10px] font-normal text-slate-500">
-                        ({stay.mealStatus === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (stay.mealStatus === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (stay.mealStatus === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (language === 'hi' ? 'सशुल्क' : 'Paid')))})
+                        ({stay.mealStatus === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (stay.mealStatus === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (stay.mealStatus === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (stay.mealStatus === 'AS PER APPLICABLE' || stay.mealStatus === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))})
                       </span>
                     </div>
 

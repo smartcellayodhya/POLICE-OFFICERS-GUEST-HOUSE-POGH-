@@ -235,12 +235,14 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     if (language === 'hi') {
       if (st === 'PAID') return 'सशुल्क';
       if (st === 'COMPLIMENTARY') return 'शासकीय / वीआईपी';
+      if (st === 'AS PER APPLICABLE' || st === 'AS_PER_APPLICABLE') return 'As per Applicable';
       if (st === 'NOT REQUIRED') return 'लागू नहीं';
       if (st === 'FREE') return 'निःशुल्क';
       if (st === 'PENDING') return 'लंबित';
     } else {
       if (st === 'PAID') return 'Paid';
       if (st === 'COMPLIMENTARY') return 'Complimentary (Govt/VIP)';
+      if (st === 'AS PER APPLICABLE' || st === 'AS_PER_APPLICABLE') return 'As per Applicable';
       if (st === 'NOT REQUIRED') return 'Not Required';
       if (st === 'FREE') return 'Free';
       if (st === 'PENDING') return 'Pending';

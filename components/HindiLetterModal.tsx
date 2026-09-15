@@ -137,6 +137,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     if (st === 'PAID') return 'सशुल्क';
     if (st === 'COMPLIMENTARY') return 'शासकीय / वीआईपी';
     if (st === 'NOT REQUIRED') return 'लागू नहीं';
+    if (st === 'AS PER APPLICABLE' || st === 'AS_PER_APPLICABLE') return 'As per Applicable';
     if (st === 'FREE') return 'निःशुल्क';
     if (st === 'PENDING') return 'लंबित';
     return st || 'सशुल्क';

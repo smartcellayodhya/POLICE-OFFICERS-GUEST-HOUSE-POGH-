@@ -160,19 +160,21 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType>({
-  language: 'hi',
+  language: 'en',
   setLanguage: () => {},
-  t: (key: TranslationKey) => translations.hi[key] || key,
+  t: (key: TranslationKey) => translations.en[key] || translations.hi[key] || key,
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>('hi');
+  const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pogh_language') as Language;
-      if (saved === 'hi' || saved === 'en') {
-        setLanguageState(saved);
+      const explicitSaved = localStorage.getItem('pogh_user_selected_lang') as Language;
+      if (explicitSaved === 'hi' || explicitSaved === 'en') {
+        setLanguageState(explicitSaved);
+      } else {
+        setLanguageState('en');
       }
     }
   }, []);
@@ -181,11 +183,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLanguageState(lang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('pogh_language', lang);
+      localStorage.setItem('pogh_user_selected_lang', lang);
     }
   };
 
   const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations.hi[key] || key;
+    return translations[language][key] || translations.en[key] || translations.hi[key] || key;
   };
 
   return (
