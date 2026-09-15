@@ -6,6 +6,9 @@ import {
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
+  extractFoodAmountFromNotes,
+  extractPaymentModeFromNotes,
+  extractCollectedByFromNotes,
 } from './bookingUtils';
 
 export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhya_Bookings.csv') {
@@ -25,7 +28,11 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     'संदर्भ (रेफरेंस)',
     'आरक्षित सूट',
     'प्रति रूम किराया (₹)',
-    'कुल देय किराया (₹)',
+    'कमरा किराया (₹)',
+    'खान-पान संग्रह (₹)',
+    'कुल संग्रह (₹)',
+    'भुगतान माध्यम',
+    'कलेक्शन कर्ता',
     'भोजन व्यवस्था',
     'बुकिंग स्थिति',
     'विशेष विवरण (रिमार्क्स)',
@@ -49,7 +56,12 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     const metaRate = extractRatePerRoomFromNotes(b.notes);
     const suitRate = Math.max(Number(b.suit_1) || 0, Number(b.suit_2) || 0, Number(b.suit_3) || 0, Number(b.suit_4) || 0);
     const perRoomRent = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(b.total_amount) || 0);
-    const totalPayable = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
+    const totalRent = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
+
+    const foodAmount = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
+    const totalCollection = totalRent + foodAmount;
+    const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (totalCollection > 0 ? 'CASH' : '-');
+    const collectedBy = extractCollectedByFromNotes(b.notes) || b.collected_by || '-';
 
     const cleanedNotes = cleanNotesText(b.notes);
 
@@ -63,7 +75,11 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
       `"${b.reference || '-'}"`,
       `"${suits.join(', ')}"`,
       `"${perRoomRent > 0 ? `₹${perRoomRent}` : 'As per applicable'}"`,
-      `"${totalPayable > 0 ? `₹${totalPayable}` : 'As per applicable'}"`,
+      `"${totalRent > 0 ? `₹${totalRent}` : 'As per applicable'}"`,
+      `"${foodAmount > 0 ? `₹${foodAmount}` : 0}"`,
+      `"${totalCollection > 0 ? `₹${totalCollection}` : 0}"`,
+      `"${paymentMode}"`,
+      `"${collectedBy}"`,
       `"${b.meal_type_status || 'PAID'}"`,
       `"${b.status || 'CONFIRMED'}"`,
       `"${cleanedNotes.replace(/"/g, '""')}"`,

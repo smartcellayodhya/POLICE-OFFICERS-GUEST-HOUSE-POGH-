@@ -9,6 +9,9 @@ import {
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
+  extractFoodAmountFromNotes,
+  extractPaymentModeFromNotes,
+  extractCollectedByFromNotes,
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Receipt, CheckCircle2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
@@ -30,6 +33,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [downloading, setDownloading] = useState(false);
   const [paymentMode, setPaymentMode] = useState<string>('CASH'); // CASH | UPI | GOVT
   const [inchargeName, setInchargeName] = useState<string>('उ0नि0 यदुनाथ (प्रभारी POGH)');
+
+  React.useEffect(() => {
+    if (booking) {
+      const mode = booking.payment_mode || extractPaymentModeFromNotes(booking.notes) || 'CASH';
+      setPaymentMode(mode);
+    }
+  }, [booking]);
 
   React.useEffect(() => {
     if (isOpen && typeof window !== 'undefined') {
@@ -106,6 +116,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   const dailyTotalRent = singleRoomRent * numRooms;
   const totalRentAmount = dailyTotalRent * totalDays;
+
+  const foodAmount = booking.food_amount !== undefined && Number(booking.food_amount) >= 0
+    ? Number(booking.food_amount)
+    : extractFoodAmountFromNotes(booking.notes);
+  const grandTotal = totalRentAmount + foodAmount;
+  const collectedBy = booking.collected_by || extractCollectedByFromNotes(booking.notes);
 
   const todayHindi = formatToHindiDate(new Date());
   const cinHindi = formatToHindiDate(checkInDate);
@@ -287,22 +303,38 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <tr className="bg-slate-50">
                     <td className="p-2 border border-slate-300 text-center font-bold">2</td>
                     <td className="p-2 border border-slate-300">
-                      भोजन व्यवस्था शुल्क
+                      खान-पान / भोजन व्यवस्था संग्रह (Food Charges)
                     </td>
                     <td className="p-2 border border-slate-300 text-center">-</td>
                     <td className="p-2 border border-slate-300 text-right font-medium">
-                      {booking.meal_type_status === 'FREE' ? 'निःशुल्क' : (booking.meal_type_status === 'COMPLIMENTARY' ? 'शासकीय' : (booking.meal_type_status === 'NOT REQUIRED' ? 'लागू नहीं' : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : 'सशुल्क')))}
+                      {foodAmount > 0
+                        ? `₹${foodAmount.toLocaleString('en-IN')}`
+                        : (booking.meal_type_status === 'FREE'
+                          ? 'निःशुल्क'
+                          : (booking.meal_type_status === 'COMPLIMENTARY'
+                            ? 'शासकीय'
+                            : (booking.meal_type_status === 'NOT REQUIRED'
+                              ? 'लागू नहीं'
+                              : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE'
+                                ? 'As per Applicable'
+                                : 'सशुल्क'))))}
                     </td>
-                    <td className="p-2 border border-slate-300 text-right font-bold">
-                      {booking.meal_type_status === 'FREE' || booking.meal_type_status === 'COMPLIMENTARY' || booking.meal_type_status === 'NOT REQUIRED' ? 'निःशुल्क' : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : 'सशुल्क')}
+                    <td className="p-2 border border-slate-300 text-right font-bold font-mono">
+                      {foodAmount > 0
+                        ? `₹${foodAmount.toLocaleString('en-IN')}`
+                        : (booking.meal_type_status === 'FREE' || booking.meal_type_status === 'COMPLIMENTARY' || booking.meal_type_status === 'NOT REQUIRED'
+                          ? 'निःशुल्क'
+                          : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE'
+                            ? 'As per Applicable'
+                            : '₹0'))}
                     </td>
                   </tr>
                   <tr className="bg-amber-50/80 font-bold text-sm">
                     <td colSpan={4} className="p-2.5 border border-slate-300 text-right text-slate-900">
-                      कुल प्राप्त धनराशि (Total Amount):
+                      कुल प्राप्त धनराशि (Total Received Amount):
                     </td>
                     <td className="p-2.5 border border-slate-300 text-right font-mono text-base font-bold text-blue-900">
-                      {totalRentAmount > 0 ? `₹${totalRentAmount.toLocaleString('en-IN')}/-` : 'As per applicable'}
+                      {grandTotal > 0 ? `₹${grandTotal.toLocaleString('en-IN')}/-` : (totalRentAmount > 0 ? `₹${totalRentAmount.toLocaleString('en-IN')}/-` : 'As per applicable')}
                     </td>
                   </tr>
                 </tbody>
@@ -313,12 +345,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div className="pt-8 grid grid-cols-2 gap-8 text-center text-xs">
               <div>
                 <div className="border-b border-slate-400 w-40 mx-auto mb-1" />
-                <p className="font-bold text-slate-800">हस्ताक्षर अधिकारी</p>
+                <p className="font-bold text-slate-800">हस्ताक्षर अतिथि / अधिकारी</p>
               </div>
 
               <div>
                 <div className="border-b border-slate-400 w-40 mx-auto mb-1" />
-                <p className="font-bold text-blue-950">{inchargeName}</p>
+                <p className="font-bold text-blue-950">{collectedBy ? `${collectedBy} (कलेक्शन कर्ता)` : inchargeName}</p>
                 <p className="text-[11px] text-slate-500">कार्यालय वरिष्ठ पुलिस अधीक्षक, अयोध्या</p>
               </div>
             </div>

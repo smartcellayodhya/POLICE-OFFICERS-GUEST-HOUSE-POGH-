@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   FileText,
   Wrench,
+  IndianRupee,
 } from 'lucide-react';
 
 import { useLanguage } from '@/lib/languageContext';
@@ -19,10 +20,12 @@ import { useLanguage } from '@/lib/languageContext';
 interface RoomMatrixProps {
   bookings: Booking[];
   isAdmin: boolean;
+  isOperator?: boolean;
   selectedDate: string;
   onSelectDate: (dateStr: string) => void;
   onQuickBook?: (dateStr: string, suitKey: string) => void;
   onSelectBooking: (booking: Booking) => void;
+  onOpenRecordCollection?: (booking: Booking) => void;
   onUpdateStatus?: (booking: Booking, newStatus: BookingStatus) => Promise<void>;
   onCancelBooking?: (booking: Booking) => void;
 }
@@ -30,10 +33,12 @@ interface RoomMatrixProps {
 export const RoomMatrix: React.FC<RoomMatrixProps> = ({
   bookings,
   isAdmin,
+  isOperator = false,
   selectedDate,
   onSelectDate,
   onQuickBook,
   onSelectBooking,
+  onOpenRecordCollection,
   onUpdateStatus,
   onCancelBooking,
 }) => {
@@ -285,13 +290,29 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                     </div>
                   </div>
 
-                  {/* Footer link */}
-                    <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
+                  {/* Footer links */}
+                    <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px] gap-1">
                       <span className="text-blue-700 font-bold flex items-center gap-1">
                         <FileText className="w-3 h-3" />
                         <span>{t('allotmentLetter')}</span>
                       </span>
-                      <span className="text-slate-500 font-medium text-[11px]">
+
+                      {(isAdmin || isOperator) && onOpenRecordCollection && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenRecordCollection(booking);
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 font-bold flex items-center gap-0.5 border border-amber-500/40 transition cursor-pointer active:scale-95"
+                          title="कलेक्शन व भोजन बिल दर्ज करें"
+                        >
+                          <IndianRupee className="w-3 h-3 text-amber-800" />
+                          <span>{language === 'hi' ? 'कलेक्शन' : 'Collect'}</span>
+                        </button>
+                      )}
+
+                      <span className="text-slate-500 font-medium text-[10px]">
                         {booking.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (booking.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (booking.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
                       </span>
                     </div>

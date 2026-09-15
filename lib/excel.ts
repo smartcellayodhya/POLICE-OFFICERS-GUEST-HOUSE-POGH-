@@ -8,6 +8,9 @@ import {
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
+  extractFoodAmountFromNotes,
+  extractPaymentModeFromNotes,
+  extractCollectedByFromNotes,
   getBookingSuitsList,
 } from './bookingUtils';
 
@@ -31,7 +34,12 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
     const metaRate = extractRatePerRoomFromNotes(b.notes);
     const suitRate = Math.max(Number(b.suit_1) || 0, Number(b.suit_2) || 0, Number(b.suit_3) || 0, Number(b.suit_4) || 0);
     const perRoomRent = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(b.total_amount) || 0);
-    const totalPayable = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
+    const totalRent = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
+
+    const foodAmount = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
+    const totalCollection = totalRent + foodAmount;
+    const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (totalCollection > 0 ? 'CASH' : '-');
+    const collectedBy = extractCollectedByFromNotes(b.notes) || b.collected_by || '-';
 
     let mealLabel = 'सशुल्क (PAID)';
     if (b.meal_type_status === 'COMPLIMENTARY') mealLabel = 'शासकीय / वीआईपी';
@@ -57,7 +65,11 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
       'आवंटित सूट (Suits)': suits.join(', ') || 'Suit 1',
       'कमरों की संख्या (Rooms)': numRooms,
       'दैनिक किराया ₹ (Room Rate)': perRoomRent > 0 ? perRoomRent : 'As per applicable',
-      'कुल किराया ₹ (Total Rent)': totalPayable > 0 ? totalPayable : 'As per applicable',
+      'कमरा किराया ₹ (Room Rent)': totalRent > 0 ? totalRent : 0,
+      'खान-पान संग्रह ₹ (Food Bill)': foodAmount > 0 ? foodAmount : 0,
+      'कुल संग्रह ₹ (Total Collection)': totalCollection > 0 ? totalCollection : 0,
+      'भुगतान माध्यम (Mode)': paymentMode,
+      'कलेक्शन कर्ता (Collected By)': collectedBy,
       'भोजन व्यवस्था (Meal Status)': mealLabel,
       'स्थिति (Status)': statusLabel,
       'विवरण / रिमार्क्स (Remarks)': cleanNotesText(b.notes) || '-',
@@ -79,7 +91,11 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
     { wch: 16 }, // Suits
     { wch: 10 }, // Rooms
     { wch: 16 }, // Room Rate
-    { wch: 16 }, // Total Rent
+    { wch: 16 }, // Room Rent
+    { wch: 16 }, // Food Bill
+    { wch: 18 }, // Total Collection
+    { wch: 14 }, // Mode
+    { wch: 22 }, // Collected By
     { wch: 18 }, // Meal Status
     { wch: 20 }, // Status
     { wch: 26 }, // Remarks

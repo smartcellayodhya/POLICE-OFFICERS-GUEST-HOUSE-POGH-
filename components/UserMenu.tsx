@@ -34,6 +34,13 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = currentUser.role === 'admin';
+  const isOperator = currentUser.role === 'operator';
+
+  const roleLabel = isAdmin
+    ? t('admin')
+    : isOperator
+    ? (language === 'hi' ? 'काउंटर ऑपरेटर' : 'Counter Operator')
+    : t('officer');
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -55,9 +62,19 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         title="यूज़र मेन्यू एवं भाषा विकल्प"
       >
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
-          isAdmin ? 'bg-amber-100 text-amber-900' : 'bg-blue-100 text-blue-900'
+          isAdmin
+            ? 'bg-amber-100 text-amber-900'
+            : isOperator
+            ? 'bg-emerald-100 text-emerald-900'
+            : 'bg-blue-100 text-blue-900'
         }`}>
-          {isAdmin ? <Shield className="w-4 h-4 text-amber-700" /> : <User className="w-4 h-4 text-blue-700" />}
+          {isAdmin ? (
+            <Shield className="w-4 h-4 text-amber-700" />
+          ) : isOperator ? (
+            <Building2 className="w-4 h-4 text-emerald-700" />
+          ) : (
+            <User className="w-4 h-4 text-blue-700" />
+          )}
         </div>
 
         <div className="text-left hidden sm:block">
@@ -65,7 +82,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             {currentUser.displayName.replace(' / Admin In-Charge', '').replace(' / Ayodhya Police', '')}
           </p>
           <p className="text-[10px] text-slate-500 font-medium leading-none">
-            {isAdmin ? t('admin') : t('officer')}
+            {roleLabel}
           </p>
         </div>
 
@@ -83,7 +100,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
               {currentUser.displayName.replace(' / Admin In-Charge', '').replace(' / Ayodhya Police', '')}
             </p>
             <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-              <span>{isAdmin ? t('admin') : t('officer')}</span>
+              <span className={isOperator ? 'text-emerald-700 font-semibold' : ''}>{roleLabel}</span>
               <span>•</span>
               <span className="text-amber-700 font-semibold">{t('ayodhyaPolice')}</span>
             </p>

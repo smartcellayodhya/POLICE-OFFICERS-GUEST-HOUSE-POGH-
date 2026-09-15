@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'officer';
+export type UserRole = 'admin' | 'officer' | 'operator';
 
 export interface AuthUser {
   id: string;
@@ -15,6 +15,13 @@ export const PRESET_ACCOUNTS = [
     displayName: 'SSP Office',
     role: 'admin' as UserRole,
     badgeTitle: 'प्रशासनिक नियंत्रण (Full Control)',
+  },
+  {
+    username: 'operator',
+    password: 'operator@2026',
+    displayName: 'Guest House Operator',
+    role: 'operator' as UserRole,
+    badgeTitle: 'काउंटर ऑपरेटर (Collection & Billing)',
   },
   {
     username: 'officer',

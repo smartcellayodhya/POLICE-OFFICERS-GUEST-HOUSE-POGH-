@@ -9,6 +9,9 @@ import {
   extractDispatchNoFromNotes,
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
+  extractFoodAmountFromNotes,
+  extractPaymentModeFromNotes,
+  extractCollectedByFromNotes,
   formatGuestDisplayName,
   calculateBookingRent,
 } from '@/lib/bookingUtils';
@@ -33,6 +36,7 @@ import {
   Download,
   Receipt,
   MoreVertical,
+  IndianRupee,
 } from 'lucide-react';
 
 import { useLanguage } from '@/lib/languageContext';
@@ -40,8 +44,10 @@ import { useLanguage } from '@/lib/languageContext';
 interface BookingsTableProps {
   bookings: Booking[];
   isAdmin: boolean;
+  isOperator?: boolean;
   onOpenLetter: (booking: Booking) => void;
   onOpenReceipt: (booking: Booking) => void;
+  onOpenRecordCollection?: (booking: Booking) => void;
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (id: string, groupId?: string) => Promise<void>;
   onUpdateStatus: (booking: Booking, newStatus: BookingStatus, updateAllDates?: boolean) => Promise<void>;
@@ -62,6 +68,10 @@ interface GroupedStay {
   stayNights: number;
   suits: string[];
   totalRent: number;
+  foodAmount: number;
+  totalCollection: number;
+  collectedBy: string;
+  paymentMode: string;
   mealStatus: string;
   status: BookingStatus;
   notes: string;
@@ -71,8 +81,10 @@ interface GroupedStay {
 export const BookingsTable: React.FC<BookingsTableProps> = ({
   bookings,
   isAdmin,
+  isOperator = false,
   onOpenLetter,
   onOpenReceipt,
+  onOpenRecordCollection,
   onEditBooking,
   onDeleteBooking,
   onUpdateStatus,
@@ -143,16 +155,28 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         if (Number(b.suit_4) > 0) suitSet.add('Suit 4');
       });
 
-      // Calculate total stay rent across days
+      // Calculate total stay rent & collections across days
       let totalRent = 0;
+      let foodAmount = 0;
+      let collectedBy = '';
+      let paymentMode = '';
+
       dayBookings.forEach((b) => {
         totalRent += calculateBookingRent(b);
+        const f = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
+        if (f > foodAmount) foodAmount = f;
+        const cb = extractCollectedByFromNotes(b.notes) || b.collected_by;
+        if (cb && !collectedBy) collectedBy = cb;
+        const pm = extractPaymentModeFromNotes(b.notes) || b.payment_mode;
+        if (pm && !paymentMode) paymentMode = pm;
       });
 
       // If rent was stored only on primary record
       if (totalRent === 0 && Number(primary.total_amount) > 0) {
         totalRent = Number(primary.total_amount);
       }
+
+      const totalCollection = totalRent + foodAmount;
 
       // Determine overall status
       let overallStatus: BookingStatus = primary.status || 'CONFIRMED';
@@ -177,6 +201,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         stayNights: Math.max(stayNights, dayBookings.length),
         suits: Array.from(suitSet).sort(),
         totalRent,
+        foodAmount,
+        totalCollection,
+        collectedBy,
+        paymentMode,
         mealStatus: primary.meal_type_status || 'PAID',
         status: overallStatus,
         notes: primary.notes || '',
@@ -258,7 +286,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
 
   // Synchronized Check-in / Check-out for the entire stay group
   const handleLifecycleClick = (stay: GroupedStay) => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isOperator) return;
     const current = stay.status;
     let nextStatus: BookingStatus = 'CONFIRMED';
     if (current === 'CONFIRMED' || !current) {
@@ -539,18 +567,43 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                   </div>
 
                   {/* Clean Footer: Total Amount & Streamlined Action Buttons */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                     
                     {/* Amount & Meal Tag */}
-                    <div className="text-xs font-bold text-slate-900">
-                      {stay.totalRent > 0 ? (
-                        <>₹{stay.totalRent.toLocaleString('en-IN')}/- </>
+                    <div className="text-xs">
+                      {stay.foodAmount > 0 ? (
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono text-emerald-700 font-extrabold text-sm">
+                              ₹{stay.totalCollection.toLocaleString('en-IN')}/-
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold">
+                              {language === 'hi' ? 'कुल संग्रह' : 'Total'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                            <span>किराया: ₹{stay.totalRent}</span>
+                            <span>+</span>
+                            <span className="text-blue-600 font-bold">भोजन: ₹{stay.foodAmount}</span>
+                            {stay.paymentMode && (
+                              <span className="ml-1 px-1 rounded bg-slate-100 text-slate-600 font-sans text-[9px] uppercase font-semibold">
+                                {stay.paymentMode}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       ) : (
-                        <span className="text-slate-500 font-medium text-[11px]">As per applicable </span>
+                        <div className="font-bold text-slate-900">
+                          {stay.totalRent > 0 ? (
+                            <>₹{stay.totalRent.toLocaleString('en-IN')}/- </>
+                          ) : (
+                            <span className="text-slate-500 font-medium text-[11px]">As per applicable </span>
+                          )}
+                          <span className="text-[10px] font-normal text-slate-500">
+                            ({stay.mealStatus === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (stay.mealStatus === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (stay.mealStatus === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (stay.mealStatus === 'AS PER APPLICABLE' || stay.mealStatus === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))})
+                          </span>
+                        </div>
                       )}
-                      <span className="text-[10px] font-normal text-slate-500">
-                        ({stay.mealStatus === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (stay.mealStatus === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (stay.mealStatus === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (stay.mealStatus === 'AS PER APPLICABLE' || stay.mealStatus === 'AS_PER_APPLICABLE' ? 'As per Applicable' : (language === 'hi' ? 'सशुल्क' : 'Paid'))))})
-                      </span>
                     </div>
 
                     {/* Primary Actions + Dropdown Menu */}
@@ -566,8 +619,20 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         <span>{t('allotmentLetter')}</span>
                       </button>
 
-                      {/* 2. Quick Lifecycle Action: Check-in / Check-out */}
-                      {isAdmin && (
+                      {/* 2. Collection & Food Settlement Action (Admin & Operator) */}
+                      {(isAdmin || isOperator) && onOpenRecordCollection && (
+                        <button
+                          onClick={() => onOpenRecordCollection(stay.primaryBooking)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 text-xs font-bold transition border border-amber-500/40 active:scale-95 cursor-pointer shadow-2xs"
+                          title={language === 'hi' ? 'कमरा किराया व खान-पान कलेक्शन दर्ज करें' : 'Record Room Rent & Food Collection'}
+                        >
+                          <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
+                          <span>{language === 'hi' ? 'कलेक्शन दर्ज करें' : 'Collection'}</span>
+                        </button>
+                      )}
+
+                      {/* 3. Quick Lifecycle Action: Check-in / Check-out (Admin & Operator) */}
+                      {(isAdmin || isOperator) && (
                         <button
                           onClick={() => handleLifecycleClick(stay)}
                           className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition shadow-2xs active:scale-95 cursor-pointer ${
@@ -593,7 +658,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         </button>
                       )}
 
-                      {/* 3. More Actions Dropdown (⋮) */}
+                      {/* 4. More Actions Dropdown (⋮) */}
                       <div className="relative">
                         <button
                           onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
@@ -604,8 +669,22 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         </button>
 
                         {isMenuOpen && (
-                          <div className="absolute right-0 bottom-full mb-1.5 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
+                          <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
                             
+                            {/* Record Collection in Dropdown */}
+                            {(isAdmin || isOperator) && onOpenRecordCollection && (
+                              <button
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  onOpenRecordCollection(stay.primaryBooking);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-50 transition text-left cursor-pointer"
+                              >
+                                <IndianRupee className="w-3.5 h-3.5 text-amber-600" />
+                                <span>{language === 'hi' ? 'कलेक्शन एवं बिलिंग' : 'Collection & Billing'}</span>
+                              </button>
+                            )}
+
                             {/* Receipt */}
                             <button
                               onClick={() => {
@@ -635,7 +714,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                                   check_out_time: stay.primaryBooking.check_out_time || '12:00 PM',
                                   suits: stay.suits,
                                   total_days: stay.stayNights,
-                                  total_amount: stay.totalRent,
+                                  total_amount: stay.totalCollection,
                                   meal_type_status: stay.mealStatus,
                                   contact_person: customIncharge || undefined,
                                   dates: stay.allBookings.map((b) => b.booking_date),

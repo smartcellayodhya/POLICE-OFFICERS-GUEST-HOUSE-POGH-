@@ -8,7 +8,14 @@ import {
   getLocalBookings,
   saveLocalBookings,
 } from '@/lib/supabase';
-import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
+import {
+  extractGroupIdFromNotes,
+  extractDispatchNoFromNotes,
+  extractCheckInDateFromNotes,
+  extractCheckOutDateFromNotes,
+  cleanNotesText,
+  encodeNotesWithMeta,
+} from '@/lib/bookingUtils';
 import { AuthUser, getLoggedInUser, logoutUser } from '@/lib/auth';
 import { formatToISODate } from '@/lib/dateUtils';
 
@@ -23,6 +30,7 @@ import { DateWiseRoomSchedule } from '@/components/DateWiseRoomSchedule';
 import { BookingsTable } from '@/components/BookingsTable';
 import { BookingModal } from '@/components/BookingModal';
 import { EditBookingModal } from '@/components/EditBookingModal';
+import { RecordCollectionModal } from '@/components/RecordCollectionModal';
 import { HindiLetterModal } from '@/components/HindiLetterModal';
 import { ReceiptModal } from '@/components/ReceiptModal';
 import { AuditLogModal } from '@/components/AuditLogModal';
@@ -63,6 +71,9 @@ export default function HomePage() {
 
   const [selectedEditBooking, setSelectedEditBooking] = useState<Booking | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const [selectedCollectionBooking, setSelectedCollectionBooking] = useState<Booking | null>(null);
+  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
 
   // Check login and sync URL route on mount
   useEffect(() => {
@@ -274,14 +285,14 @@ export default function HomePage() {
     saveLocalBookings(filtered);
   };
 
-  // Handle Lifecycle Status Change (Admin Only)
+  // Handle Lifecycle Status Change (Admin & Operator)
   const handleUpdateStatus = async (
     booking: Booking,
     newStatus: BookingStatus,
     updateAllDates: boolean = false
   ) => {
-    if (currentUser?.role !== 'admin') {
-      alert('केवल एडमिन को स्थिति अद्यतन करने की अनुमति है।');
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'operator') {
+      alert('केवल एडमिन व ऑपरेटर को स्थिति अद्यतन करने की अनुमति है।');
       return;
     }
 
@@ -406,6 +417,124 @@ export default function HomePage() {
     saveLocalBookings(updated);
   };
 
+  // Open Collection Modal (Admin & Operator)
+  const handleOpenCollection = (booking: Booking) => {
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'operator') {
+      alert('केवल एडमिन व ऑपरेटर को कलेक्शन दर्ज करने की अनुमति है।');
+      return;
+    }
+    setSelectedCollectionBooking(booking);
+    setIsCollectionModalOpen(true);
+  };
+
+  // Save Collection (Desk Operator & Admin)
+  const handleSaveCollection = async (data: {
+    roomRentPerDay: number;
+    foodAmount: number;
+    paymentMode: string;
+    remarks?: string;
+    markCheckedOut?: boolean;
+  }) => {
+    if (!selectedCollectionBooking) return;
+    const targetBooking = selectedCollectionBooking;
+    const targetRef = targetBooking.group_id || extractGroupIdFromNotes(targetBooking.notes);
+    const dispNo = targetBooking.dispatch_no || extractDispatchNoFromNotes(targetBooking.notes);
+    const cinDate = extractCheckInDateFromNotes(targetBooking.notes) || targetBooking.booking_date;
+    const coutDate = extractCheckOutDateFromNotes(targetBooking.notes) || targetBooking.booking_date;
+    const currentNotesClean = cleanNotesText(targetBooking.notes);
+
+    const collectorName = currentUser?.displayName || 'Guest House Operator';
+
+    const finalNotes = encodeNotesWithMeta(
+      currentNotesClean,
+      targetRef,
+      dispNo,
+      cinDate,
+      coutDate,
+      data.roomRentPerDay,
+      data.foodAmount,
+      data.paymentMode,
+      collectorName,
+      data.remarks
+    );
+
+    const roomsCount =
+      (Number(targetBooking.suit_1) > 0 ? 1 : 0) +
+      (Number(targetBooking.suit_2) > 0 ? 1 : 0) +
+      (Number(targetBooking.suit_3) > 0 ? 1 : 0) +
+      (Number(targetBooking.suit_4) > 0 ? 1 : 0) || 1;
+
+    const dayRentAmount = data.roomRentPerDay * roomsCount;
+    const newStatus = data.markCheckedOut ? 'CHECKED_OUT' : targetBooking.status;
+
+    const dbPayload: Record<string, any> = {
+      total_amount: dayRentAmount > 0 ? dayRentAmount : data.roomRentPerDay,
+      status: newStatus,
+      notes: finalNotes,
+      suit_1: Number(targetBooking.suit_1) > 0 ? (data.roomRentPerDay > 0 ? data.roomRentPerDay : 1) : 0,
+      suit_2: Number(targetBooking.suit_2) > 0 ? (data.roomRentPerDay > 0 ? data.roomRentPerDay : 1) : 0,
+      suit_3: Number(targetBooking.suit_3) > 0 ? (data.roomRentPerDay > 0 ? data.roomRentPerDay : 1) : 0,
+      suit_4: Number(targetBooking.suit_4) > 0 ? (data.roomRentPerDay > 0 ? data.roomRentPerDay : 1) : 0,
+    };
+
+    if (isSupabaseConfigured()) {
+      const client = getSupabaseClient();
+      if (client) {
+        if (targetRef) {
+          const { error } = await client
+            .from('pogh_bookings')
+            .update(dbPayload)
+            .ilike('notes', `%${targetRef}%`);
+          if (error) throw new Error(error.message);
+        } else {
+          const { error } = await client
+            .from('pogh_bookings')
+            .update(dbPayload)
+            .eq('id', targetBooking.id);
+          if (error) throw new Error(error.message);
+        }
+        await fetchBookings();
+      }
+    }
+
+    // Local / in-memory state update
+    const updated = bookings.map((b) => {
+      const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+      const isTarget = (targetRef && bRef === targetRef) || b.id === targetBooking.id;
+      if (isTarget) {
+        return {
+          ...b,
+          ...dbPayload,
+          food_amount: data.foodAmount,
+          payment_mode: data.paymentMode,
+          collected_by: collectorName,
+          collection_date: formatToISODate(new Date()),
+        };
+      }
+      return b;
+    });
+
+    setBookings(updated);
+    saveLocalBookings(updated);
+
+    logActivity(
+      'UPDATE',
+      `कलेक्शन दर्ज: ₹${dayRentAmount + data.foodAmount}`,
+      `अतिथि: ${targetBooking.guest_name}, कमरा: ₹${dayRentAmount}, भोजन: ₹${data.foodAmount}, माध्यम: ${data.paymentMode}`
+    );
+
+    // Open receipt modal immediately so the operator can print or download
+    setSelectedReceiptBooking({
+      ...targetBooking,
+      ...dbPayload,
+      food_amount: data.foodAmount,
+      payment_mode: data.paymentMode,
+      collected_by: collectorName,
+      collection_date: formatToISODate(new Date()),
+    });
+    setIsReceiptModalOpen(true);
+  };
+
   // Related bookings for letter
   const refCode = selectedLetterBooking
     ? selectedLetterBooking.group_id || extractGroupIdFromNotes(selectedLetterBooking.notes)
@@ -452,6 +581,7 @@ export default function HomePage() {
   }
 
   const isAdmin = currentUser.role === 'admin';
+  const isOperator = currentUser.role === 'operator';
 
   return (
     <>
@@ -498,9 +628,11 @@ export default function HomePage() {
               <RoomMatrix
                 bookings={bookings}
                 isAdmin={isAdmin}
+                isOperator={isOperator}
                 selectedDate={selectedDate}
                 onSelectDate={(d) => setSelectedDate(d)}
                 onSelectBooking={handleOpenLetter}
+                onOpenRecordCollection={handleOpenCollection}
               />
 
               <TodayActivityWidget
@@ -573,8 +705,10 @@ export default function HomePage() {
               <BookingsTable
                 bookings={bookings}
                 isAdmin={isAdmin}
+                isOperator={isOperator}
                 onOpenLetter={handleOpenLetter}
                 onOpenReceipt={handleOpenReceipt}
+                onOpenRecordCollection={handleOpenCollection}
                 onEditBooking={handleOpenEdit}
                 onDeleteBooking={handleDeleteBooking}
                 onUpdateStatus={handleUpdateStatus}
@@ -614,7 +748,7 @@ export default function HomePage() {
               </span>
               <span>•</span>
               <span className="text-amber-400/90 font-semibold">
-                {isAdmin ? 'एडमिन' : 'ड्यूटी अधिकारी'}
+                {isAdmin ? 'एडमिन' : (isOperator ? 'काउंटर ऑपरेटर' : 'ड्यूटी अधिकारी')}
               </span>
             </div>
           </div>
@@ -672,6 +806,31 @@ export default function HomePage() {
         }}
         booking={selectedLetterBooking}
         relatedBookings={relatedBookings}
+      />
+
+      <RecordCollectionModal
+        isOpen={isCollectionModalOpen}
+        onClose={() => {
+          setIsCollectionModalOpen(false);
+          setSelectedCollectionBooking(null);
+        }}
+        booking={selectedCollectionBooking}
+        currentUserDisplayName={currentUser.displayName}
+        relatedBookings={
+          selectedCollectionBooking
+            ? bookings.filter((b) => {
+                if (b.status === 'CANCELLED') return false;
+                const targetRef = selectedCollectionBooking.group_id || extractGroupIdFromNotes(selectedCollectionBooking.notes);
+                const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+                return (
+                  (targetRef && bRef === targetRef) ||
+                  (b.guest_name.toLowerCase() === selectedCollectionBooking.guest_name.toLowerCase() &&
+                    b.mobile_number === selectedCollectionBooking.mobile_number)
+                );
+              })
+            : []
+        }
+        onSaveCollection={handleSaveCollection}
       />
 
       <ReceiptModal

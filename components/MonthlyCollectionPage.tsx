@@ -8,6 +8,9 @@ import {
   getBookingRoomsCount,
   getBookingSuitsList,
   extractDispatchNoFromNotes,
+  calculateBookingFoodAmount,
+  calculateBookingTotalCollection,
+  extractPaymentModeFromNotes,
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import { printDocumentDirectly } from '@/lib/pdfUtils';
@@ -27,6 +30,7 @@ import {
   Award,
   CheckCircle2,
   BarChart3,
+  Utensils,
 } from 'lucide-react';
 
 interface MonthlyCollectionPageProps {
@@ -67,6 +71,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         monthKey: string;
         bookings: Booking[];
         totalRent: number;
+        totalFood: number;
+        grandTotal: number;
         roomsCount: number;
       }
     > = {};
@@ -80,15 +86,20 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           monthKey,
           bookings: [],
           totalRent: 0,
+          totalFood: 0,
+          grandTotal: 0,
           roomsCount: 0,
         };
       }
 
       const rent = calculateBookingRent(b);
+      const food = calculateBookingFoodAmount(b);
       const rooms = getBookingRoomsCount(b);
 
       monthMap[monthKey].bookings.push(b);
       monthMap[monthKey].totalRent += rent;
+      monthMap[monthKey].totalFood += food;
+      monthMap[monthKey].grandTotal += (rent + food);
       monthMap[monthKey].roomsCount += rooms;
     });
 
@@ -105,43 +116,62 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
   // Overall KPIs
   const overallStats = useMemo(() => {
-    let grandTotal = 0;
+    let grandTotalRent = 0;
+    let grandTotalFood = 0;
+    let grandTotalRevenue = 0;
     let totalBookingsCount = 0;
     let totalRoomsCount = 0;
     let peakRent = 0;
     let peakMonthKey = '';
     let currentMonthRent = 0;
+    let currentMonthFood = 0;
+    let currentMonthGrandTotal = 0;
     let lastMonthRent = 0;
+    let lastMonthFood = 0;
+    let lastMonthGrandTotal = 0;
     let currentMonthCount = 0;
     let lastMonthCount = 0;
 
     monthlyData.forEach((m) => {
-      grandTotal += m.totalRent;
+      grandTotalRent += m.totalRent;
+      grandTotalFood += m.totalFood;
+      grandTotalRevenue += m.grandTotal;
       totalBookingsCount += m.bookings.length;
       totalRoomsCount += m.roomsCount;
 
-      if (m.totalRent > peakRent) {
-        peakRent = m.totalRent;
+      if (m.grandTotal > peakRent) {
+        peakRent = m.grandTotal;
         peakMonthKey = m.monthKey;
       }
 
       if (m.monthKey === currentMonthKey) {
         currentMonthRent = m.totalRent;
+        currentMonthFood = m.totalFood;
+        currentMonthGrandTotal = m.grandTotal;
         currentMonthCount = m.bookings.length;
       } else if (m.monthKey === lastMonthKey) {
         lastMonthRent = m.totalRent;
+        lastMonthFood = m.totalFood;
+        lastMonthGrandTotal = m.grandTotal;
         lastMonthCount = m.bookings.length;
       }
     });
 
     return {
-      grandTotal,
+      grandTotal: grandTotalRevenue,
+      grandTotalRent,
+      grandTotalFood,
+      grandTotalRevenue,
       totalBookingsCount,
       totalRoomsCount,
       peakRent,
       peakMonthKey,
       currentMonthRent,
+      currentMonthFood,
+      currentMonthGrandTotal,
       lastMonthRent,
+      lastMonthFood,
+      lastMonthGrandTotal,
       currentMonthCount,
       lastMonthCount,
       activeMonthsCount: monthlyData.length,
@@ -164,24 +194,28 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       return {
         'माह / वर्ष (Month)': monthLabel,
         'माह कोड (Code)': m.monthKey,
-        'कुल बुकिंग संख्या (Bookings)': m.bookings.length,
+        'कुल आवंटन संख्या (Bookings)': m.bookings.length,
         'कुल कक्ष दिवस (Room Days)': m.roomsCount,
-        'कुल निर्धारित किराया (Total Collection ₹)': m.totalRent,
-        'औसत किराया प्रति बुकिंग (Avg Rent ₹)':
-          m.bookings.length > 0 ? Math.round(m.totalRent / m.bookings.length) : 0,
+        'कमरा किराया संग्रह (Room Rent ₹)': m.totalRent,
+        'भोजन संग्रह (Food Amount ₹)': m.totalFood,
+        'कुल संग्रह (Total Collection ₹)': m.grandTotal,
+        'औसत संग्रह प्रति आवंटन (Avg ₹)':
+          m.bookings.length > 0 ? Math.round(m.grandTotal / m.bookings.length) : 0,
       };
     });
 
     // Add Grand Total row to summary
     summaryRows.push({
-      'माह / वर्ष (Month)': 'कुल योग (GRAND TOTAL)',
+      'माह / वर्ष (Month)': 'कुल महायोग (GRAND TOTAL)',
       'माह कोड (Code)': '-',
-      'कुल बुकिंग संख्या (Bookings)': overallStats.totalBookingsCount,
+      'कुल आवंटन संख्या (Bookings)': overallStats.totalBookingsCount,
       'कुल कक्ष दिवस (Room Days)': overallStats.totalRoomsCount,
-      'कुल निर्धारित किराया (Total Collection ₹)': overallStats.grandTotal,
-      'औसत किराया प्रति बुकिंग (Avg Rent ₹)':
+      'कमरा किराया संग्रह (Room Rent ₹)': overallStats.grandTotalRent,
+      'भोजन संग्रह (Food Amount ₹)': overallStats.grandTotalFood,
+      'कुल संग्रह (Total Collection ₹)': overallStats.grandTotalRevenue,
+      'औसत संग्रह प्रति आवंटन (Avg ₹)':
         overallStats.totalBookingsCount > 0
-          ? Math.round(overallStats.grandTotal / overallStats.totalBookingsCount)
+          ? Math.round(overallStats.grandTotalRevenue / overallStats.totalBookingsCount)
           : 0,
     });
 
@@ -196,6 +230,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
         const suits = getBookingSuitsList(b).join(', ');
         const rent = calculateBookingRent(b);
+        const food = calculateBookingFoodAmount(b);
+        const total = rent + food;
+        const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
 
         detailRows.push({
           'माह (Month)': monthLabel,
@@ -205,7 +242,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           'पदनाम/संदर्भ (Reference)': b.reference || '-',
           'आवंटित सूट (Suits)': suits,
           'कमरे (Room Count)': getBookingRoomsCount(b),
-          'निर्धारित किराया (Rent ₹)': rent,
+          'कमरा किराया (Room Rent ₹)': rent,
+          'भोजन संग्रह (Food Amount ₹)': food,
+          'कुल संग्रह (Total Collection ₹)': total,
+          'भुगतान माध्यम (Payment Mode)': payMode,
           'स्थिति (Status)': b.status,
         });
       });
@@ -328,50 +368,67 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       {/* 4 KPI Summary Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
-        {/* Total Revenue Tile */}
+        {/* 1. Room Rent Total Tile */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              {language === 'hi' ? 'कुल संकलित किराया' : 'Total Revenue'}
+              {language === 'hi' ? 'कमरा किराया संग्रह' : 'Room Rent Collection'}
             </span>
             <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
-              <IndianRupee className="w-4 h-4" />
+              <Building2 className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="text-2xl sm:text-3xl font-black text-slate-900">
-              ₹{overallStats.grandTotal.toLocaleString('en-IN')}
+              ₹{overallStats.grandTotalRent.toLocaleString('en-IN')}
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            {overallStats.totalBookingsCount} {language === 'hi' ? 'कुल बुकिंग्स' : 'Total Bookings'} • {overallStats.totalRoomsCount} {language === 'hi' ? 'कक्ष दिवस' : 'Room days'}
+            {overallStats.totalRoomsCount} {language === 'hi' ? 'कक्ष दिवस' : 'Room days'} • {overallStats.totalBookingsCount} {language === 'hi' ? 'आवंटन' : 'Allotments'}
           </p>
         </div>
 
-        {/* Last Month Collection Tile */}
-        <div className="bg-gradient-to-br from-purple-50/70 via-white to-purple-50/40 rounded-2xl p-4 sm:p-5 border border-purple-200 shadow-2xs">
+        {/* 2. Food Collection Tile */}
+        <div className="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/40 rounded-2xl p-4 sm:p-5 border border-blue-200 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1">
-              <span>{language === 'hi' ? 'गत माह कलेक्शन' : 'Last Month'}</span>
-              <span className="text-[10px] font-semibold text-purple-700">
-                ({formatMonthKey(lastMonthKey, language === 'hi' ? 'hi' : 'en')})
-              </span>
+            <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1">
+              <span>{language === 'hi' ? 'भोजन संग्रह' : 'Food Collection'}</span>
             </span>
-            <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
-              <History className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+              <Utensils className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black text-purple-950">
-              ₹{overallStats.lastMonthRent.toLocaleString('en-IN')}
+            <span className="text-2xl sm:text-3xl font-black text-blue-950">
+              ₹{overallStats.grandTotalFood.toLocaleString('en-IN')}
             </span>
           </div>
-          <p className="mt-1 text-xs text-purple-700 font-medium">
-            {overallStats.lastMonthCount} {language === 'hi' ? 'आवंटन दर्ज' : 'Bookings recorded'}
+          <p className="mt-1 text-xs text-blue-700 font-medium">
+            {language === 'hi' ? 'मेस / खान-पान कुल संग्रह' : 'Total Mess & Food collection'}
           </p>
         </div>
 
-        {/* Current Month Collection Tile */}
+        {/* 3. Grand Total Revenue Tile */}
+        <div className="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 rounded-2xl p-4 sm:p-5 border border-emerald-200 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1">
+              <span>{language === 'hi' ? 'सर्वकुल राजस्व संग्रह' : 'Grand Total'}</span>
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+              <IndianRupee className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl font-black text-emerald-950">
+              ₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-emerald-800 font-medium">
+            {language === 'hi' ? 'कमरा किराया + भोजन संग्रह' : 'Rent + Food Combined'}
+          </p>
+        </div>
+
+        {/* 4. Current Month Collection Tile */}
         <div className="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/40 rounded-2xl p-4 sm:p-5 border border-amber-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
@@ -386,31 +443,11 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="text-2xl sm:text-3xl font-black text-amber-950">
-              ₹{overallStats.currentMonthRent.toLocaleString('en-IN')}
+              ₹{overallStats.currentMonthGrandTotal.toLocaleString('en-IN')}
             </span>
           </div>
-          <p className="mt-1 text-xs text-amber-800 font-medium">
-            {overallStats.currentMonthCount} {language === 'hi' ? 'आवंटन दर्ज' : 'Bookings recorded'}
-          </p>
-        </div>
-
-        {/* Peak Month Collection Tile */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              {language === 'hi' ? 'सर्वाधिक संग्रह माह' : 'Peak Month'}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <Award className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-900">
-              ₹{overallStats.peakRent.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-emerald-700 font-medium truncate">
-            {formatMonthKey(overallStats.peakMonthKey, language === 'hi' ? 'hi' : 'en')}
+          <p className="mt-1 text-[11px] text-amber-800 font-medium truncate">
+            कमरा: ₹{overallStats.currentMonthRent} • भोजन: ₹{overallStats.currentMonthFood}
           </p>
         </div>
 
@@ -534,10 +571,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                   {/* Revenue Amount */}
                   <div className="text-right">
                     <div className="text-lg sm:text-xl font-black text-slate-900">
-                      ₹{m.totalRent.toLocaleString('en-IN')}
+                      ₹{m.grandTotal.toLocaleString('en-IN')}
                     </div>
                     <div className="text-[11px] text-slate-500 font-semibold">
-                      {language === 'hi' ? 'कुल किराया संग्रह' : 'Total Collection'}
+                      कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')}
                     </div>
                   </div>
 
@@ -576,8 +613,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                   <div className="flex items-center justify-between mb-3 px-1">
                     <span className="text-xs sm:text-sm font-bold text-slate-800">
                       {language === 'hi'
-                        ? `${monthHindi} के सभी आवंटन विवरण (${m.bookings.length})`
-                        : `All Bookings for ${monthEnglish} (${m.bookings.length})`}
+                        ? `${monthHindi} के सभी आवंटन विवरण (${m.bookings.length}) • कुल संग्रह: ₹${m.grandTotal.toLocaleString('en-IN')}`
+                        : `All Bookings for ${monthEnglish} (${m.bookings.length}) • Total: ₹${m.grandTotal.toLocaleString('en-IN')}`}
                     </span>
                     <button
                       type="button"
@@ -596,29 +633,38 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           <th className="py-3 px-3.5 whitespace-nowrap">
                             {language === 'hi' ? 'दिनांक' : 'Date'}
                           </th>
-                          <th className="py-3 px-3.5 whitespace-nowrap">
-                            {language === 'hi' ? 'पत्र संख्या' : 'Dispatch'}
+                          <th className="py-3 px-2.5 whitespace-nowrap">
+                            {language === 'hi' ? 'पत्र सं०' : 'Dispatch'}
                           </th>
                           <th className="py-3 px-3.5">
-                            {language === 'hi' ? 'अधिकारी का नाम व पदनाम' : 'Officer & Rank'}
+                            {language === 'hi' ? 'अधिकारी / अतिथि का नाम' : 'Officer & Rank'}
                           </th>
-                          <th className="py-3 px-3.5 whitespace-nowrap">
+                          <th className="py-3 px-2.5 whitespace-nowrap">
                             {language === 'hi' ? 'आवंटित सूट' : 'Suits'}
                           </th>
-                          <th className="py-3 px-3.5 text-right whitespace-nowrap">
-                            {language === 'hi' ? 'किराया' : 'Rent'}
+                          <th className="py-3 px-2.5 text-right whitespace-nowrap">
+                            {language === 'hi' ? 'कमरा किराया' : 'Room Rent'}
                           </th>
-                          <th className="py-3 px-3.5 text-center whitespace-nowrap">
-                            {language === 'hi' ? 'स्थिति' : 'Status'}
+                          <th className="py-3 px-2.5 text-right whitespace-nowrap">
+                            {language === 'hi' ? 'भोजन संग्रह' : 'Food'}
+                          </th>
+                          <th className="py-3 px-3 text-right whitespace-nowrap">
+                            {language === 'hi' ? 'कुल संग्रह' : 'Total'}
+                          </th>
+                          <th className="py-3 px-2.5 text-center whitespace-nowrap">
+                            {language === 'hi' ? 'स्थिति / माध्यम' : 'Status / Mode'}
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {m.bookings.map((b) => {
                           const rent = calculateBookingRent(b);
+                          const food = calculateBookingFoodAmount(b);
+                          const total = rent + food;
                           const suits = getBookingSuitsList(b).join(', ');
                           const dispatchNo =
                             b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
+                          const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
 
                           return (
                             <tr
@@ -629,8 +675,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                               <td className="py-3 px-3.5 font-semibold text-slate-900 whitespace-nowrap">
                                 {b.booking_date}
                               </td>
-                              <td className="py-3 px-3.5 font-bold text-slate-600 whitespace-nowrap">
-                                {dispatchNo !== '-' ? `पत्र #${dispatchNo}` : '-'}
+                              <td className="py-3 px-2.5 font-bold text-slate-600 whitespace-nowrap">
+                                {dispatchNo !== '-' ? `#${dispatchNo}` : '-'}
                               </td>
                               <td className="py-3 px-3.5">
                                 <div className="font-bold text-slate-900 group-hover:text-amber-900 transition">
@@ -642,18 +688,24 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                                   </div>
                                 )}
                               </td>
-                              <td className="py-3 px-3.5 font-medium text-slate-700 whitespace-nowrap">
-                                <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-semibold border border-slate-200">
+                              <td className="py-3 px-2.5 font-medium text-slate-700 whitespace-nowrap">
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-xs font-semibold border border-slate-200">
                                   {suits}
                                 </span>
                               </td>
-                              <td className="py-3 px-3.5 text-right font-black text-slate-900 whitespace-nowrap">
+                              <td className="py-3 px-2.5 text-right font-mono font-semibold text-slate-800 whitespace-nowrap">
                                 ₹{rent.toLocaleString('en-IN')}
                               </td>
-                              <td className="py-3 px-3.5 text-center whitespace-nowrap">
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                                  <CheckCircle2 className="w-3 h-3" />
+                              <td className="py-3 px-2.5 text-right font-mono font-semibold text-blue-700 whitespace-nowrap">
+                                {food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}
+                              </td>
+                              <td className="py-3 px-3 text-right font-black font-mono text-slate-900 whitespace-nowrap">
+                                ₹{total.toLocaleString('en-IN')}
+                              </td>
+                              <td className="py-3 px-2.5 text-center whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                                   <span>{b.status || 'CONFIRMED'}</span>
+                                  <span className="text-[9px] text-slate-500">({payMode})</span>
                                 </span>
                               </td>
                             </tr>
@@ -736,86 +788,106 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           {singleMonthPrintData ? (
             <div>
               {/* Month KPI Summary Tiles */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>माह</div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{formatMonthKey(singleMonthPrintData.monthKey, 'hi')}</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>कोड: {singleMonthPrintData.monthKey}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>माह</div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{formatMonthKey(singleMonthPrintData.monthKey, 'hi')}</div>
+                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>कोड: {singleMonthPrintData.monthKey}</div>
                 </div>
 
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल आवंटन संख्या</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{singleMonthPrintData.bookings.length} पत्र</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>सक्रिय बुकिंग्स</div>
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल आवंटन / दिवस</div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{singleMonthPrintData.bookings.length} पत्र</div>
+                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>{singleMonthPrintData.roomsCount} कक्ष दिवस</div>
                 </div>
 
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल कक्ष दिवस</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{singleMonthPrintData.roomsCount} दिवस</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>आवंटित कमरे/रात्रि</div>
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#F8FAFC' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#4338CA', textTransform: 'uppercase' }}>कमरा किराया संग्रह</div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#312E81', marginTop: '2px' }}>₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>कमरों का किराया</div>
                 </div>
 
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#FEF3C7' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>कुल संकलित किराया</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#92400E', marginTop: '2px' }}>₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#92400E', marginTop: '2px' }}>
-                    औसत: ₹{singleMonthPrintData.bookings.length > 0 ? Math.round(singleMonthPrintData.totalRent / singleMonthPrintData.bookings.length).toLocaleString('en-IN') : 0}
-                  </div>
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#EFF6FF' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#1D4ED8', textTransform: 'uppercase' }}>भोजन संग्रह</div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E3A8A', marginTop: '2px' }}>₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>मेस / खान-पान बिल</div>
+                </div>
+
+                <div style={{ border: '1px solid #FCD34D', borderRadius: '6px', padding: '6px 8px', background: '#FEF3C7' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल राजस्व संग्रह</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#78350F', marginTop: '2px' }}>₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#92400E', marginTop: '1px' }}>कमरा + भोजन योग</div>
                 </div>
               </div>
 
               {/* Single Month Allotment Table */}
               <div style={{ marginBottom: '22px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  आवंटन एवं किराया संग्रह विवरण तालिका (Allotments & Revenue Log)
+                  आवंटन, कमरा किराया एवं भोजन संग्रह विवरण तालिका (Revenue & Mess Log)
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
                   <thead>
                     <tr style={{ background: '#0F172A', color: '#FFFFFF' }}>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '35px', textAlign: 'center' }}>क्र०</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '85px', textAlign: 'center' }}>दिनांक</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '75px', textAlign: 'center' }}>पत्र संख्या</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'left' }}>अधिकारी का नाम एवं पदनाम</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '85px', textAlign: 'center' }}>आवंटित सूट</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '85px', textAlign: 'right' }}>निर्धारित किराया (₹)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '75px', textAlign: 'center' }}>स्थिति</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '28px', textAlign: 'center' }}>क्र०</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '70px', textAlign: 'center' }}>दिनांक</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '60px', textAlign: 'center' }}>पत्र सं०</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', textAlign: 'left' }}>अधिकारी का नाम एवं पदनाम</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'center' }}>आवंटित सूट</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '70px', textAlign: 'right' }}>कमरा किराया (₹)</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'right' }}>भोजन संग्रह (₹)</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '75px', textAlign: 'right' }}>कुल संग्रह (₹)</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'center' }}>स्थिति / माध्यम</th>
                     </tr>
                   </thead>
                   <tbody>
                     {singleMonthPrintData.bookings.map((b, idx) => {
                       const rent = calculateBookingRent(b);
+                      const food = calculateBookingFoodAmount(b);
+                      const total = rent + food;
                       const suits = getBookingSuitsList(b).join(', ');
                       const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
+                      const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
 
                       return (
                         <tr key={`print-single-${b.id}`} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{b.booking_date}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{b.booking_date}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1' }}>
                             <div style={{ fontWeight: 700, color: '#0F172A' }}>{b.guest_name}</div>
-                            {b.reference && <div style={{ fontSize: '10px', color: '#64748B' }}>{b.reference}</div>}
+                            {b.reference && <div style={{ fontSize: '9px', color: '#64748B' }}>{b.reference}</div>}
                           </td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{suits}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{rent.toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '10px' }}>{b.status || 'CONFIRMED'}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{suits}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600 }}>₹{rent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{total.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '9px' }}>
+                            <div>{b.status || 'CONFIRMED'}</div>
+                            <div style={{ color: '#64748B' }}>({payMode})</div>
+                          </td>
                         </tr>
                       );
                     })}
 
                     {/* Total Row */}
-                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '12px' }}>
-                      <td colSpan={4} style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
+                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '11px' }}>
+                      <td colSpan={4} style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
                         कुल योग (TOTAL COLLECTION - {formatMonthKey(singleMonthPrintData.monthKey, 'hi')})
                       </td>
-                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
                         {singleMonthPrintData.roomsCount} कक्ष दिवस
                       </td>
-                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
                         ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#1E40AF' }}>
+                        ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
+                        ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
                         {singleMonthPrintData.bookings.length} आवंटन
                       </td>
                     </tr>
@@ -831,53 +903,53 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
               {/* Key Highlights / Summary Boxes */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल संकलित किराया</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalBookingsCount} आवंटन • {overallStats.totalRoomsCount} कक्ष दिवस</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कमरा किराया संग्रह</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalRoomsCount} कक्ष दिवस • {overallStats.totalBookingsCount} आवंटन</div>
+                </div>
+
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#EFF6FF' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase' }}>कुल भोजन संग्रह</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#1E3A8A', marginTop: '2px' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>मेस / खान-पान कुल आय</div>
+                </div>
+
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#FEF3C7' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल राजस्व (Grand Total)</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#78350F', marginTop: '2px' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', color: '#92400E', marginTop: '2px' }}>कमरा + भोजन सर्वकुल योग</div>
                 </div>
 
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>गत माह ({formatMonthKey(lastMonthKey, 'hi')})</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#7E22CE', marginTop: '2px' }}>₹{overallStats.lastMonthRent.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.lastMonthCount} आवंटन पत्र दर्ज</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह ({formatMonthKey(currentMonthKey, 'hi')})</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#B45309', marginTop: '2px' }}>₹{overallStats.currentMonthRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह संग्रह ({formatMonthKey(currentMonthKey, 'hi')})</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.currentMonthGrandTotal.toLocaleString('en-IN')}</div>
                   <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.currentMonthCount} आवंटन पत्र दर्ज</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>सर्वाधिक संग्रह माह</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.peakRent.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{formatMonthKey(overallStats.peakMonthKey, 'hi')}</div>
                 </div>
               </div>
 
               {/* भाग 1: माह-वार राजस्व संग्रह सारांश तालिका (Summary Table) */}
               <div style={{ marginBottom: '22px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  भाग 1: माह-वार किराया संग्रह सारांश तालिका (Monthly Revenue Summary)
+                  भाग 1: माह-वार किराया एवं भोजन संग्रह सारांश तालिका (Monthly Revenue Summary)
                 </div>
 
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                   <thead>
                     <tr style={{ background: '#0F172A', color: '#FFFFFF', textAlign: 'left' }}>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '40px', textAlign: 'center' }}>क्र०सं०</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '35px', textAlign: 'center' }}>क्र०</th>
                       <th style={{ padding: '6px 8px', border: '1px solid #0F172A' }}>माह एवं वर्ष (Month & Year)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>माह कोड</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कुल आवंटन संख्या</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>आवंटित कक्ष दिवस</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कुल निर्धारित किराया (₹)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>औसत किराया / आवंटन (₹)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कोड</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>आवंटन संख्या</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कक्ष दिवस</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कमरा किराया (₹)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>भोजन संग्रह (₹)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कुल संग्रह (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {monthlyData.map((m, idx) => {
                       const isCurrent = m.monthKey === currentMonthKey;
                       const isLast = m.monthKey === lastMonthKey;
-                      const avgRent = m.bookings.length > 0 ? Math.round(m.totalRent / m.bookings.length) : 0;
 
                       return (
                         <tr key={m.monthKey} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
@@ -890,21 +962,21 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', color: '#64748B' }}>{m.monthKey}</td>
                           <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 700 }}>{m.bookings.length}</td>
                           <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center' }}>{m.roomsCount}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', color: '#475569' }}>₹{avgRent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{m.totalFood > 0 ? `₹${m.totalFood.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{m.grandTotal.toLocaleString('en-IN')}</td>
                         </tr>
                       );
                     })}
 
                     {/* Grand Total Row */}
-                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '12px' }}>
-                      <td colSpan={3} style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>कुल महायोग (GRAND TOTAL)</td>
-                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalBookingsCount}</td>
-                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
-                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotal.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
-                        ₹{overallStats.totalBookingsCount > 0 ? Math.round(overallStats.grandTotal / overallStats.totalBookingsCount).toLocaleString('en-IN') : 0}
-                      </td>
+                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '11px' }}>
+                      <td colSpan={3} style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>कुल महायोग (GRAND TOTAL)</td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalBookingsCount}</td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#1E40AF' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -913,46 +985,56 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
               {/* भाग 2: विस्तृत आवंटन एवं किराया विवरण तालिका (Detailed Allotments Record) */}
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  भाग 2: विस्तृत आवंटन एवं किराया विवरण (Detailed Allotments & Rent Record)
+                  भाग 2: विस्तृत आवंटन, कमरा किराया एवं भोजन विवरण (Detailed Allotments & Collection Record)
                 </div>
 
                 {monthlyData.map((m) => (
                   <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '14px' }}>
-                    <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 8px', fontWeight: 700, fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 8px', fontWeight: 700, fontSize: '10px', display: 'flex', justifyContent: 'space-between' }}>
                       <span>माह: {formatMonthKey(m.monthKey, 'hi')} ({m.bookings.length} आवंटन)</span>
-                      <span>मासिक संग्रह: ₹{m.totalRent.toLocaleString('en-IN')}</span>
+                      <span>कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')} • <strong>कुल: ₹{m.grandTotal.toLocaleString('en-IN')}</strong></span>
                     </div>
 
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
                       <thead>
                         <tr style={{ background: '#F8FAFC', color: '#334155', borderBottom: '1px solid #CBD5E1' }}>
-                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '30px', textAlign: 'center' }}>क्र०</th>
-                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '75px' }}>दिनांक</th>
-                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px' }}>पत्र संख्या</th>
-                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>अधिकारी का नाम एवं पदनाम</th>
-                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '70px' }}>आवंटित सूट</th>
-                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>किराया (₹)</th>
-                          <th style={{ padding: '4px 6px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'center' }}>स्थिति</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '25px', textAlign: 'center' }}>क्र०</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '70px' }}>दिनांक</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '55px' }}>पत्र संख्या</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>अधिकारी का नाम एवं पदनाम</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px' }}>आवंटित सूट</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>कमरा किराया (₹)</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px', textAlign: 'right' }}>भोजन (₹)</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>कुल (₹)</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'center' }}>स्थिति / माध्यम</th>
                         </tr>
                       </thead>
                       <tbody>
                         {m.bookings.map((b, bIdx) => {
                           const rent = calculateBookingRent(b);
+                          const food = calculateBookingFoodAmount(b);
+                          const total = rent + food;
                           const suits = getBookingSuitsList(b).join(', ');
                           const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
+                          const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
 
                           return (
                             <tr key={`print-b-${b.id}`} style={{ background: bIdx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center' }}>{bIdx + 1}</td>
-                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{b.booking_date}</td>
-                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
-                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'center' }}>{bIdx + 1}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{b.booking_date}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>
                                 <span style={{ fontWeight: 700 }}>{b.guest_name}</span>
-                                {b.reference && <span style={{ color: '#64748B', display: 'block', fontSize: '9px' }}>{b.reference}</span>}
+                                {b.reference && <span style={{ color: '#64748B', display: 'block', fontSize: '8px' }}>{b.reference}</span>}
                               </td>
-                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0' }}>{suits}</td>
-                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{rent.toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '4px 6px', border: '1px solid #E2E8F0', textAlign: 'center', fontSize: '9px' }}>{b.status || 'CONFIRMED'}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>{suits}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600 }}>₹{rent.toLocaleString('en-IN')}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{total.toLocaleString('en-IN')}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'center', fontSize: '8px' }}>
+                                <span>{b.status || 'CONFIRMED'}</span>
+                                <span style={{ color: '#64748B', display: 'block' }}>({payMode})</span>
+                              </td>
                             </tr>
                           );
                         })}

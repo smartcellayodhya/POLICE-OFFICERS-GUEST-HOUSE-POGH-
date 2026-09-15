@@ -55,7 +55,11 @@ export function encodeNotesWithMeta(
   dispatchNo: string,
   checkInDate?: string,
   checkOutDate?: string,
-  ratePerRoom?: number
+  ratePerRoom?: number,
+  foodAmount?: number,
+  paymentMode?: string,
+  collectedBy?: string,
+  collectionNote?: string
 ): string {
   const cleanNotes = (notes || '').replace(/\[META:.*?\]/g, '').trim();
   const metaObj: Record<string, any> = {
@@ -65,6 +69,10 @@ export function encodeNotesWithMeta(
   if (checkInDate) metaObj.check_in_date = checkInDate;
   if (checkOutDate) metaObj.check_out_date = checkOutDate;
   if (ratePerRoom && ratePerRoom > 0) metaObj.rate_per_room = ratePerRoom;
+  if (foodAmount !== undefined && foodAmount >= 0) metaObj.food_amount = foodAmount;
+  if (paymentMode) metaObj.payment_mode = paymentMode;
+  if (collectedBy) metaObj.collected_by = collectedBy;
+  if (collectionNote) metaObj.collection_note = collectionNote;
 
   const metaTag = `[META:${JSON.stringify(metaObj)}]`;
   return cleanNotes ? `${cleanNotes} ${metaTag}` : metaTag;
@@ -140,6 +148,62 @@ export function extractRatePerRoomFromNotes(notes?: string): number {
   return 0;
 }
 
+export function extractFoodAmountFromNotes(notes?: string): number {
+  if (!notes) return 0;
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return Number(parsed.food_amount) || 0;
+    } catch {
+      // ignore
+    }
+  }
+  return 0;
+}
+
+export function extractPaymentModeFromNotes(notes?: string): string {
+  if (!notes) return 'CASH';
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return parsed.payment_mode || 'CASH';
+    } catch {
+      // ignore
+    }
+  }
+  return 'CASH';
+}
+
+export function extractCollectedByFromNotes(notes?: string): string {
+  if (!notes) return '';
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return parsed.collected_by || '';
+    } catch {
+      // ignore
+    }
+  }
+  return '';
+}
+
+export function extractCollectionNoteFromNotes(notes?: string): string {
+  if (!notes) return '';
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return parsed.collection_note || '';
+    } catch {
+      // ignore
+    }
+  }
+  return '';
+}
+
 export function cleanNotesText(notes?: string): string {
   if (!notes) return '';
   return notes.replace(/\[META:.*?\]/g, '').trim();
@@ -198,4 +262,19 @@ export function getBookingSuitsList(b: Booking): string[] {
   if (Number(b.suit_3) > 0) suits.push('सूट 3');
   if (Number(b.suit_4) > 0) suits.push('सूट 4');
   return suits.length > 0 ? suits : ['सूट 1'];
+}
+
+export function calculateBookingFoodAmount(b: Booking): number {
+  if (b.status === 'CANCELLED') return 0;
+  if (b.food_amount !== undefined && Number(b.food_amount) >= 0) {
+    return Number(b.food_amount);
+  }
+  return extractFoodAmountFromNotes(b.notes);
+}
+
+export function calculateBookingTotalCollection(b: Booking): number {
+  if (b.status === 'CANCELLED') return 0;
+  const rent = calculateBookingRent(b);
+  const food = calculateBookingFoodAmount(b);
+  return rent + food;
 }
