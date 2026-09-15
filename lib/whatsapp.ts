@@ -10,7 +10,7 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
 
   const rentLine = details.total_amount && details.total_amount > 0
     ? `- प्रति रूम प्रति दिन किराया: ₹${details.total_amount}/-\n`
-    : `- प्रति रूम प्रति दिन किराया: लागू नियमानुसार\n`;
+    : `- प्रति रूम प्रति दिन किराया: As per applicable\n`;
 
   const isSingleDay = details.check_in_date === details.check_out_date;
   const datePhrase = isSingleDay

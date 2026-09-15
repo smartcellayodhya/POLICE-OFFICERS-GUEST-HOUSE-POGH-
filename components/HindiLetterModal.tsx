@@ -131,7 +131,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         : Number(booking.total_amount)));
 
   const hasRentAmount = !isNaN(bookingRent) && bookingRent > 0;
-  const rentDisplay = hasRentAmount ? `₹${bookingRent.toLocaleString('en-IN')}/-` : 'लागू नियमानुसार';
+  const rentDisplay = hasRentAmount ? `₹${bookingRent.toLocaleString('en-IN')}/-` : 'As per applicable';
 
   const getMealLabel = (st?: string) => {
     if (st === 'PAID') return 'सशुल्क';
