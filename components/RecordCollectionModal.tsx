@@ -75,8 +75,8 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
         Number(booking.suit_3) || 0,
         Number(booking.suit_4) || 0
       );
-      const defaultRate = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(booking.total_amount) || 800);
-      setRoomRentInput(String(defaultRate));
+      const defaultRate = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(booking.total_amount) || 0);
+      setRoomRentInput(defaultRate > 0 ? String(defaultRate) : '');
 
       // Existing food amount
       const existingFood = extractFoodAmountFromNotes(booking.notes) || Number(booking.food_amount) || 0;
@@ -245,7 +245,7 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
                 required
                 value={roomRentInput}
                 onChange={(e) => setRoomRentInput(e.target.value)}
-                placeholder="800"
+                placeholder={language === 'hi' ? 'लागू कमरा किराया दर दर्ज करें' : 'Enter room rent per day'}
                 className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono font-bold text-slate-900"
               />
             </div>

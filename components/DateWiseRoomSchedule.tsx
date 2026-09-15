@@ -611,9 +611,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                               <span className="text-[10px] font-bold text-slate-500 font-mono">
                                 {isPast
                                   ? `${group.suitIds.length} कमरे खाली रहे`
-                                  : group.suitIds.length === 1
-                                  ? `₹${SUITS.find((s) => s.id === group.suitIds[0])?.rate || 800}/रात`
-                                  : `${group.suitIds.length} कमरे`}
+                                  : `${group.suitIds.length} कमरा उपलब्ध`}
                               </span>
                             </div>
 

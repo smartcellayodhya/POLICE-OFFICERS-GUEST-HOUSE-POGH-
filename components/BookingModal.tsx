@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Booking } from '@/lib/types';
-import { SUITS, REFERENCES, MEAL_STATUSES, DEFAULT_RATES } from '@/lib/constants';
+import { SUITS, REFERENCES, MEAL_STATUSES } from '@/lib/constants';
 import { formatToISODate, getDatesInRange, getStayDates, calculateStayNights, formatToDisplayDate } from '@/lib/dateUtils';
 import {
   generateBookingRef,
@@ -482,7 +482,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 min="0"
                 value={manualAmount}
                 onChange={(e) => setManualAmount(e.target.value)}
-                placeholder="800"
+                placeholder={language === 'hi' ? 'लागू कमरा किराया दर दर्ज करें' : 'Enter room rent per day'}
                 className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono"
               />
             </div>

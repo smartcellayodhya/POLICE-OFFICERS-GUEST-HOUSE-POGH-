@@ -202,7 +202,6 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-slate-900">{suit.name}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">₹{suit.rate}/रात</span>
                   </div>
 
                   {isAvailable ? (

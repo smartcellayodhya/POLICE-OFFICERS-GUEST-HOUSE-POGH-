@@ -1,16 +1,9 @@
 export const SUITS = [
-  { id: 'suit_1' as const, name: 'Suit 1', rate: 800, badgeColor: 'bg-blue-500' },
-  { id: 'suit_2' as const, name: 'Suit 2', rate: 800, badgeColor: 'bg-cyan-500' },
-  { id: 'suit_3' as const, name: 'Suit 3', rate: 1200, badgeColor: 'bg-emerald-500' },
-  { id: 'suit_4' as const, name: 'Suit 4', rate: 1200, badgeColor: 'bg-amber-500' },
+  { id: 'suit_1' as const, name: 'Suit 1', badgeColor: 'bg-blue-500' },
+  { id: 'suit_2' as const, name: 'Suit 2', badgeColor: 'bg-cyan-500' },
+  { id: 'suit_3' as const, name: 'Suit 3', badgeColor: 'bg-emerald-500' },
+  { id: 'suit_4' as const, name: 'Suit 4', badgeColor: 'bg-amber-500' },
 ];
-
-export const DEFAULT_RATES = {
-  suit_1: 800,
-  suit_2: 800,
-  suit_3: 1200,
-  suit_4: 1200,
-};
 
 export const REFERENCES = [
   'SSP SIR',
