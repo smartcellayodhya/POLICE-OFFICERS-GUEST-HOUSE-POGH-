@@ -431,6 +431,7 @@ export default function HomePage() {
   const handleSaveCollection = async (data: {
     roomRentPerDay: number;
     foodAmount: number;
+    expenditure: number;
     paymentMode: string;
     remarks?: string;
     markCheckedOut?: boolean;
@@ -455,7 +456,8 @@ export default function HomePage() {
       data.foodAmount,
       data.paymentMode,
       collectorName,
-      data.remarks
+      data.remarks,
+      data.expenditure
     );
 
     const roomsCount =
@@ -506,6 +508,7 @@ export default function HomePage() {
           ...b,
           ...dbPayload,
           food_amount: data.foodAmount,
+          expenditure: data.expenditure,
           payment_mode: data.paymentMode,
           collected_by: collectorName,
           collection_date: formatToISODate(new Date()),
@@ -517,10 +520,13 @@ export default function HomePage() {
     setBookings(updated);
     saveLocalBookings(updated);
 
+    const gross = dayRentAmount + data.foodAmount;
+    const net = gross <= 0 ? 0 : Math.max(0, gross - data.expenditure);
+
     logActivity(
       'UPDATE',
-      `कलेक्शन दर्ज: ₹${dayRentAmount + data.foodAmount}`,
-      `अतिथि: ${targetBooking.guest_name}, कमरा: ₹${dayRentAmount}, भोजन: ₹${data.foodAmount}, माध्यम: ${data.paymentMode}`
+      `कलेक्शन दर्ज: शुद्ध ₹${net} (सकल: ₹${gross}, व्यय: ₹${data.expenditure})`,
+      `अतिथि: ${targetBooking.guest_name}, कमरा: ₹${dayRentAmount}, भोजन: ₹${data.foodAmount}, व्यय: ₹${data.expenditure}, माध्यम: ${data.paymentMode}`
     );
 
     // Open receipt modal immediately so the operator can print or download
@@ -528,6 +534,7 @@ export default function HomePage() {
       ...targetBooking,
       ...dbPayload,
       food_amount: data.foodAmount,
+      expenditure: data.expenditure,
       payment_mode: data.paymentMode,
       collected_by: collectorName,
       collection_date: formatToISODate(new Date()),

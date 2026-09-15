@@ -9,6 +9,7 @@ import {
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
   extractFoodAmountFromNotes,
+  extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectionNoteFromNotes,
   getBookingSuitsList,
@@ -27,6 +28,7 @@ import {
   User,
   Phone,
   FileText,
+  TrendingDown,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 
@@ -39,6 +41,7 @@ interface RecordCollectionModalProps {
   onSaveCollection: (data: {
     roomRentPerDay: number;
     foodAmount: number;
+    expenditure: number;
     paymentMode: string;
     remarks?: string;
     markCheckedOut?: boolean;
@@ -57,6 +60,7 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
 
   const [roomRentInput, setRoomRentInput] = useState<string>('');
   const [foodAmountInput, setFoodAmountInput] = useState<string>('');
+  const [expenditureInput, setExpenditureInput] = useState<string>('');
   const [paymentMode, setPaymentMode] = useState<string>('CASH');
   const [remarks, setRemarks] = useState<string>('');
   const [markCheckedOut, setMarkCheckedOut] = useState<boolean>(true);
@@ -81,6 +85,10 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
       // Existing food amount
       const existingFood = extractFoodAmountFromNotes(booking.notes) || Number(booking.food_amount) || 0;
       setFoodAmountInput(existingFood > 0 ? String(existingFood) : '');
+
+      // Existing expenditure
+      const existingExp = extractExpenditureFromNotes(booking.notes) || Number(booking.expenditure) || 0;
+      setExpenditureInput(existingExp > 0 ? String(existingExp) : '');
 
       // Payment mode
       const existingPay = booking.payment_mode || extractPaymentModeFromNotes(booking.notes) || 'CASH';
@@ -136,7 +144,10 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
   const parsedRent = Number(roomRentInput) || 0;
   const totalRoomRent = parsedRent * numRooms * stayNights;
   const parsedFood = Number(foodAmountInput) || 0;
-  const grandTotal = totalRoomRent + parsedFood;
+  const parsedExp = Number(expenditureInput) || 0;
+  const grossCollection = totalRoomRent + parsedFood;
+  // User condition: If room is free/govt with 0 rent & 0 food, net shouldn't be negative!
+  const netGrandTotal = grossCollection <= 0 ? 0 : Math.max(0, grossCollection - parsedExp);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,6 +156,7 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
       await onSaveCollection({
         roomRentPerDay: parsedRent,
         foodAmount: parsedFood,
+        expenditure: parsedExp,
         paymentMode,
         remarks: remarks.trim(),
         markCheckedOut,
@@ -319,6 +331,35 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
             </div>
           </div>
 
+          {/* 4. Booking Expenditure (खर्च / व्यय) */}
+          <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+                <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
+                <span>{language === 'hi' ? 'बुकिंग पर हुआ व्यय / खर्च (₹)' : 'Expenditure on Booking (₹)'}</span>
+              </label>
+              <span className="text-[11px] text-rose-700 font-medium">
+                (कमरा किराया + भोजन संग्रह से घट जाएगा)
+              </span>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-rose-400 text-sm">₹</span>
+              <input
+                type="number"
+                min="0"
+                value={expenditureInput}
+                onChange={(e) => setExpenditureInput(e.target.value)}
+                placeholder="0"
+                className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-rose-300 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition bg-white font-mono font-bold text-slate-900"
+              />
+            </div>
+            <p className="text-[11px] text-rose-600">
+              {grossCollection <= 0
+                ? '*यह कमरा निःशुल्क/शासकीय है, व्यय दर्ज करने पर भी कुल देय धनराशि माइनस में नहीं होगी।'
+                : 'यह धनराशि कुल संकलित राजस्व की शुद्ध गणना हेतु घटाई जाएगी।'}
+            </p>
+          </div>
+
           {/* Optional Remarks */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
@@ -357,12 +398,28 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
               <span>खान-पान / भोजन संग्रह:</span>
               <span className="font-mono font-bold text-blue-400">₹{parsedFood.toLocaleString('en-IN')}</span>
             </div>
+            {parsedExp > 0 && (
+              <div className="flex items-center justify-between text-xs text-rose-300 border-t border-slate-800/80 pt-1.5">
+                <span className="flex items-center gap-1">
+                  <span>व्यय / खर्च (Expenditure):</span>
+                  {grossCollection <= 0 && <span className="text-[10px] text-amber-400 font-bold">(निःशुल्क रूम)</span>}
+                </span>
+                <span className="font-mono font-bold text-rose-400">-₹{parsedExp.toLocaleString('en-IN')}</span>
+              </div>
+            )}
             <div className="border-t border-slate-700 pt-2 flex items-center justify-between">
-              <span className="text-sm font-bold text-white uppercase tracking-wider">
-                सर्वकुल संकलित धनराशि (Grand Total):
-              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-white uppercase tracking-wider">
+                  {parsedExp > 0 ? 'सर्वकुल शुद्ध संकलित धनराशि (NET TOTAL):' : 'सर्वकुल संकलित धनराशि (GRAND TOTAL):'}
+                </span>
+                {grossCollection <= 0 && parsedExp > 0 && (
+                  <span className="text-[10px] text-amber-400 font-semibold">
+                    *निःशुल्क कमरा होने के कारण कुल संग्रह ऋणात्मक (माइनस) नहीं किया गया है।
+                  </span>
+                )}
+              </div>
               <span className="text-xl font-black font-mono text-emerald-400">
-                ₹{grandTotal.toLocaleString('en-IN')}/-
+                ₹{netGrandTotal.toLocaleString('en-IN')}/-
               </span>
             </div>
           </div>

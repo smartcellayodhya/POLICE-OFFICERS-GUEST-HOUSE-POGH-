@@ -14,6 +14,7 @@ export interface Booking {
   suit_4: number;
   total_amount: number;
   food_amount?: number;
+  expenditure?: number;
   payment_mode?: 'CASH' | 'UPI' | 'GOVT' | string;
   collected_by?: string;
   collection_date?: string;
@@ -41,6 +42,7 @@ export interface ReceiptDetails {
   rent_per_day: number;
   room_rent?: number;
   food_amount?: number;
+  expenditure?: number;
   total_amount: number;
   meal_type_status: string;
   payment_mode: string;

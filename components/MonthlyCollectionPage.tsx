@@ -10,6 +10,8 @@ import {
   extractDispatchNoFromNotes,
   calculateBookingFoodAmount,
   calculateBookingTotalCollection,
+  calculateBookingExpenditure,
+  calculateBookingNetCollection,
   extractPaymentModeFromNotes,
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
@@ -25,6 +27,7 @@ import {
   Search,
   Building2,
   TrendingUp,
+  TrendingDown,
   History,
   FileText,
   Award,
@@ -72,6 +75,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         bookings: Booking[];
         totalRent: number;
         totalFood: number;
+        totalExpenditure: number;
         grandTotal: number;
         roomsCount: number;
       }
@@ -87,6 +91,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           bookings: [],
           totalRent: 0,
           totalFood: 0,
+          totalExpenditure: 0,
           grandTotal: 0,
           roomsCount: 0,
         };
@@ -94,12 +99,17 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
       const rent = calculateBookingRent(b);
       const food = calculateBookingFoodAmount(b);
+      const exp = calculateBookingExpenditure(b);
       const rooms = getBookingRoomsCount(b);
+      const gross = rent + food;
+      // Free rooms with 0 rent and 0 food must never go negative
+      const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
 
       monthMap[monthKey].bookings.push(b);
       monthMap[monthKey].totalRent += rent;
       monthMap[monthKey].totalFood += food;
-      monthMap[monthKey].grandTotal += (rent + food);
+      monthMap[monthKey].totalExpenditure += exp;
+      monthMap[monthKey].grandTotal += net;
       monthMap[monthKey].roomsCount += rooms;
     });
 
@@ -118,6 +128,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
   const overallStats = useMemo(() => {
     let grandTotalRent = 0;
     let grandTotalFood = 0;
+    let grandTotalExpenditure = 0;
     let grandTotalRevenue = 0;
     let totalBookingsCount = 0;
     let totalRoomsCount = 0;
@@ -125,9 +136,11 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     let peakMonthKey = '';
     let currentMonthRent = 0;
     let currentMonthFood = 0;
+    let currentMonthExpenditure = 0;
     let currentMonthGrandTotal = 0;
     let lastMonthRent = 0;
     let lastMonthFood = 0;
+    let lastMonthExpenditure = 0;
     let lastMonthGrandTotal = 0;
     let currentMonthCount = 0;
     let lastMonthCount = 0;
@@ -135,6 +148,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     monthlyData.forEach((m) => {
       grandTotalRent += m.totalRent;
       grandTotalFood += m.totalFood;
+      grandTotalExpenditure += m.totalExpenditure;
       grandTotalRevenue += m.grandTotal;
       totalBookingsCount += m.bookings.length;
       totalRoomsCount += m.roomsCount;
@@ -147,11 +161,13 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       if (m.monthKey === currentMonthKey) {
         currentMonthRent = m.totalRent;
         currentMonthFood = m.totalFood;
+        currentMonthExpenditure = m.totalExpenditure;
         currentMonthGrandTotal = m.grandTotal;
         currentMonthCount = m.bookings.length;
       } else if (m.monthKey === lastMonthKey) {
         lastMonthRent = m.totalRent;
         lastMonthFood = m.totalFood;
+        lastMonthExpenditure = m.totalExpenditure;
         lastMonthGrandTotal = m.grandTotal;
         lastMonthCount = m.bookings.length;
       }
@@ -161,6 +177,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       grandTotal: grandTotalRevenue,
       grandTotalRent,
       grandTotalFood,
+      grandTotalExpenditure,
       grandTotalRevenue,
       totalBookingsCount,
       totalRoomsCount,
@@ -168,9 +185,11 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       peakMonthKey,
       currentMonthRent,
       currentMonthFood,
+      currentMonthExpenditure,
       currentMonthGrandTotal,
       lastMonthRent,
       lastMonthFood,
+      lastMonthExpenditure,
       lastMonthGrandTotal,
       currentMonthCount,
       lastMonthCount,
@@ -198,7 +217,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         'कुल कक्ष दिवस (Room Days)': m.roomsCount,
         'कमरा किराया संग्रह (Room Rent ₹)': m.totalRent,
         'भोजन संग्रह (Food Amount ₹)': m.totalFood,
-        'कुल संग्रह (Total Collection ₹)': m.grandTotal,
+        'व्यय / खर्च (Expenditure ₹)': m.totalExpenditure,
+        'कुल शुद्ध संग्रह (Net Collection ₹)': m.grandTotal,
         'औसत संग्रह प्रति आवंटन (Avg ₹)':
           m.bookings.length > 0 ? Math.round(m.grandTotal / m.bookings.length) : 0,
       };
@@ -212,7 +232,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       'कुल कक्ष दिवस (Room Days)': overallStats.totalRoomsCount,
       'कमरा किराया संग्रह (Room Rent ₹)': overallStats.grandTotalRent,
       'भोजन संग्रह (Food Amount ₹)': overallStats.grandTotalFood,
-      'कुल संग्रह (Total Collection ₹)': overallStats.grandTotalRevenue,
+      'व्यय / खर्च (Expenditure ₹)': overallStats.grandTotalExpenditure,
+      'कुल शुद्ध संग्रह (Net Collection ₹)': overallStats.grandTotalRevenue,
       'औसत संग्रह प्रति आवंटन (Avg ₹)':
         overallStats.totalBookingsCount > 0
           ? Math.round(overallStats.grandTotalRevenue / overallStats.totalBookingsCount)
@@ -231,7 +252,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         const suits = getBookingSuitsList(b).join(', ');
         const rent = calculateBookingRent(b);
         const food = calculateBookingFoodAmount(b);
-        const total = rent + food;
+        const exp = calculateBookingExpenditure(b);
+        const gross = rent + food;
+        const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
         const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
 
         detailRows.push({
@@ -244,7 +267,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           'कमरे (Room Count)': getBookingRoomsCount(b),
           'कमरा किराया (Room Rent ₹)': rent,
           'भोजन संग्रह (Food Amount ₹)': food,
-          'कुल संग्रह (Total Collection ₹)': total,
+          'व्यय / खर्च (Expenditure ₹)': exp,
+          'कुल शुद्ध संग्रह (Net Collection ₹)': net,
           'भुगतान माध्यम (Payment Mode)': payMode,
           'स्थिति (Status)': b.status,
         });
@@ -408,11 +432,31 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           </p>
         </div>
 
-        {/* 3. Grand Total Revenue Tile */}
+        {/* 3. Total Expenditure Tile */}
+        <div className="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/40 rounded-2xl p-4 sm:p-5 border border-rose-200 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider flex items-center gap-1">
+              <span>{language === 'hi' ? 'कुल व्यय / खर्च' : 'Total Expenditure'}</span>
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+              <TrendingDown className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl font-black text-rose-950">
+              ₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-rose-700 font-medium">
+            {language === 'hi' ? 'विभिन्न बुकिंग्स पर व्यय' : 'Expenditure deducted from revenue'}
+          </p>
+        </div>
+
+        {/* 4. Grand Total Revenue Tile */}
         <div className="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 rounded-2xl p-4 sm:p-5 border border-emerald-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1">
-              <span>{language === 'hi' ? 'सर्वकुल राजस्व संग्रह' : 'Grand Total'}</span>
+              <span>{language === 'hi' ? 'सर्वकुल शुद्ध संग्रह' : 'Net Grand Total'}</span>
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
               <IndianRupee className="w-4 h-4" />
@@ -424,30 +468,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             </span>
           </div>
           <p className="mt-1 text-xs text-emerald-800 font-medium">
-            {language === 'hi' ? 'कमरा किराया + भोजन संग्रह' : 'Rent + Food Combined'}
-          </p>
-        </div>
-
-        {/* 4. Current Month Collection Tile */}
-        <div className="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/40 rounded-2xl p-4 sm:p-5 border border-amber-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
-              <span>{language === 'hi' ? 'चालू माह संग्रह' : 'Current Month'}</span>
-              <span className="text-[10px] font-semibold text-amber-700">
-                ({formatMonthKey(currentMonthKey, language === 'hi' ? 'hi' : 'en')})
-              </span>
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black text-amber-950">
-              ₹{overallStats.currentMonthGrandTotal.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <p className="mt-1 text-[11px] text-amber-800 font-medium truncate">
-            कमरा: ₹{overallStats.currentMonthRent} • भोजन: ₹{overallStats.currentMonthFood}
+            {language === 'hi' ? '(किराया + भोजन) - खर्च' : '(Rent + Food) - Expenditure'}
           </p>
         </div>
 
@@ -575,6 +596,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                     </div>
                     <div className="text-[11px] text-slate-500 font-semibold">
                       कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')}
+                      {m.totalExpenditure > 0 && (
+                        <span className="text-rose-600 font-bold"> • खर्च: -₹{m.totalExpenditure.toLocaleString('en-IN')}</span>
+                      )}
                     </div>
                   </div>
 
@@ -648,8 +672,11 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           <th className="py-3 px-2.5 text-right whitespace-nowrap">
                             {language === 'hi' ? 'भोजन संग्रह' : 'Food'}
                           </th>
+                          <th className="py-3 px-2.5 text-right whitespace-nowrap text-rose-700">
+                            {language === 'hi' ? 'व्यय / खर्च' : 'Expenditure'}
+                          </th>
                           <th className="py-3 px-3 text-right whitespace-nowrap">
-                            {language === 'hi' ? 'कुल संग्रह' : 'Total'}
+                            {language === 'hi' ? 'शुद्ध संग्रह' : 'Net Total'}
                           </th>
                           <th className="py-3 px-2.5 text-center whitespace-nowrap">
                             {language === 'hi' ? 'स्थिति / माध्यम' : 'Status / Mode'}
@@ -660,7 +687,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                         {m.bookings.map((b) => {
                           const rent = calculateBookingRent(b);
                           const food = calculateBookingFoodAmount(b);
-                          const total = rent + food;
+                          const exp = calculateBookingExpenditure(b);
+                          const gross = rent + food;
+                          const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                           const suits = getBookingSuitsList(b).join(', ');
                           const dispatchNo =
                             b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
@@ -699,8 +728,11 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                               <td className="py-3 px-2.5 text-right font-mono font-semibold text-blue-700 whitespace-nowrap">
                                 {food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}
                               </td>
+                              <td className="py-3 px-2.5 text-right font-mono font-semibold text-rose-700 whitespace-nowrap">
+                                {exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}
+                              </td>
                               <td className="py-3 px-3 text-right font-black font-mono text-slate-900 whitespace-nowrap">
-                                ₹{total.toLocaleString('en-IN')}
+                                ₹{net.toLocaleString('en-IN')}
                               </td>
                               <td className="py-3 px-2.5 text-center whitespace-nowrap">
                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -788,7 +820,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           {singleMonthPrintData ? (
             <div>
               {/* Month KPI Summary Tiles */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', marginBottom: '16px' }}>
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#F8FAFC' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>माह</div>
                   <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{formatMonthKey(singleMonthPrintData.monthKey, 'hi')}</div>
@@ -813,30 +845,37 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                   <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>मेस / खान-पान बिल</div>
                 </div>
 
+                <div style={{ border: '1px solid #FECDD3', borderRadius: '6px', padding: '6px 8px', background: '#FFF1F2' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#BE123C', textTransform: 'uppercase' }}>कुल व्यय / खर्च</div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#9F1239', marginTop: '2px' }}>₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#BE123C', marginTop: '1px' }}>खर्च कटौती</div>
+                </div>
+
                 <div style={{ border: '1px solid #FCD34D', borderRadius: '6px', padding: '6px 8px', background: '#FEF3C7' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल राजस्व संग्रह</div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल शुद्ध संग्रह</div>
                   <div style={{ fontSize: '15px', fontWeight: 800, color: '#78350F', marginTop: '2px' }}>₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#92400E', marginTop: '1px' }}>कमरा + भोजन योग</div>
+                  <div style={{ fontSize: '9px', color: '#92400E', marginTop: '1px' }}>(किराया+भोजन)-खर्च</div>
                 </div>
               </div>
 
               {/* Single Month Allotment Table */}
               <div style={{ marginBottom: '22px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  आवंटन, कमरा किराया एवं भोजन संग्रह विवरण तालिका (Revenue & Mess Log)
+                  आवंटन, कमरा किराया, भोजन एवं व्यय विवरण तालिका (Revenue, Mess & Expenditure Log)
                 </div>
 
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
                   <thead>
                     <tr style={{ background: '#0F172A', color: '#FFFFFF' }}>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '28px', textAlign: 'center' }}>क्र०</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '70px', textAlign: 'center' }}>दिनांक</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '60px', textAlign: 'center' }}>पत्र सं०</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '26px', textAlign: 'center' }}>क्र०</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'center' }}>दिनांक</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '55px', textAlign: 'center' }}>पत्र सं०</th>
                       <th style={{ padding: '5px 6px', border: '1px solid #0F172A', textAlign: 'left' }}>अधिकारी का नाम एवं पदनाम</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'center' }}>आवंटित सूट</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '70px', textAlign: 'right' }}>कमरा किराया (₹)</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'right' }}>भोजन संग्रह (₹)</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '75px', textAlign: 'right' }}>कुल संग्रह (₹)</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '60px', textAlign: 'center' }}>आवंटित सूट</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'right' }}>कमरा किराया (₹)</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '60px', textAlign: 'right' }}>भोजन संग्रह (₹)</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'right' }}>व्यय / खर्च (₹)</th>
+                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '70px', textAlign: 'right' }}>शुद्ध संग्रह (₹)</th>
                       <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'center' }}>स्थिति / माध्यम</th>
                     </tr>
                   </thead>
@@ -844,7 +883,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                     {singleMonthPrintData.bookings.map((b, idx) => {
                       const rent = calculateBookingRent(b);
                       const food = calculateBookingFoodAmount(b);
-                      const total = rent + food;
+                      const exp = calculateBookingExpenditure(b);
+                      const gross = rent + food;
+                      const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                       const suits = getBookingSuitsList(b).join(', ');
                       const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
                       const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
@@ -861,7 +902,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{suits}</td>
                           <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600 }}>₹{rent.toLocaleString('en-IN')}</td>
                           <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{total.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#BE123C' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{net.toLocaleString('en-IN')}</td>
                           <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '9px' }}>
                             <div>{b.status || 'CONFIRMED'}</div>
                             <div style={{ color: '#64748B' }}>({payMode})</div>
@@ -884,6 +926,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#1E40AF' }}>
                         ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}
                       </td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#BE123C' }}>
+                        -₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}
+                      </td>
                       <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
                         ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}
                       </td>
@@ -901,36 +946,42 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             /* =================================================================== */
             <div>
               {/* Key Highlights / Summary Boxes */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '18px' }}>
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कमरा किराया संग्रह</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalRoomsCount} कक्ष दिवस • {overallStats.totalBookingsCount} आवंटन</div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कमरा किराया संग्रह</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalRoomsCount} कक्ष दिवस • {overallStats.totalBookingsCount} पत्र</div>
                 </div>
 
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#EFF6FF' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase' }}>कुल भोजन संग्रह</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#1E3A8A', marginTop: '2px' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>मेस / खान-पान कुल आय</div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase' }}>कुल भोजन संग्रह</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#1E3A8A', marginTop: '2px' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '2px' }}>मेस / खान-पान कुल आय</div>
+                </div>
+
+                <div style={{ border: '1px solid #FECDD3', borderRadius: '6px', padding: '8px 10px', background: '#FFF1F2' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#BE123C', textTransform: 'uppercase' }}>कुल व्यय / खर्च</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#9F1239', marginTop: '2px' }}>₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#BE123C', marginTop: '2px' }}>खर्च कटौती</div>
                 </div>
 
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#FEF3C7' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल राजस्व (Grand Total)</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#78350F', marginTop: '2px' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#92400E', marginTop: '2px' }}>कमरा + भोजन सर्वकुल योग</div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल शुद्ध राजस्व</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#78350F', marginTop: '2px' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#92400E', marginTop: '2px' }}>(किराया+भोजन)-खर्च</div>
                 </div>
 
                 <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह संग्रह ({formatMonthKey(currentMonthKey, 'hi')})</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.currentMonthGrandTotal.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>{overallStats.currentMonthCount} आवंटन पत्र दर्ज</div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह शुद्ध संग्रह</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.currentMonthGrandTotal.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '2px' }}>{overallStats.currentMonthCount} आवंटन पत्र</div>
                 </div>
               </div>
 
               {/* भाग 1: माह-वार राजस्व संग्रह सारांश तालिका (Summary Table) */}
               <div style={{ marginBottom: '22px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  भाग 1: माह-वार किराया एवं भोजन संग्रह सारांश तालिका (Monthly Revenue Summary)
+                  भाग 1: माह-वार किराया, भोजन एवं व्यय सारांश तालिका (Monthly Revenue Summary)
                 </div>
 
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
@@ -943,7 +994,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कक्ष दिवस</th>
                       <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कमरा किराया (₹)</th>
                       <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>भोजन संग्रह (₹)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कुल संग्रह (₹)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>व्यय / खर्च (₹)</th>
+                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>शुद्ध संग्रह (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -964,6 +1016,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center' }}>{m.roomsCount}</td>
                           <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
                           <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{m.totalFood > 0 ? `₹${m.totalFood.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#BE123C' }}>{m.totalExpenditure > 0 ? `-₹${m.totalExpenditure.toLocaleString('en-IN')}` : '-'}</td>
                           <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{m.grandTotal.toLocaleString('en-IN')}</td>
                         </tr>
                       );
@@ -976,6 +1029,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
                       <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</td>
                       <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#1E40AF' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#BE123C' }}>-₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}</td>
                       <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</td>
                     </tr>
                   </tbody>
@@ -985,27 +1039,28 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
               {/* भाग 2: विस्तृत आवंटन एवं किराया विवरण तालिका (Detailed Allotments Record) */}
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  भाग 2: विस्तृत आवंटन, कमरा किराया एवं भोजन विवरण (Detailed Allotments & Collection Record)
+                  भाग 2: विस्तृत आवंटन, कमरा किराया, भोजन एवं व्यय विवरण (Detailed Allotments & Collection Record)
                 </div>
 
                 {monthlyData.map((m) => (
                   <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '14px' }}>
                     <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 8px', fontWeight: 700, fontSize: '10px', display: 'flex', justifyContent: 'space-between' }}>
                       <span>माह: {formatMonthKey(m.monthKey, 'hi')} ({m.bookings.length} आवंटन)</span>
-                      <span>कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')} • <strong>कुल: ₹{m.grandTotal.toLocaleString('en-IN')}</strong></span>
+                      <span>कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')} • खर्च: ₹{m.totalExpenditure.toLocaleString('en-IN')} • <strong>शुद्ध कुल: ₹{m.grandTotal.toLocaleString('en-IN')}</strong></span>
                     </div>
 
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
                       <thead>
                         <tr style={{ background: '#F8FAFC', color: '#334155', borderBottom: '1px solid #CBD5E1' }}>
                           <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '25px', textAlign: 'center' }}>क्र०</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '70px' }}>दिनांक</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px' }}>दिनांक</th>
                           <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '55px' }}>पत्र संख्या</th>
                           <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>अधिकारी का नाम एवं पदनाम</th>
                           <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px' }}>आवंटित सूट</th>
                           <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>कमरा किराया (₹)</th>
                           <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px', textAlign: 'right' }}>भोजन (₹)</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>कुल (₹)</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px', textAlign: 'right' }}>व्यय / खर्च (₹)</th>
+                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>शुद्ध कुल (₹)</th>
                           <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'center' }}>स्थिति / माध्यम</th>
                         </tr>
                       </thead>
@@ -1013,7 +1068,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                         {m.bookings.map((b, bIdx) => {
                           const rent = calculateBookingRent(b);
                           const food = calculateBookingFoodAmount(b);
-                          const total = rent + food;
+                          const exp = calculateBookingExpenditure(b);
+                          const gross = rent + food;
+                          const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                           const suits = getBookingSuitsList(b).join(', ');
                           const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
                           const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
@@ -1030,7 +1087,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                               <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>{suits}</td>
                               <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600 }}>₹{rent.toLocaleString('en-IN')}</td>
                               <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{total.toLocaleString('en-IN')}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600, color: '#BE123C' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
+                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{net.toLocaleString('en-IN')}</td>
                               <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'center', fontSize: '8px' }}>
                                 <span>{b.status || 'CONFIRMED'}</span>
                                 <span style={{ color: '#64748B', display: 'block' }}>({payMode})</span>

@@ -10,6 +10,7 @@ import {
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
   extractFoodAmountFromNotes,
+  extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
   formatGuestDisplayName,
@@ -69,6 +70,8 @@ interface GroupedStay {
   suits: string[];
   totalRent: number;
   foodAmount: number;
+  expenditure: number;
+  grossCollection: number;
   totalCollection: number;
   collectedBy: string;
   paymentMode: string;
@@ -158,6 +161,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       // Calculate total stay rent & collections across days
       let totalRent = 0;
       let foodAmount = 0;
+      let expenditure = 0;
       let collectedBy = '';
       let paymentMode = '';
 
@@ -165,6 +169,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         totalRent += calculateBookingRent(b);
         const f = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
         if (f > foodAmount) foodAmount = f;
+        const exp = extractExpenditureFromNotes(b.notes) || Number(b.expenditure) || 0;
+        if (exp > expenditure) expenditure = exp;
         const cb = extractCollectedByFromNotes(b.notes) || b.collected_by;
         if (cb && !collectedBy) collectedBy = cb;
         const pm = extractPaymentModeFromNotes(b.notes) || b.payment_mode;
@@ -176,7 +182,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         totalRent = Number(primary.total_amount);
       }
 
-      const totalCollection = totalRent + foodAmount;
+      const grossCollection = totalRent + foodAmount;
+      // If room rent + food charge is 0, expenditure must not turn total into negative
+      const totalCollection = grossCollection <= 0 ? 0 : Math.max(0, grossCollection - expenditure);
 
       // Determine overall status
       let overallStatus: BookingStatus = primary.status || 'CONFIRMED';
@@ -202,6 +210,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         suits: Array.from(suitSet).sort(),
         totalRent,
         foodAmount,
+        expenditure,
+        grossCollection,
         totalCollection,
         collectedBy,
         paymentMode,
@@ -571,20 +581,30 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                     
                     {/* Amount & Meal Tag */}
                     <div className="text-xs">
-                      {stay.foodAmount > 0 ? (
+                      {stay.foodAmount > 0 || stay.expenditure > 0 ? (
                         <div className="space-y-0.5">
                           <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
                             <span className="font-mono text-emerald-700 font-extrabold text-sm">
                               ₹{stay.totalCollection.toLocaleString('en-IN')}/-
                             </span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold">
-                              {language === 'hi' ? 'कुल संग्रह' : 'Total'}
+                              {stay.expenditure > 0 ? (language === 'hi' ? 'शुद्ध संग्रह' : 'Net Total') : (language === 'hi' ? 'कुल संग्रह' : 'Total')}
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 flex-wrap">
                             <span>किराया: ₹{stay.totalRent}</span>
-                            <span>+</span>
-                            <span className="text-blue-600 font-bold">भोजन: ₹{stay.foodAmount}</span>
+                            {stay.foodAmount > 0 && (
+                              <>
+                                <span>+</span>
+                                <span className="text-blue-600 font-bold">भोजन: ₹{stay.foodAmount}</span>
+                              </>
+                            )}
+                            {stay.expenditure > 0 && (
+                              <>
+                                <span>-</span>
+                                <span className="text-rose-600 font-bold">खर्च: ₹{stay.expenditure}</span>
+                              </>
+                            )}
                             {stay.paymentMode && (
                               <span className="ml-1 px-1 rounded bg-slate-100 text-slate-600 font-sans text-[9px] uppercase font-semibold">
                                 {stay.paymentMode}

@@ -9,6 +9,7 @@ import {
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
   extractFoodAmountFromNotes,
+  extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
   getBookingSuitsList,
@@ -37,8 +38,11 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
     const totalRent = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
 
     const foodAmount = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
-    const totalCollection = totalRent + foodAmount;
-    const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (totalCollection > 0 ? 'CASH' : '-');
+    const expenditure = extractExpenditureFromNotes(b.notes) || Number(b.expenditure) || 0;
+    const grossCollection = totalRent + foodAmount;
+    // Free rooms with no room rent and no food charge must never go negative
+    const netCollection = grossCollection <= 0 ? 0 : Math.max(0, grossCollection - expenditure);
+    const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (netCollection > 0 ? 'CASH' : '-');
     const collectedBy = extractCollectedByFromNotes(b.notes) || b.collected_by || '-';
 
     let mealLabel = 'सशुल्क (PAID)';
@@ -67,7 +71,8 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
       'दैनिक किराया ₹ (Room Rate)': perRoomRent > 0 ? perRoomRent : 'As per applicable',
       'कमरा किराया ₹ (Room Rent)': totalRent > 0 ? totalRent : 0,
       'खान-पान संग्रह ₹ (Food Bill)': foodAmount > 0 ? foodAmount : 0,
-      'कुल संग्रह ₹ (Total Collection)': totalCollection > 0 ? totalCollection : 0,
+      'व्यय / खर्च ₹ (Expenditure)': expenditure > 0 ? expenditure : 0,
+      'कुल शुद्ध संग्रह ₹ (Net Collection)': netCollection > 0 ? netCollection : 0,
       'भुगतान माध्यम (Mode)': paymentMode,
       'कलेक्शन कर्ता (Collected By)': collectedBy,
       'भोजन व्यवस्था (Meal Status)': mealLabel,
@@ -93,7 +98,8 @@ export function exportBookingsToExcel(bookings: Booking[], fileName = 'POGH_Ayod
     { wch: 16 }, // Room Rate
     { wch: 16 }, // Room Rent
     { wch: 16 }, // Food Bill
-    { wch: 18 }, // Total Collection
+    { wch: 16 }, // Expenditure
+    { wch: 20 }, // Net Collection
     { wch: 14 }, // Mode
     { wch: 22 }, // Collected By
     { wch: 18 }, // Meal Status

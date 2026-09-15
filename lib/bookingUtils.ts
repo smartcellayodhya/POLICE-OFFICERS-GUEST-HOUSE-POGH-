@@ -59,7 +59,8 @@ export function encodeNotesWithMeta(
   foodAmount?: number,
   paymentMode?: string,
   collectedBy?: string,
-  collectionNote?: string
+  collectionNote?: string,
+  expenditure?: number
 ): string {
   const cleanNotes = (notes || '').replace(/\[META:.*?\]/g, '').trim();
   const metaObj: Record<string, any> = {
@@ -70,6 +71,7 @@ export function encodeNotesWithMeta(
   if (checkOutDate) metaObj.check_out_date = checkOutDate;
   if (ratePerRoom && ratePerRoom > 0) metaObj.rate_per_room = ratePerRoom;
   if (foodAmount !== undefined && foodAmount >= 0) metaObj.food_amount = foodAmount;
+  if (expenditure !== undefined && expenditure >= 0) metaObj.expenditure = expenditure;
   if (paymentMode) metaObj.payment_mode = paymentMode;
   if (collectedBy) metaObj.collected_by = collectedBy;
   if (collectionNote) metaObj.collection_note = collectionNote;
@@ -204,6 +206,20 @@ export function extractCollectionNoteFromNotes(notes?: string): string {
   return '';
 }
 
+export function extractExpenditureFromNotes(notes?: string): number {
+  if (!notes) return 0;
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return Number(parsed.expenditure) || 0;
+    } catch {
+      // ignore
+    }
+  }
+  return 0;
+}
+
 export function cleanNotesText(notes?: string): string {
   if (!notes) return '';
   return notes.replace(/\[META:.*?\]/g, '').trim();
@@ -277,4 +293,27 @@ export function calculateBookingTotalCollection(b: Booking): number {
   const rent = calculateBookingRent(b);
   const food = calculateBookingFoodAmount(b);
   return rent + food;
+}
+
+export function calculateBookingExpenditure(b: Booking): number {
+  if (b.status === 'CANCELLED') return 0;
+  if (b.expenditure !== undefined && Number(b.expenditure) >= 0) {
+    return Number(b.expenditure);
+  }
+  return extractExpenditureFromNotes(b.notes);
+}
+
+/**
+ * Calculates net collection: (Room Rent + Food Collection) - Expenditure.
+ * If gross collection is 0 (e.g. Free/Complimentary/VIP room with no rent & no food charge),
+ * the net revenue is NEVER shown as negative (returns 0).
+ */
+export function calculateBookingNetCollection(b: Booking): number {
+  if (b.status === 'CANCELLED') return 0;
+  const rent = calculateBookingRent(b);
+  const food = calculateBookingFoodAmount(b);
+  const exp = calculateBookingExpenditure(b);
+  const gross = rent + food;
+  if (gross <= 0) return 0;
+  return Math.max(0, gross - exp);
 }

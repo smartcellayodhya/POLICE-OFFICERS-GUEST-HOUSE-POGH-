@@ -10,6 +10,7 @@ import {
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
   extractFoodAmountFromNotes,
+  extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
 } from '@/lib/bookingUtils';
@@ -120,7 +121,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const foodAmount = booking.food_amount !== undefined && Number(booking.food_amount) >= 0
     ? Number(booking.food_amount)
     : extractFoodAmountFromNotes(booking.notes);
-  const grandTotal = totalRentAmount + foodAmount;
+  const expenditure = booking.expenditure !== undefined && Number(booking.expenditure) >= 0
+    ? Number(booking.expenditure)
+    : extractExpenditureFromNotes(booking.notes);
+  const grossTotal = totalRentAmount + foodAmount;
+  // Free rooms with no room rent and no food charge must never become negative
+  const grandTotal = grossTotal <= 0 ? 0 : Math.max(0, grossTotal - expenditure);
   const collectedBy = booking.collected_by || extractCollectedByFromNotes(booking.notes);
 
   const todayHindi = formatToHindiDate(new Date());
@@ -329,12 +335,33 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                             : '₹0'))}
                     </td>
                   </tr>
+                  {expenditure > 0 && (
+                    <tr className="bg-rose-50/60">
+                      <td className="p-2 border border-slate-300 text-center font-bold text-rose-700">3</td>
+                      <td className="p-2 border border-slate-300 text-rose-800 font-medium">
+                        घटाएं: व्यय / खर्च (Booking Expenditure Deduction)
+                      </td>
+                      <td className="p-2 border border-slate-300 text-center text-rose-700">-</td>
+                      <td className="p-2 border border-slate-300 text-right font-mono text-rose-700">
+                        -₹{expenditure.toLocaleString('en-IN')}
+                      </td>
+                      <td className="p-2 border border-slate-300 text-right font-bold font-mono text-rose-700">
+                        -₹{expenditure.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  )}
                   <tr className="bg-amber-50/80 font-bold text-sm">
                     <td colSpan={4} className="p-2.5 border border-slate-300 text-right text-slate-900">
-                      कुल प्राप्त धनराशि (Total Received Amount):
+                      {expenditure > 0
+                        ? 'सर्वकुल शुद्ध प्राप्त धनराशि (Net Received Grand Total):'
+                        : 'कुल प्राप्त धनराशि (Total Received Amount):'}
                     </td>
                     <td className="p-2.5 border border-slate-300 text-right font-mono text-base font-bold text-blue-900">
-                      {grandTotal > 0 ? `₹${grandTotal.toLocaleString('en-IN')}/-` : (totalRentAmount > 0 ? `₹${totalRentAmount.toLocaleString('en-IN')}/-` : 'As per applicable')}
+                      {grandTotal > 0
+                        ? `₹${grandTotal.toLocaleString('en-IN')}/-`
+                        : (grossTotal === 0 && expenditure > 0
+                          ? '₹0/- (निःशुल्क कक्ष)'
+                          : (totalRentAmount > 0 ? `₹${totalRentAmount.toLocaleString('en-IN')}/-` : 'As per applicable'))}
                     </td>
                   </tr>
                 </tbody>

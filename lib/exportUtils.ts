@@ -7,6 +7,7 @@ import {
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
   extractFoodAmountFromNotes,
+  extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
 } from './bookingUtils';
@@ -30,7 +31,8 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     'प्रति रूम किराया (₹)',
     'कमरा किराया (₹)',
     'खान-पान संग्रह (₹)',
-    'कुल संग्रह (₹)',
+    'व्यय / खर्च (₹)',
+    'कुल शुद्ध संग्रह (₹)',
     'भुगतान माध्यम',
     'कलेक्शन कर्ता',
     'भोजन व्यवस्था',
@@ -59,8 +61,11 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     const totalRent = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
 
     const foodAmount = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
-    const totalCollection = totalRent + foodAmount;
-    const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (totalCollection > 0 ? 'CASH' : '-');
+    const expenditure = extractExpenditureFromNotes(b.notes) || Number(b.expenditure) || 0;
+    const grossCollection = totalRent + foodAmount;
+    // Free rooms with no room rent and no food charge must never go negative
+    const netCollection = grossCollection <= 0 ? 0 : Math.max(0, grossCollection - expenditure);
+    const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (netCollection > 0 ? 'CASH' : '-');
     const collectedBy = extractCollectedByFromNotes(b.notes) || b.collected_by || '-';
 
     const cleanedNotes = cleanNotesText(b.notes);
@@ -77,7 +82,8 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
       `"${perRoomRent > 0 ? `₹${perRoomRent}` : 'As per applicable'}"`,
       `"${totalRent > 0 ? `₹${totalRent}` : 'As per applicable'}"`,
       `"${foodAmount > 0 ? `₹${foodAmount}` : 0}"`,
-      `"${totalCollection > 0 ? `₹${totalCollection}` : 0}"`,
+      `"${expenditure > 0 ? `₹${expenditure}` : 0}"`,
+      `"${netCollection > 0 ? `₹${netCollection}` : 0}"`,
       `"${paymentMode}"`,
       `"${collectedBy}"`,
       `"${b.meal_type_status || 'PAID'}"`,
