@@ -8,8 +8,9 @@ import {
   generateBookingRef,
   generateDispatchNumber,
   encodeNotesWithMeta,
+  findConflictingBooking,
 } from '@/lib/bookingUtils';
-import { X, Calendar, User, Phone, Tag, Utensils, AlertTriangle, CheckCircle2, Hash, Clock, Wrench } from 'lucide-react';
+import { X, Calendar, User, Phone, Tag, Utensils, AlertTriangle, CheckCircle2, Hash, Clock, Wrench, Lock } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
 
@@ -72,17 +73,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     const baseDate = initialDate || formatToISODate(new Date());
     setCheckInDate(baseDate);
     const d = new Date(baseDate + (baseDate.length === 10 ? 'T00:00:00' : ''));
+    let cout = baseDate;
     if (!isNaN(d.getTime())) {
       d.setDate(d.getDate() + 1);
-      setCheckOutDate(formatToISODate(d));
+      cout = formatToISODate(d);
+      setCheckOutDate(cout);
     } else {
       setCheckOutDate(baseDate);
     }
+    const initialStay = getStayDates(baseDate, cout);
+    const availInitial = initialSuit
+      ? findConflictingBooking(existingBookings, initialSuit, initialStay)
+      : { isBooked: false };
+
     setSelectedSuits({
-      suit_1: initialSuit === 'suit_1',
-      suit_2: initialSuit === 'suit_2',
-      suit_3: initialSuit === 'suit_3',
-      suit_4: initialSuit === 'suit_4',
+      suit_1: initialSuit === 'suit_1' && !availInitial.isBooked,
+      suit_2: initialSuit === 'suit_2' && !availInitial.isBooked,
+      suit_3: initialSuit === 'suit_3' && !availInitial.isBooked,
+      suit_4: initialSuit === 'suit_4' && !availInitial.isBooked,
     });
     setCheckInTime('12:00 PM');
     setCheckOutTime('12:00 PM');
@@ -90,7 +98,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setManualAmount('');
     setMealStatus('PAID');
     setNotes('');
-  }, [initialDate, initialSuit]);
+  }, [initialDate, initialSuit, existingBookings]);
 
   useEffect(() => {
     if (isOpen) {
@@ -105,17 +113,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   useEffect(() => {
     if (initialDate) {
       setCheckInDate(initialDate);
-      setCheckOutDate(getNextDayISO(initialDate));
+      const nextDay = getNextDayISO(initialDate);
+      setCheckOutDate(nextDay);
+      if (initialSuit) {
+        const initialStay = getStayDates(initialDate, nextDay);
+        const availInitial = findConflictingBooking(existingBookings, initialSuit, initialStay);
+        setSelectedSuits({
+          suit_1: initialSuit === 'suit_1' && !availInitial.isBooked,
+          suit_2: initialSuit === 'suit_2' && !availInitial.isBooked,
+          suit_3: initialSuit === 'suit_3' && !availInitial.isBooked,
+          suit_4: initialSuit === 'suit_4' && !availInitial.isBooked,
+        });
+      }
     }
-    if (initialSuit) {
-      setSelectedSuits({
-        suit_1: initialSuit === 'suit_1',
-        suit_2: initialSuit === 'suit_2',
-        suit_3: initialSuit === 'suit_3',
-        suit_4: initialSuit === 'suit_4',
-      });
-    }
-  }, [initialDate, initialSuit]);
+  }, [initialDate, initialSuit, existingBookings]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -133,30 +144,65 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const bookingDates = getStayDates(checkInDate, checkOutDate);
   const totalDays = calculateStayNights(checkInDate, checkOutDate);
 
-  const checkConflicts = () => {
-    const conflicts: string[] = [];
-    bookingDates.forEach((d) => {
-      SUITS.forEach((s) => {
-        if (selectedSuits[s.id]) {
-          const booked = existingBookings.find(
-            (b) => b.booking_date === d && b.status !== 'CANCELLED' && Number(b[s.id as keyof Booking]) > 0
-          );
-          if (booked) {
-            conflicts.push(
-              language === 'hi'
-                ? `${s.name} दिनांक ${formatToDisplayDate(d)} को ${booked.guest_name} के लिए पहले से आरक्षित है।`
-                : `${s.name} is already booked on ${formatToDisplayDate(d)} for ${booked.guest_name}.`
-            );
+  // Check real-time availability of each suit for the selected date range
+  const getSuitAvailability = useCallback(
+    (suitId: string) => {
+      const dates = getStayDates(checkInDate, checkOutDate);
+      const res = findConflictingBooking(existingBookings, suitId, dates);
+      if (res.isBooked && res.booking) {
+        return {
+          isBooked: true,
+          date: res.conflictingDate || dates[0] || checkInDate,
+          guestName: res.guestName || res.booking.guest_name,
+          isMaintenance: !!res.isMaintenance,
+        };
+      }
+      return { isBooked: false, date: '', guestName: '', isMaintenance: false };
+    },
+    [checkInDate, checkOutDate, existingBookings]
+  );
+
+  // Automatically uncheck any suit that becomes booked if the user changes the dates
+  useEffect(() => {
+    setSelectedSuits((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      SUITS.forEach((suit) => {
+        if (next[suit.id]) {
+          const avail = getSuitAvailability(suit.id);
+          if (avail.isBooked) {
+            next[suit.id] = false;
+            changed = true;
           }
         }
       });
+      return changed ? next : prev;
     });
-    return conflicts;
+  }, [getSuitAvailability]);
+
+  const checkConflicts = () => {
+    const conflictsList: string[] = [];
+    SUITS.forEach((s) => {
+      if (selectedSuits[s.id]) {
+        const conflict = findConflictingBooking(existingBookings, s.id, bookingDates);
+        if (conflict.isBooked && conflict.booking) {
+          conflictsList.push(
+            language === 'hi'
+              ? `${s.name} दिनांक ${formatToDisplayDate(conflict.conflictingDate || '')} को ${conflict.guestName || conflict.booking.guest_name} के लिए पहले से आरक्षित है।`
+              : `${s.name} is already booked on ${formatToDisplayDate(conflict.conflictingDate || '')} for ${conflict.guestName || conflict.booking.guest_name}.`
+          );
+        }
+      }
+    });
+    return conflictsList;
   };
 
   const conflicts = checkConflicts();
 
   const handleSuitToggle = (suitId: string) => {
+    const avail = getSuitAvailability(suitId);
+    if (avail.isBooked) return; // Prevent selecting already booked suits
+
     setSelectedSuits((prev) => ({
       ...prev,
       [suitId]: !prev[suitId],
@@ -454,24 +500,115 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              {language === 'hi' ? 'कमरा आवंटन (सूट चुनें):' : 'Select Room(s) to Allocate:'}
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                {language === 'hi' ? 'कमरा आवंटन (सूट चुनें):' : 'Select Room(s) to Allocate:'}
+              </label>
+              <span className="text-[11px] text-slate-500 font-medium">
+                {Object.values(selectedSuits).filter(Boolean).length} {language === 'hi' ? 'सूट चयनित' : 'suits selected'}
+              </span>
+            </div>
+
+            {/* Real-time Conflict Alert Banner */}
+            {conflicts.length > 0 && (
+              <div className="mb-3 p-3 bg-rose-50 border border-rose-300 rounded-xl flex items-start gap-2.5 text-rose-900 animate-in fade-in duration-150 shadow-xs">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1 text-xs">
+                  <div className="font-bold text-rose-800">
+                    {language === 'hi' ? 'कमरा पहले से आरक्षित है (Room Already Booked):' : 'Booking Conflict Detected:'}
+                  </div>
+                  <ul className="mt-1 list-disc list-inside space-y-0.5 text-rose-700">
+                    {conflicts.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                  <div className="mt-1 text-[11px] text-rose-600 font-medium">
+                    {language === 'hi' ? 'कृपया अन्य कमरा या अन्य तारीख चुनें।' : 'Please choose another room or date.'}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {SUITS.map((suit) => {
-                const isSelected = selectedSuits[suit.id];
+                const isSelected = !!selectedSuits[suit.id];
+                const avail = getSuitAvailability(suit.id);
+
+                if (avail.isBooked) {
+                  return (
+                    <div
+                      key={suit.id}
+                      className="rounded-xl p-2.5 border-2 border-rose-300 bg-rose-50/80 text-rose-950 flex flex-col justify-between select-none cursor-not-allowed opacity-90 shadow-2xs"
+                      title={
+                        language === 'hi'
+                          ? `${suit.name}: दिनांक ${formatToDisplayDate(avail.date)} को ${avail.guestName} के लिए आरक्षित है (चयन नहीं किया जा सकता)`
+                          : `${suit.name}: Already booked on ${formatToDisplayDate(avail.date)} for ${avail.guestName} (disabled)`
+                      }
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs sm:text-sm font-extrabold text-slate-800 line-through decoration-rose-500">
+                          {suit.name}
+                        </span>
+                        <Lock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                      </div>
+
+                      <div className="mt-2 pt-1.5 border-t border-rose-200 flex flex-col items-center">
+                        <span className="inline-flex items-center justify-center gap-1 text-[10px] font-bold text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded text-center w-full truncate border border-rose-200">
+                          <Lock className="w-2.5 h-2.5" />
+                          <span>
+                            {avail.isMaintenance
+                              ? (language === 'hi' ? 'मरम्मत ब्लॉक' : 'Maintenance')
+                              : (language === 'hi' ? 'आरक्षित' : 'Booked')}
+                          </span>
+                        </span>
+                        <span
+                          className="text-[10px] text-slate-700 truncate mt-0.5 max-w-full font-bold"
+                          title={avail.guestName}
+                        >
+                          👤 {avail.guestName}
+                        </span>
+                        <span className="text-[9px] text-slate-500 font-mono">
+                          {formatToDisplayDate(avail.date)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={suit.id}
                     onClick={() => handleSuitToggle(suit.id)}
-                    className={`cursor-pointer rounded-xl p-3 border-2 transition text-center flex items-center justify-center gap-1.5 select-none ${
+                    className={`cursor-pointer rounded-xl p-2.5 border-2 transition flex flex-col justify-between select-none ${
                       isSelected
-                        ? 'border-amber-500 bg-amber-50 font-bold text-amber-950 shadow-xs'
-                        : 'border-slate-200 hover:border-slate-300 bg-white text-slate-800 font-semibold'
+                        ? 'border-amber-500 bg-amber-50 font-bold text-amber-950 shadow-xs ring-2 ring-amber-400/20'
+                        : 'border-emerald-200 hover:border-emerald-400 bg-white hover:bg-emerald-50/30 text-slate-800'
                     }`}
                   >
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />}
-                    <span className="text-xs sm:text-sm">{suit.name}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs sm:text-sm font-extrabold text-slate-900">
+                        {suit.name}
+                      </span>
+                      {isSelected ? (
+                        <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+                      ) : (
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                      )}
+                    </div>
+
+                    <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-center">
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-center w-full ${
+                          isSelected
+                            ? 'bg-amber-200/80 text-amber-950'
+                            : 'bg-emerald-50 text-emerald-700'
+                        }`}
+                      >
+                        {isSelected
+                          ? (language === 'hi' ? 'चयनित' : 'Selected')
+                          : (language === 'hi' ? 'उपलब्ध' : 'Available')}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -552,23 +689,54 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
 
           {/* Fixed Footer */}
-          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-10 sm:h-11 px-5 text-sm font-semibold text-slate-700 hover:bg-slate-200 bg-slate-100 rounded-xl transition cursor-pointer"
-            >
-              {language === 'hi' ? 'रद्द करें' : 'Cancel'}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="h-10 sm:h-11 px-6 text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              {submitting
-                ? (language === 'hi' ? 'पुष्टि की जा रही है...' : 'Confirming...')
-                : (language === 'hi' ? 'बुकिंग सुरक्षित करें' : 'Confirm & Save Booking')}
-            </button>
+          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+            <div className="flex-1 min-w-0 pr-2">
+              {conflicts.length > 0 ? (
+                <span className="text-xs font-bold text-rose-600 flex items-center gap-1 truncate">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">
+                    {language === 'hi' ? 'कमरा पहले से आरक्षित है' : 'Room is already booked'}
+                  </span>
+                </span>
+              ) : !Object.values(selectedSuits).some(Boolean) ? (
+                <span className="text-xs font-semibold text-slate-500 truncate">
+                  {language === 'hi' ? 'कृपया कम से कम एक कमरा चुनें' : 'Please select at least one suit'}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1 truncate">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">
+                    {Object.values(selectedSuits).filter(Boolean).length} {language === 'hi' ? 'कमरा तैयार' : 'room(s) ready'}
+                  </span>
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-10 sm:h-11 px-5 text-sm font-semibold text-slate-700 hover:bg-slate-200 bg-slate-100 rounded-xl transition cursor-pointer"
+              >
+                {language === 'hi' ? 'रद्द करें' : 'Cancel'}
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || conflicts.length > 0 || !Object.values(selectedSuits).some(Boolean)}
+                title={
+                  conflicts.length > 0
+                    ? (language === 'hi' ? 'कमरा पहले से आरक्षित है' : 'Room is already booked')
+                    : !Object.values(selectedSuits).some(Boolean)
+                    ? (language === 'hi' ? 'कमरा चुनें' : 'Select a room')
+                    : ''
+                }
+                className="h-10 sm:h-11 px-6 text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 rounded-xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-95 flex items-center gap-2"
+              >
+                {submitting
+                  ? (language === 'hi' ? 'पुष्टि की जा रही है...' : 'Confirming...')
+                  : (language === 'hi' ? 'बुकिंग सुरक्षित करें' : 'Confirm & Save Booking')}
+              </button>
+            </div>
           </div>
         </form>
 

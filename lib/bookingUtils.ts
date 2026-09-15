@@ -317,3 +317,98 @@ export function calculateBookingNetCollection(b: Booking): number {
   if (gross <= 0) return 0;
   return Math.max(0, gross - exp);
 }
+
+/**
+ * Checks if a specific suit is allocated/booked in the given booking record.
+ */
+export function isSuitAllocatedInBooking(b: Booking, suitId: string): boolean {
+  if (!b) return false;
+  const val = b[suitId as keyof Booking];
+  if (typeof val === 'number') return val > 0;
+  if (typeof val === 'string') {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }
+  if (typeof val === 'boolean') return val;
+  return false;
+}
+
+/**
+ * Checks if a booking record occupies a specific calendar date (format: 'YYYY-MM-DD').
+ * Handles single-day records, timestamped dates, and multi-day spans from metadata.
+ */
+export function isBookingOccupyingDate(b: Booking, targetDate: string): boolean {
+  if (!b || !targetDate) return false;
+  const status = (b.status || '').toUpperCase();
+  if (status === 'CANCELLED') return false;
+
+  const target = targetDate.trim().slice(0, 10);
+  const bDate = (b.booking_date || '').trim().slice(0, 10);
+
+  // Exact date match
+  if (bDate && bDate === target) return true;
+
+  // Check date range in metadata if available
+  const cin = (extractCheckInDateFromNotes(b.notes) || bDate).trim().slice(0, 10);
+  const cout = (extractCheckOutDateFromNotes(b.notes) || bDate).trim().slice(0, 10);
+
+  if (cin && cout) {
+    if (cin === cout) {
+      return cin === target;
+    }
+    // Overnight stay: occupant occupies from checkInDate up to (but not including checkout noon) checkOutDate
+    return target >= cin && target < cout;
+  }
+
+  return false;
+}
+
+export interface SuitConflictResult {
+  isBooked: boolean;
+  booking?: Booking;
+  conflictingDate?: string;
+  guestName?: string;
+  isMaintenance?: boolean;
+}
+
+/**
+ * Checks whether a suit is already booked on any date of a stay dates array.
+ * Optionally excludes a set of booking IDs (e.g. current booking group being edited).
+ */
+export function findConflictingBooking(
+  existingBookings: Booking[],
+  suitId: string,
+  stayDates: string[],
+  excludeBookingIds?: Set<string>
+): SuitConflictResult {
+  if (!existingBookings || existingBookings.length === 0 || stayDates.length === 0) {
+    return { isBooked: false };
+  }
+
+  for (const dateStr of stayDates) {
+    for (const b of existingBookings) {
+      if (excludeBookingIds && excludeBookingIds.has(b.id)) {
+        continue;
+      }
+      const status = (b.status || '').toUpperCase();
+      if (status === 'CANCELLED') {
+        continue;
+      }
+      if (!isSuitAllocatedInBooking(b, suitId)) {
+        continue;
+      }
+      if (isBookingOccupyingDate(b, dateStr)) {
+        const isMaint = status === 'MAINTENANCE' || !!b.is_maintenance;
+        return {
+          isBooked: true,
+          booking: b,
+          conflictingDate: dateStr,
+          guestName: b.guest_name,
+          isMaintenance: isMaint,
+        };
+      }
+    }
+  }
+
+  return { isBooked: false };
+}
