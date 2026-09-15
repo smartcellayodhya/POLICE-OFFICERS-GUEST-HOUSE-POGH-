@@ -569,7 +569,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                 </div>
 
                 {/* Right: Rent & Progress & Actions (Print Specific Month + Expand Trigger) */}
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto pt-2 sm:pt-0 border-t border-slate-100 sm:border-0 shrink-0">
                   {/* Visual Bar Indicator */}
                   <div className="hidden md:flex flex-col items-end w-28">
                     <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">

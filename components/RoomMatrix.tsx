@@ -299,7 +299,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectBooking(booking)}
-                      className="h-7.5 px-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                      className="flex-1 h-8 px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
                     >
                       <FileText className="w-3.5 h-3.5 text-slate-500" />
                       <span>{language === 'hi' ? 'पत्र देखें' : 'View Letter'}</span>
@@ -312,7 +312,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                           e.stopPropagation();
                           onOpenRecordCollection(booking);
                         }}
-                        className="h-7.5 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95"
+                        className="flex-1 h-8 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer active:scale-95"
                         title="कलेक्शन व भोजन बिल दर्ज करें"
                       >
                         <IndianRupee className="w-3.5 h-3.5 text-amber-700" />

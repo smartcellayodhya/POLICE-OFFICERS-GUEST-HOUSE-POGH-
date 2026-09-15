@@ -520,35 +520,35 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         </div>
 
         {/* Modal Bottom Footer */}
-        <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-sm no-print shrink-0">
-          <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="p-3 sm:px-5 sm:py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-sm no-print shrink-0">
+          <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             <button
               onClick={handleDownloadPDF}
               disabled={downloading}
-              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl text-sm font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-95"
+              className="h-10 sm:h-11 px-2.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold bg-blue-700 hover:bg-blue-600 text-white transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
             >
-              <Download className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-              <span>{downloading ? 'डाउनलोड हो रहा है...' : 'PDF डाउनलोड'}</span>
+              <Download className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
+              <span className="truncate">{downloading ? 'डाउनलोड...' : 'PDF'}</span>
             </button>
             <button
               onClick={handlePrint}
-              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white transition shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
+              className="h-10 sm:h-11 px-2.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white transition shadow-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
             >
-              <Printer className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400" />
-              <span>प्रिंट करें</span>
+              <Printer className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400 shrink-0" />
+              <span>प्रिंट</span>
             </button>
             <button
               onClick={handleWhatsApp}
-              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
+              className="h-10 sm:h-11 px-2.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
             >
-              <Share2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+              <Share2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
               <span>WhatsApp</span>
             </button>
           </div>
 
           <button
             onClick={onClose}
-            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-semibold transition cursor-pointer"
+            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs sm:text-sm font-semibold transition cursor-pointer w-full sm:w-auto"
           >
             बंद करें
           </button>

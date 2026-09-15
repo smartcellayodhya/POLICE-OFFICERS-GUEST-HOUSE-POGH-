@@ -382,10 +382,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       </div>
 
       {/* 2. Streamlined Filter Bar */}
-      <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Status Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <div className="flex items-center gap-1 text-slate-500 mr-1 font-semibold">
+      <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        {/* Status Filter Tabs (Horizontal smooth swipe on mobile) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none w-full lg:w-auto">
+          <div className="flex items-center gap-1 text-slate-500 mr-1 font-semibold shrink-0">
             <Filter className="w-3.5 h-3.5" />
             <span>{language === 'hi' ? 'स्थिति:' : 'Status:'}</span>
           </div>
@@ -400,7 +400,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id as StatusFilter)}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer shrink-0 whitespace-nowrap ${
                 statusFilter === tab.id
                   ? 'bg-amber-500 text-slate-950 shadow-2xs'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -610,14 +610,14 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       )}
                     </div>
 
-                    {/* Standardized Action Strip */}
-                    <div className="flex items-center gap-2 shrink-0 relative card-action-menu">
+                    {/* Standardized Responsive Action Strip */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto relative card-action-menu shrink-0">
                       
-                      {/* 1. Quick Status / Lifecycle Action */}
+                      {/* 1. Quick Status / Lifecycle Action (Full width on mobile for easy tap, auto on desktop) */}
                       {(isAdmin || isOperator) && (
                         <button
                           onClick={() => handleLifecycleClick(stay)}
-                          className={`h-9 px-3.5 rounded-lg text-xs sm:text-[13px] font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-xs whitespace-nowrap ${
+                          className={`h-9 px-3.5 rounded-lg text-xs sm:text-[13px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs whitespace-nowrap w-full sm:w-auto ${
                             isInHouse
                               ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
                               : isCheckedOut
@@ -640,40 +640,42 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         </button>
                       )}
 
-                      {/* 2. Collection Action */}
-                      {(isAdmin || isOperator) && onOpenRecordCollection && (
-                        <button
-                          onClick={() => onOpenRecordCollection(stay.primaryBooking)}
-                          className="h-9 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs sm:text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
-                          title={language === 'hi' ? 'किराया व भोजन कलेक्शन दर्ज करें' : 'Record Collection'}
-                        >
-                          <IndianRupee className="w-4 h-4 text-amber-700" />
-                          <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
-                        </button>
-                      )}
+                      {/* Secondary Actions Row: Symmetrically distributed across width on mobile, inline on desktop */}
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {/* 2. Collection Action */}
+                        {(isAdmin || isOperator) && onOpenRecordCollection && (
+                          <button
+                            onClick={() => onOpenRecordCollection(stay.primaryBooking)}
+                            className="flex-1 sm:flex-initial h-9 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs sm:text-[13px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                            title={language === 'hi' ? 'किराया व भोजन कलेक्शन दर्ज करें' : 'Record Collection'}
+                          >
+                            <IndianRupee className="w-4 h-4 text-amber-700" />
+                            <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
+                          </button>
+                        )}
 
-                      {/* 3. Allotment Letter */}
-                      <button
-                        onClick={() => onOpenLetter(stay.primaryBooking)}
-                        className="h-9 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs sm:text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
-                        title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Letter'}
-                      >
-                        <FileText className="w-4 h-4 text-slate-500" />
-                        <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
-                      </button>
-
-                      {/* 4. More Options Dropdown (⋮) */}
-                      <div className="relative">
+                        {/* 3. Allotment Letter */}
                         <button
-                          onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
-                          className="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer"
-                          title="अधिक विकल्प"
+                          onClick={() => onOpenLetter(stay.primaryBooking)}
+                          className="flex-1 sm:flex-initial h-9 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs sm:text-[13px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                          title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Letter'}
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          <FileText className="w-4 h-4 text-slate-500" />
+                          <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
                         </button>
 
-                        {isMenuOpen && (
-                          <div className="absolute right-0 bottom-full mb-1.5 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
+                        {/* 4. More Options Dropdown (⋮) */}
+                        <div className="relative shrink-0">
+                          <button
+                            onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
+                            className="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer"
+                            title="अधिक विकल्प"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {isMenuOpen && (
+                            <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
                             
                             {/* Receipt */}
                             <button
@@ -773,10 +775,11 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           </div>
                         )}
                       </div>
-
                     </div>
+
                   </div>
                 </div>
+              </div>
               );
             })}
           </div>
