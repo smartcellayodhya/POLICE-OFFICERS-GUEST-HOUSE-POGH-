@@ -111,8 +111,6 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !booking) return null;
-
   const stayDates = getStayDates(checkInDate, checkOutDate);
   const currentGroupIds = React.useMemo(() => {
     if (!booking) return new Set<string>();
@@ -158,13 +156,13 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   }, [checkInDate, checkOutDate, existingBookings]);
 
   const bookingRef =
-    booking.group_id ||
-    extractGroupIdFromNotes(booking.notes) ||
-    `POGH-${booking.id.slice(0, 4)}`;
+    (booking?.group_id) ||
+    extractGroupIdFromNotes(booking?.notes) ||
+    (booking ? `POGH-${booking.id.slice(0, 4)}` : '');
 
   const dispatchNo =
-    booking.dispatch_no ||
-    extractDispatchNoFromNotes(booking.notes) ||
+    (booking?.dispatch_no) ||
+    extractDispatchNoFromNotes(booking?.notes) ||
     '';
 
   // Conflict detection for edited suits
@@ -280,6 +278,8 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     }
     return st;
   };
+
+  if (!isOpen || !booking) return null;
 
   return (
     <div 

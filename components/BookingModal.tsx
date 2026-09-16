@@ -139,8 +139,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const bookingDates = getStayDates(checkInDate, checkOutDate);
   const totalDays = calculateStayNights(checkInDate, checkOutDate);
 
@@ -316,6 +314,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
     return status;
   };
+
+  if (!isOpen) return null;
+
   return (
     <div 
       onClick={onClose}

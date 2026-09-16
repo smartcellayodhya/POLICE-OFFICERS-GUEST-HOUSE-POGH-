@@ -557,7 +557,7 @@ function HomePageContent() {
         const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
         return (
           (refCode && bRef && refCode === bRef) ||
-          (b.guest_name.toLowerCase() === selectedLetterBooking.guest_name.toLowerCase() &&
+          ((b.guest_name || '').toLowerCase() === (selectedLetterBooking.guest_name || '').toLowerCase() &&
             b.mobile_number === selectedLetterBooking.mobile_number)
         );
       })
@@ -568,7 +568,7 @@ function HomePageContent() {
         const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
         if (refCode && bRef && refCode === bRef) return true;
         return (
-          b.guest_name.toLowerCase() === selectedLetterBooking.guest_name.toLowerCase() &&
+          (b.guest_name || '').toLowerCase() === (selectedLetterBooking.guest_name || '').toLowerCase() &&
           b.mobile_number === selectedLetterBooking.mobile_number
         );
       })
@@ -801,7 +801,7 @@ function HomePageContent() {
                   const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
                   return (
                     (targetRef && bRef === targetRef) ||
-                    (b.guest_name.toLowerCase() === selectedEditBooking.guest_name.toLowerCase() &&
+                    ((b.guest_name || '').toLowerCase() === (selectedEditBooking.guest_name || '').toLowerCase() &&
                       b.mobile_number === selectedEditBooking.mobile_number)
                   );
                 })
@@ -837,7 +837,7 @@ function HomePageContent() {
                 const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
                 return (
                   (targetRef && bRef === targetRef) ||
-                  (b.guest_name.toLowerCase() === selectedCollectionBooking.guest_name.toLowerCase() &&
+                  ((b.guest_name || '').toLowerCase() === (selectedCollectionBooking.guest_name || '').toLowerCase() &&
                     b.mobile_number === selectedCollectionBooking.mobile_number)
                 );
               })
@@ -861,7 +861,7 @@ function HomePageContent() {
                 const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
                 return (
                   (targetRef && bRef === targetRef) ||
-                  (b.guest_name.toLowerCase() === selectedReceiptBooking.guest_name.toLowerCase() &&
+                  ((b.guest_name || '').toLowerCase() === (selectedReceiptBooking.guest_name || '').toLowerCase() &&
                     b.mobile_number === selectedReceiptBooking.mobile_number)
                 );
               })

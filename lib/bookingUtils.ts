@@ -86,7 +86,7 @@ export function extractGroupIdFromNotes(notes?: string): string {
   if (match && match[1]) {
     try {
       const parsed = JSON.parse(match[1]);
-      return parsed.group_id || '';
+      return parsed.group_id || parsed.groupId || '';
     } catch {
       // ignore
     }
@@ -100,7 +100,7 @@ export function extractDispatchNoFromNotes(notes?: string): string {
   if (match && match[1]) {
     try {
       const parsed = JSON.parse(match[1]);
-      return parsed.dispatch_no || '';
+      return parsed.dispatch_no || parsed.dispatchNo || '';
     } catch {
       // ignore
     }
@@ -114,7 +114,7 @@ export function extractCheckInDateFromNotes(notes?: string): string {
   if (match && match[1]) {
     try {
       const parsed = JSON.parse(match[1]);
-      return parsed.check_in_date || '';
+      return parsed.check_in_date || parsed.checkInDate || '';
     } catch {
       // ignore
     }
@@ -128,7 +128,7 @@ export function extractCheckOutDateFromNotes(notes?: string): string {
   if (match && match[1]) {
     try {
       const parsed = JSON.parse(match[1]);
-      return parsed.check_out_date || '';
+      return parsed.check_out_date || parsed.checkOutDate || '';
     } catch {
       // ignore
     }
@@ -142,7 +142,7 @@ export function extractRatePerRoomFromNotes(notes?: string): number {
   if (match && match[1]) {
     try {
       const parsed = JSON.parse(match[1]);
-      return Number(parsed.rate_per_room) || 0;
+      return Number(parsed.rate_per_room || parsed.ratePerRoom) || 0;
     } catch {
       // ignore
     }
@@ -342,15 +342,15 @@ export function isBookingOccupyingDate(b: Booking, targetDate: string): boolean 
   const status = (b.status || '').toUpperCase();
   if (status === 'CANCELLED') return false;
 
-  const target = targetDate.trim().slice(0, 10);
-  const bDate = (b.booking_date || '').trim().slice(0, 10);
+  const target = String(targetDate || '').trim().slice(0, 10);
+  const bDate = String(b.booking_date || '').trim().slice(0, 10);
 
   // Exact date match
   if (bDate && bDate === target) return true;
 
   // Check date range in metadata if available
-  const cin = (extractCheckInDateFromNotes(b.notes) || bDate).trim().slice(0, 10);
-  const cout = (extractCheckOutDateFromNotes(b.notes) || bDate).trim().slice(0, 10);
+  const cin = String(extractCheckInDateFromNotes(b.notes) || bDate).trim().slice(0, 10);
+  const cout = String(extractCheckOutDateFromNotes(b.notes) || bDate).trim().slice(0, 10);
 
   if (cin && cout) {
     if (cin === cout) {
