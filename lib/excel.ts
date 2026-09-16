@@ -14,6 +14,19 @@ import {
   getBookingSuitsList,
 } from './bookingUtils';
 
+/**
+ * Neutralizes CSV/Excel Formula Injection (CWE-1236).
+ * Prepend single quote (') if string starts with dangerous formula characters (=, +, -, @, \t, \r).
+ */
+export function sanitizeExcelCell(val: any): any {
+  if (typeof val !== 'string') return val;
+  const trimmed = val.trim();
+  if (/^[=+\-@\t\r]/.test(trimmed)) {
+    return `'${val}`;
+  }
+  return val;
+}
+
 export async function exportBookingsToExcel(
   bookings: Booking[],
   fileName = 'POGH_Ayodhya_Bookings.xlsx',
@@ -111,7 +124,11 @@ export async function exportBookingsToExcel(
     };
   });
 
-  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const sanitizedRows = rows.map((row) =>
+    Object.fromEntries(Object.entries(row).map(([k, v]) => [k, sanitizeExcelCell(v)]))
+  );
+
+  const worksheet = XLSX.utils.json_to_sheet(sanitizedRows);
 
   // Set optimized column widths
   worksheet['!cols'] = [

@@ -130,11 +130,27 @@ function HomePageContent() {
     }
   }, []);
 
-  // 15-Minute Inactivity Auto-Logout
+  // 15-Minute Inactivity Auto-Logout with Sleep/Wake-up & Cross-Tab Sync
   const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
   useEffect(() => {
     if (!currentUser) return;
+
+    const checkAndEnforceInactivity = () => {
+      const last = parseInt(localStorage.getItem('pogh_last_activity') || '0', 10);
+      const now = Date.now();
+      if (last > 0 && now - last > INACTIVITY_TIMEOUT_MS) {
+        setLogoutReason('inactivity');
+        logoutUser();
+        try {
+          localStorage.removeItem('pogh_bookings_cache');
+        } catch {}
+        setBookings([]);
+        setCurrentUser(null);
+        return true;
+      }
+      return false;
+    };
 
     const updateActivity = () => {
       const now = Date.now();
@@ -147,6 +163,9 @@ function HomePageContent() {
 
     let lastRecorded = Date.now();
     const handleUserActivity = () => {
+      // Check for timeout FIRST before recording new activity (prevents waking up after 1 hour and bypassing auto-logout)
+      if (checkAndEnforceInactivity()) return;
+
       const now = Date.now();
       if (now - lastRecorded > 3000) {
         lastRecorded = now;
@@ -154,21 +173,38 @@ function HomePageContent() {
       }
     };
 
+    // Listen for tab visibility changes (e.g. laptop wake-from-sleep or switching tabs)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkAndEnforceInactivity();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      checkAndEnforceInactivity();
+    };
+
+    // Instant cross-tab logout synchronization
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'pogh_session_v2' && !e.newValue) {
+        setCurrentUser(null);
+        setLogoutReason(null);
+      }
+    };
+
     const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll', 'click'];
     events.forEach((ev) => window.addEventListener(ev, handleUserActivity, { passive: true }));
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('storage', handleStorageChange);
 
-    const intervalId = setInterval(() => {
-      const last = parseInt(localStorage.getItem('pogh_last_activity') || '0', 10);
-      const now = Date.now();
-      if (last > 0 && now - last > INACTIVITY_TIMEOUT_MS) {
-        setLogoutReason('inactivity');
-        logoutUser();
-        setCurrentUser(null);
-      }
-    }, 10000);
+    const intervalId = setInterval(checkAndEnforceInactivity, 10000);
 
     return () => {
       events.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('storage', handleStorageChange);
       clearInterval(intervalId);
     };
   }, [currentUser]);
@@ -202,6 +238,10 @@ function HomePageContent() {
   const handleLogout = () => {
     setLogoutReason('manual');
     logoutUser();
+    try {
+      localStorage.removeItem('pogh_bookings_cache');
+    } catch {}
+    setBookings([]);
     setCurrentUser(null);
     setShowSplash(false);
   };

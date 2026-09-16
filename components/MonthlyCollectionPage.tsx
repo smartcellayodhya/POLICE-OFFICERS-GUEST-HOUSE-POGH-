@@ -17,6 +17,7 @@ import {
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import { printDocumentDirectly } from '@/lib/pdfUtils';
+import { sanitizeExcelCell } from '@/lib/excel';
 import {
   Calendar,
   IndianRupee,
@@ -295,7 +296,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       });
     }
 
-    const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
+    const sanitizedSummaryRows = summaryRows.map((row) =>
+      Object.fromEntries(Object.entries(row).map(([k, v]) => [k, sanitizeExcelCell(v)]))
+    );
+    const summaryWs = XLSX.utils.json_to_sheet(sanitizedSummaryRows);
     XLSX.utils.book_append_sheet(wb, summaryWs, language === 'hi' ? 'माह-वार सारांश' : 'Monthly Summary');
 
     // Sheet 2: All Active Bookings Details
@@ -349,7 +353,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       });
     });
 
-    const detailWs = XLSX.utils.json_to_sheet(detailRows);
+    const sanitizedDetailRows = detailRows.map((row) =>
+      Object.fromEntries(Object.entries(row).map(([k, v]) => [k, sanitizeExcelCell(v)]))
+    );
+    const detailWs = XLSX.utils.json_to_sheet(sanitizedDetailRows);
     XLSX.utils.book_append_sheet(wb, detailWs, language === 'hi' ? 'विस्तृत आवंटन विवरण' : 'Allotment Details');
 
     // Write file

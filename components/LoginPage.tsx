@@ -26,13 +26,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, logoutReas
   useEffect(() => {
     const checkLockout = () => {
       try {
-        const lockoutUntil = parseInt(sessionStorage.getItem('pogh_login_lockout_until') || '0', 10);
+        const lockoutUntil = parseInt(localStorage.getItem('pogh_login_lockout_until') || '0', 10);
         const now = Date.now();
         if (lockoutUntil > now) {
           setLockoutSecondsLeft(Math.ceil((lockoutUntil - now) / 1000));
         } else {
           setLockoutSecondsLeft(0);
-          sessionStorage.removeItem('pogh_login_lockout_until');
+          localStorage.removeItem('pogh_login_lockout_until');
         }
       } catch {
         setLockoutSecondsLeft(0);
@@ -56,20 +56,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, logoutReas
       if (user) {
         // Reset brute-force counter on successful login
         try {
-          sessionStorage.removeItem('pogh_login_failed_attempts');
-          sessionStorage.removeItem('pogh_login_lockout_until');
+          localStorage.removeItem('pogh_login_failed_attempts');
+          localStorage.removeItem('pogh_login_lockout_until');
         } catch {}
         onLoginSuccess(user);
       } else {
         try {
-          const prev = parseInt(sessionStorage.getItem('pogh_login_failed_attempts') || '0', 10);
+          const prev = parseInt(localStorage.getItem('pogh_login_failed_attempts') || '0', 10);
           const currentAttempts = prev + 1;
-          sessionStorage.setItem('pogh_login_failed_attempts', currentAttempts.toString());
+          localStorage.setItem('pogh_login_failed_attempts', currentAttempts.toString());
 
           if (currentAttempts >= MAX_FAILED_ATTEMPTS) {
             const lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
-            sessionStorage.setItem('pogh_login_lockout_until', lockoutUntil.toString());
-            sessionStorage.removeItem('pogh_login_failed_attempts');
+            localStorage.setItem('pogh_login_lockout_until', lockoutUntil.toString());
+            localStorage.removeItem('pogh_login_failed_attempts');
             setLockoutSecondsLeft(60);
             setError(
               language === 'hi'
