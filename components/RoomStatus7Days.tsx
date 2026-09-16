@@ -133,9 +133,9 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
 
       if (bSuits.length === 0) return;
 
-      const guestKey = `${b.guest_name.trim().toLowerCase()}_${b.mobile_number.trim()}`;
+      const guestKey = `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`;
       const existing = guestGroups.find((g) => {
-        const gKey = `${g.primaryBooking.guest_name.trim().toLowerCase()}_${g.primaryBooking.mobile_number.trim()}`;
+        const gKey = `${(g.primaryBooking.guest_name || '').trim().toLowerCase()}_${(g.primaryBooking.mobile_number || '').trim()}`;
         return gKey === guestKey;
       });
 

@@ -20,7 +20,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const { language } = useLanguage();
   const isAdmin = currentUser?.role === 'admin';
   
-  const [targetUser, setTargetUser] = useState<'admin' | 'officer'>('admin');
+  const [targetUser, setTargetUser] = useState<'admin' | 'officer' | 'operator'>('admin');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,7 +32,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setTargetUser(currentUser?.username === 'officer' ? 'officer' : 'admin');
+      if (currentUser?.username === 'operator') {
+        setTargetUser('operator');
+      } else if (currentUser?.username === 'officer') {
+        setTargetUser('officer');
+      } else {
+        setTargetUser('admin');
+      }
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -52,8 +58,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Admin resetting officer password directly without needing old password
-  const isAdminResettingOfficer = isAdmin && targetUser === 'officer';
+  // Admin resetting another account directly without needing old password
+  const isAdminResettingOther = isAdmin && targetUser !== 'admin';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,8 +81,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setTimeout(() => {
       let res: { success: boolean; message: string };
 
-      if (isAdminResettingOfficer) {
-        res = adminResetUserPassword('officer', newPassword);
+      if (isAdminResettingOther) {
+        res = adminResetUserPassword(targetUser, newPassword);
       } else {
         res = changeUserPassword(targetUser, oldPassword, newPassword);
       }
@@ -87,10 +93,16 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         setErrorMsg(res.message);
       } else {
         setSuccessMsg(language === 'hi' ? 'पासवर्ड सफलतापूर्वक बदल दिया गया है!' : 'Password updated successfully!');
+        const targetLabel =
+          targetUser === 'admin'
+            ? 'SSP Office'
+            : targetUser === 'operator'
+            ? 'Guest House Operator'
+            : 'Duty Officer';
         logActivity(
           'UPDATE',
           `पासवर्ड बदला गया (${targetUser})`,
-          `उपयोगकर्ता: ${targetUser === 'admin' ? 'SSP Office' : 'Duty Officer'}`,
+          `उपयोगकर्ता: ${targetLabel}`,
           currentUser?.displayName || 'System'
         );
         setTimeout(() => {
@@ -137,20 +149,34 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 <User className="w-3.5 h-3.5 text-slate-500" />
                 <span>{language === 'hi' ? 'उपयोगकर्ता खाता चुनें' : 'Select Account'}</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setTargetUser('admin');
                     setErrorMsg('');
                   }}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition border text-center ${
+                  className={`py-2 px-2 rounded-xl text-xs font-bold transition border text-center ${
                     targetUser === 'admin'
                       ? 'bg-amber-50 border-amber-400 text-amber-950 shadow-xs'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  {language === 'hi' ? 'एडमिन (एसएसपी कार्यालय)' : 'Admin (SSP Office)'}
+                  {language === 'hi' ? 'एडमिन' : 'Admin'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetUser('operator');
+                    setErrorMsg('');
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold transition border text-center ${
+                    targetUser === 'operator'
+                      ? 'bg-emerald-50 border-emerald-400 text-emerald-950 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {language === 'hi' ? 'ऑपरेटर' : 'Operator'}
                 </button>
                 <button
                   type="button"
@@ -158,13 +184,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                     setTargetUser('officer');
                     setErrorMsg('');
                   }}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition border text-center ${
+                  className={`py-2 px-2 rounded-xl text-xs font-bold transition border text-center ${
                     targetUser === 'officer'
                       ? 'bg-blue-50 border-blue-400 text-blue-950 shadow-xs'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  {language === 'hi' ? 'ड्यूटी अधिकारी (ऑपरेटर)' : 'Duty Officer (Counter)'}
+                  {language === 'hi' ? 'अधिकारी' : 'Officer'}
                 </button>
               </div>
             </div>
@@ -184,8 +210,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             </div>
           )}
 
-          {/* Current / Old Password (Not required if Admin is resetting Officer) */}
-          {!isAdminResettingOfficer && (
+          {/* Current / Old Password (Not required if Admin is resetting other user) */}
+          {!isAdminResettingOther ? (
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                 <span>{language === 'hi' ? 'वर्तमान पासवर्ड *' : 'Current Password *'}</span>
@@ -202,11 +228,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowOldPassword(!showOldPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition"
                 >
                   {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 font-medium">
+              {language === 'hi'
+                ? `एडमिन विशेषाधिकार: आप ${targetUser === 'operator' ? 'काउंटर ऑपरेटर' : 'ड्यूटी अधिकारी'} का पासवर्ड सीधे रीसेट कर सकते हैं (पुराना पासवर्ड आवश्यक नहीं है)।`
+                : `Admin privilege: Resetting ${targetUser === 'operator' ? 'Operator' : 'Duty Officer'} password directly (old password not required).`}
             </div>
           )}
 

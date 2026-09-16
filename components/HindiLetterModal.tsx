@@ -10,6 +10,7 @@ import {
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
+  formatGuestDisplayName,
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Share2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
@@ -183,7 +184,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     try {
       await downloadElementAsPDF({
         element: printRef.current,
-        filename: `POGH_Letter_${bookingRef}_${booking.guest_name.replace(/\s+/g, '_')}.pdf`,
+        filename: `POGH_Letter_${bookingRef}_${(booking.guest_name || 'Guest').replace(/\s+/g, '_')}.pdf`,
       });
     } catch (err) {
       console.error('Failed to generate PDF', err);
@@ -313,10 +314,10 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             <div className="mb-4 space-y-0.5">
               <div className="font-bold text-slate-900">सेवा में,</div>
               <div className="pl-6 font-semibold text-slate-800 text-base">
-                {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
+                {formatGuestDisplayName(booking.guest_name || '')}
               </div>
               <div className="pl-6 text-sm text-slate-950 font-black font-mono">
-                मो०नं०- {booking.mobile_number}
+                मो०नं०- {booking.mobile_number || '-'}
               </div>
             </div>
 

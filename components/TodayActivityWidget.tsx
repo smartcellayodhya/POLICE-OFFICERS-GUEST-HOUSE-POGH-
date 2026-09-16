@@ -4,7 +4,13 @@ import React, { useMemo } from 'react';
 import { Booking } from '@/lib/types';
 import { SUITS } from '@/lib/constants';
 import { formatToISODate, formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
-import { formatGuestDisplayName, cleanNotesText } from '@/lib/bookingUtils';
+import {
+  formatGuestDisplayName,
+  cleanNotesText,
+  isBookingOccupyingDate,
+  isSuitAllocatedInBooking,
+  extractGroupIdFromNotes,
+} from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import {
   User,
@@ -38,11 +44,27 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
   const { language, t } = useLanguage();
   const todayStr = formatToISODate(new Date());
 
-  // Today's active bookings
+  // Today's active bookings (handles single-day records & multi-day spans)
   const todayBookings = useMemo(() => {
-    return bookings.filter(
-      (b) => b.booking_date === todayStr && b.status !== 'CANCELLED'
+    const active = bookings.filter(
+      (b) => (b.status || '').toUpperCase() !== 'CANCELLED' && isBookingOccupyingDate(b, todayStr)
     );
+    // Deduplicate multi-day rows for the same stay/group so each guest stay appears once
+    const seenGroups = new Set<string>();
+    const uniqueBookings: Booking[] = [];
+    active.forEach((b) => {
+      const ref = b.group_id || extractGroupIdFromNotes(b.notes) || b.id;
+      if (!seenGroups.has(ref)) {
+        seenGroups.add(ref);
+        const exact = active.find(
+          (x) =>
+            (x.group_id || extractGroupIdFromNotes(x.notes) || x.id) === ref &&
+            x.booking_date === todayStr
+        );
+        uniqueBookings.push(exact || b);
+      }
+    });
+    return uniqueBookings;
   }, [bookings, todayStr]);
 
   // Which rooms are occupied vs available today
@@ -50,7 +72,7 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
     const occupiedMap = new Map<string, Booking>();
     todayBookings.forEach((b) => {
       SUITS.forEach((s) => {
-        if (Number(b[s.id as keyof Booking]) > 0) {
+        if (isSuitAllocatedInBooking(b, s.id)) {
           occupiedMap.set(s.id, b);
         }
       });

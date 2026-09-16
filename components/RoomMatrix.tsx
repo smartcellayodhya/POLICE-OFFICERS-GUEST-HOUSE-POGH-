@@ -4,7 +4,13 @@ import React from 'react';
 import { Booking, BookingStatus } from '@/lib/types';
 import { SUITS } from '@/lib/constants';
 import { formatToDisplayDate, formatToHindiDate, formatToISODate } from '@/lib/dateUtils';
-import { extractGroupIdFromNotes, cleanNotesText, formatGuestDisplayName } from '@/lib/bookingUtils';
+import {
+  extractGroupIdFromNotes,
+  cleanNotesText,
+  formatGuestDisplayName,
+  isBookingOccupyingDate,
+  isSuitAllocatedInBooking,
+} from '@/lib/bookingUtils';
 import {
   Calendar,
   ChevronLeft,
@@ -85,11 +91,21 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
 
   // Helper to find booking for a specific suit on selectedDate
   const getBookingForSuit = (suitKey: string): Booking | undefined => {
-    return bookings.find(
+    // First check exact date match
+    const exact = bookings.find(
       (b) =>
         b.booking_date === selectedDate &&
-        b.status !== 'CANCELLED' &&
-        Number(b[suitKey as keyof Booking]) > 0
+        (b.status || '').toUpperCase() !== 'CANCELLED' &&
+        isSuitAllocatedInBooking(b, suitKey)
+    );
+    if (exact) return exact;
+
+    // Fallback to date range check
+    return bookings.find(
+      (b) =>
+        (b.status || '').toUpperCase() !== 'CANCELLED' &&
+        isSuitAllocatedInBooking(b, suitKey) &&
+        isBookingOccupyingDate(b, selectedDate)
     );
   };
 

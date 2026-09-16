@@ -239,10 +239,22 @@ function HomePageContent() {
       if (isSupabaseConfigured()) {
         const client = getSupabaseClient();
         if (client) {
-          const { error } = await client
-            .from('pogh_bookings')
-            .delete()
-            .ilike('notes', `%${groupId}%`);
+          // Find all record IDs belonging to this group
+          const targetIds = bookings
+            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === groupId)
+            .map((b) => b.id);
+
+          let error = null;
+          if (targetIds.length > 0) {
+            const res = await client.from('pogh_bookings').delete().in('id', targetIds);
+            error = res.error;
+          } else {
+            const res = await client
+              .from('pogh_bookings')
+              .delete()
+              .or(`notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`);
+            error = res.error;
+          }
           if (error) {
             alert('त्रुटि: ' + error.message);
             return;
@@ -303,10 +315,24 @@ function HomePageContent() {
       const client = getSupabaseClient();
       if (client) {
         if (updateAllDates && refCode) {
-          const { error } = await client
-            .from('pogh_bookings')
-            .update({ status: newStatus })
-            .ilike('notes', `%${refCode}%`);
+          const targetIds = bookings
+            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === refCode)
+            .map((b) => b.id);
+
+          let error = null;
+          if (targetIds.length > 0) {
+            const res = await client
+              .from('pogh_bookings')
+              .update({ status: newStatus })
+              .in('id', targetIds);
+            error = res.error;
+          } else {
+            const res = await client
+              .from('pogh_bookings')
+              .update({ status: newStatus })
+              .or(`notes.ilike.%"group_id":"${refCode}"%,notes.ilike.%"groupId":"${refCode}"%`);
+            error = res.error;
+          }
           if (error) {
             alert('त्रुटि: ' + error.message);
             return;
@@ -386,10 +412,24 @@ function HomePageContent() {
       const client = getSupabaseClient();
       if (client) {
         if (applyToAll && refCode) {
-          const { error } = await client
-            .from('pogh_bookings')
-            .update(updatedData)
-            .ilike('notes', `%${refCode}%`);
+          const targetIds = bookings
+            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === refCode)
+            .map((b) => b.id);
+
+          let error = null;
+          if (targetIds.length > 0) {
+            const res = await client
+              .from('pogh_bookings')
+              .update(updatedData)
+              .in('id', targetIds);
+            error = res.error;
+          } else {
+            const res = await client
+              .from('pogh_bookings')
+              .update(updatedData)
+              .or(`notes.ilike.%"group_id":"${refCode}"%,notes.ilike.%"groupId":"${refCode}"%`);
+            error = res.error;
+          }
           if (error) throw new Error(error.message);
         } else {
           const { error } = await client
@@ -488,10 +528,24 @@ function HomePageContent() {
       const client = getSupabaseClient();
       if (client) {
         if (targetRef) {
-          const { error } = await client
-            .from('pogh_bookings')
-            .update(dbPayload)
-            .ilike('notes', `%${targetRef}%`);
+          const targetIds = bookings
+            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === targetRef)
+            .map((b) => b.id);
+
+          let error = null;
+          if (targetIds.length > 0) {
+            const res = await client
+              .from('pogh_bookings')
+              .update(dbPayload)
+              .in('id', targetIds);
+            error = res.error;
+          } else {
+            const res = await client
+              .from('pogh_bookings')
+              .update(dbPayload)
+              .or(`notes.ilike.%"group_id":"${targetRef}"%,notes.ilike.%"groupId":"${targetRef}"%`);
+            error = res.error;
+          }
           if (error) throw new Error(error.message);
         } else {
           const { error } = await client

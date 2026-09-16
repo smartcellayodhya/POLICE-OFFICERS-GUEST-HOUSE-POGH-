@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Booking } from '@/lib/types';
 import { formatMonthKey, formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import {
@@ -8,6 +8,7 @@ import {
   getBookingRoomsCount,
   getBookingSuitsList,
   extractDispatchNoFromNotes,
+  extractGroupIdFromNotes,
   calculateBookingFoodAmount,
   calculateBookingTotalCollection,
   calculateBookingExpenditure,
@@ -65,6 +66,28 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     return { currentMonthKey: currentKey, lastMonthKey: lastKey };
   }, []);
 
+  // Map of groupId -> primary bookingId that carries the food & expenditure for the stay
+  const primaryGroupMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    const sorted = [...bookings].sort((a, b) => (a.booking_date || '').localeCompare(b.booking_date || ''));
+    for (const b of sorted) {
+      const ref = b.group_id || extractGroupIdFromNotes(b.notes);
+      if (ref && !map[ref]) {
+        map[ref] = b.id;
+      }
+    }
+    return map;
+  }, [bookings]);
+
+  const isPrimaryForStayCharges = useCallback(
+    (b: Booking) => {
+      const ref = b.group_id || extractGroupIdFromNotes(b.notes);
+      if (!ref) return true;
+      return primaryGroupMap[ref] === b.id;
+    },
+    [primaryGroupMap]
+  );
+
   // Aggregate active bookings by month (YYYY-MM)
   const monthlyData = useMemo(() => {
     const active = bookings.filter((b) => b.status !== 'CANCELLED');
@@ -97,9 +120,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         };
       }
 
+      const isPrimary = isPrimaryForStayCharges(b);
       const rent = calculateBookingRent(b);
-      const food = calculateBookingFoodAmount(b);
-      const exp = calculateBookingExpenditure(b);
+      const food = isPrimary ? calculateBookingFoodAmount(b) : 0;
+      const exp = isPrimary ? calculateBookingExpenditure(b) : 0;
       const rooms = getBookingRoomsCount(b);
       const gross = rent + food;
       // Free rooms with 0 rent and 0 food must never go negative
@@ -280,9 +304,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       m.bookings.forEach((b) => {
         const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
         const suits = getBookingSuitsList(b).join(', ');
+        const isPrimary = isPrimaryForStayCharges(b);
         const rent = calculateBookingRent(b);
-        const food = calculateBookingFoodAmount(b);
-        const exp = calculateBookingExpenditure(b);
+        const food = isPrimary ? calculateBookingFoodAmount(b) : 0;
+        const exp = isPrimary ? calculateBookingExpenditure(b) : 0;
         const gross = rent + food;
         const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
         const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
@@ -733,9 +758,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {m.bookings.map((b) => {
+                          const isPrimary = isPrimaryForStayCharges(b);
                           const rent = calculateBookingRent(b);
-                          const food = calculateBookingFoodAmount(b);
-                          const exp = calculateBookingExpenditure(b);
+                          const food = isPrimary ? calculateBookingFoodAmount(b) : 0;
+                          const exp = isPrimary ? calculateBookingExpenditure(b) : 0;
                           const gross = rent + food;
                           const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                           const suits = getBookingSuitsList(b).join(', ');
@@ -929,9 +955,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                   </thead>
                   <tbody>
                     {singleMonthPrintData.bookings.map((b, idx) => {
+                      const isPrimary = isPrimaryForStayCharges(b);
                       const rent = calculateBookingRent(b);
-                      const food = calculateBookingFoodAmount(b);
-                      const exp = calculateBookingExpenditure(b);
+                      const food = isPrimary ? calculateBookingFoodAmount(b) : 0;
+                      const exp = isPrimary ? calculateBookingExpenditure(b) : 0;
                       const gross = rent + food;
                       const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                       const suits = getBookingSuitsList(b).join(', ');
@@ -1114,9 +1141,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       </thead>
                       <tbody>
                         {m.bookings.map((b, bIdx) => {
+                          const isPrimary = isPrimaryForStayCharges(b);
                           const rent = calculateBookingRent(b);
-                          const food = calculateBookingFoodAmount(b);
-                          const exp = calculateBookingExpenditure(b);
+                          const food = isPrimary ? calculateBookingFoodAmount(b) : 0;
+                          const exp = isPrimary ? calculateBookingExpenditure(b) : 0;
                           const gross = rent + food;
                           const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                           const suits = getBookingSuitsList(b).join(', ');

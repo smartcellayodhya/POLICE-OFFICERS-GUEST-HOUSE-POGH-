@@ -93,9 +93,9 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
 
       if (bSuits.length === 0) return;
 
-      const guestKey = `${b.guest_name.trim().toLowerCase()}_${b.mobile_number.trim()}`;
+      const guestKey = `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`;
       const existing = guestGroups.find((g) => {
-        const gKey = `${g.primaryBooking.guest_name.trim().toLowerCase()}_${g.primaryBooking.mobile_number.trim()}`;
+        const gKey = `${(g.primaryBooking.guest_name || '').trim().toLowerCase()}_${(g.primaryBooking.mobile_number || '').trim()}`;
         return gKey === guestKey;
       });
 
@@ -238,9 +238,9 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
         );
         return dayBookings.some(
           (b) =>
-            b.guest_name.toLowerCase().includes(q) ||
-            b.mobile_number.includes(q) ||
-            b.reference.toLowerCase().includes(q) ||
+            (b.guest_name || '').toLowerCase().includes(q) ||
+            (b.mobile_number || '').includes(q) ||
+            (b.reference || '').toLowerCase().includes(q) ||
             (b.dispatch_no && b.dispatch_no.toLowerCase().includes(q))
         );
       });

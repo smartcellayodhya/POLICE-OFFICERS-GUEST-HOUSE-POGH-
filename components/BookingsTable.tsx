@@ -120,7 +120,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     bookings.forEach((b) => {
       const gId = b.group_id || extractGroupIdFromNotes(b.notes);
       // Group by group_id if available, otherwise by unique guest + mobile combination
-      const key = gId ? `ref-${gId}` : `guest-${b.guest_name.trim().toLowerCase()}-${b.mobile_number.trim()}-${b.booking_date}`;
+      const safeGuest = (b.guest_name || '').trim().toLowerCase();
+      const safeMobile = (b.mobile_number || '').trim();
+      const key = gId ? `ref-${gId}` : `guest-${safeGuest}-${safeMobile}-${b.booking_date}`;
       if (!groupMap.has(key)) {
         groupMap.set(key, []);
       }
@@ -255,13 +257,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       const q = searchTerm.toLowerCase().trim();
 
       return (
-        stay.guestName.toLowerCase().includes(q) ||
-        stay.mobileNumber.includes(q) ||
-        stay.groupId.toLowerCase().includes(q) ||
-        stay.dispatchNo.toLowerCase().includes(q) ||
-        stay.reference.toLowerCase().includes(q) ||
-        stay.checkInDate.includes(q) ||
-        stay.checkOutDate.includes(q)
+        (stay.guestName || '').toLowerCase().includes(q) ||
+        (stay.mobileNumber || '').includes(q) ||
+        (stay.groupId || '').toLowerCase().includes(q) ||
+        (stay.dispatchNo || '').toLowerCase().includes(q) ||
+        (stay.reference || '').toLowerCase().includes(q) ||
+        (stay.checkInDate || '').includes(q) ||
+        (stay.checkOutDate || '').includes(q)
       );
     });
   }, [groupedStays, searchTerm, statusFilter, referenceFilter, suitFilter, fromDate, toDate]);
@@ -502,6 +504,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                 <div
                   key={stay.id}
                   className={`min-w-0 p-3.5 sm:p-5 rounded-2xl border transition shadow-xs flex flex-col justify-between ${
+                    isMenuOpen ? 'relative z-30' : 'relative z-0'
+                  } ${
                     isCancelled
                       ? 'bg-slate-50/70 border-slate-200 opacity-60'
                       : isInHouse
@@ -698,7 +702,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           </button>
 
                           {isMenuOpen && (
-                            <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
+                            <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
                             
                             {/* Receipt */}
                             <button
