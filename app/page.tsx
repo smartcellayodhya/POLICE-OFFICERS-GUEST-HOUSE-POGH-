@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Booking, BookingStatus } from '@/lib/types';
 import {
   getSupabaseClient,
@@ -54,9 +54,29 @@ function HomePageContent() {
   // Date Selection State (Default: Today)
   const [selectedDate, setSelectedDate] = useState<string>(() => formatToISODate(new Date()));
 
-  // Data State
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Data State - Stale-while-revalidate for instant 0ms initial render
+  const [bookings, setBookings] = useState<Booking[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = getLocalBookings();
+        if (cached && cached.length > 0) return cached;
+      } catch {
+        // ignore
+      }
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = getLocalBookings();
+        return !cached || cached.length === 0;
+      } catch {
+        return true;
+      }
+    }
+    return true;
+  });
 
   // Modals state
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -133,6 +153,7 @@ function HomePageContent() {
 
           if (!error && data) {
             setBookings(data);
+            saveLocalBookings(data);
             setLoading(false);
             return;
           }
@@ -154,6 +175,14 @@ function HomePageContent() {
 
     fetchBookings();
 
+    let debounceTimer: NodeJS.Timeout | null = null;
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchBookings();
+      }, 350);
+    };
+
     const client = getSupabaseClient();
     if (client && isSupabaseConfigured()) {
       const channel = client
@@ -162,12 +191,13 @@ function HomePageContent() {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'pogh_bookings' },
           () => {
-            fetchBookings();
+            debouncedFetch();
           }
         )
         .subscribe();
 
       return () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
         client.removeChannel(channel);
       };
     }
@@ -646,6 +676,51 @@ function HomePageContent() {
     );
   }
 
+  // Memoized related bookings - computed only when the respective modal is open
+  const editRelatedBookings = useMemo(() => {
+    if (!isEditModalOpen || !selectedEditBooking) return [];
+    const targetRef = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
+    const targetName = (selectedEditBooking.guest_name || '').toLowerCase();
+    const targetMobile = selectedEditBooking.mobile_number;
+    return bookings.filter((b) => {
+      const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+      return (
+        (targetRef && bRef === targetRef) ||
+        ((b.guest_name || '').toLowerCase() === targetName && b.mobile_number === targetMobile)
+      );
+    });
+  }, [isEditModalOpen, selectedEditBooking, bookings]);
+
+  const collectionRelatedBookings = useMemo(() => {
+    if (!isCollectionModalOpen || !selectedCollectionBooking) return [];
+    const targetRef = selectedCollectionBooking.group_id || extractGroupIdFromNotes(selectedCollectionBooking.notes);
+    const targetName = (selectedCollectionBooking.guest_name || '').toLowerCase();
+    const targetMobile = selectedCollectionBooking.mobile_number;
+    return bookings.filter((b) => {
+      if (b.status === 'CANCELLED') return false;
+      const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+      return (
+        (targetRef && bRef === targetRef) ||
+        ((b.guest_name || '').toLowerCase() === targetName && b.mobile_number === targetMobile)
+      );
+    });
+  }, [isCollectionModalOpen, selectedCollectionBooking, bookings]);
+
+  const receiptRelatedBookings = useMemo(() => {
+    if (!isReceiptModalOpen || !selectedReceiptBooking) return [];
+    const targetRef = selectedReceiptBooking.group_id || extractGroupIdFromNotes(selectedReceiptBooking.notes);
+    const targetName = (selectedReceiptBooking.guest_name || '').toLowerCase();
+    const targetMobile = selectedReceiptBooking.mobile_number;
+    return bookings.filter((b) => {
+      if (b.status === 'CANCELLED') return false;
+      const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
+      return (
+        (targetRef && bRef === targetRef) ||
+        ((b.guest_name || '').toLowerCase() === targetName && b.mobile_number === targetMobile)
+      );
+    });
+  }, [isReceiptModalOpen, selectedReceiptBooking, bookings]);
+
   const isAdmin = currentUser.role === 'admin';
   const isOperator = currentUser.role === 'operator';
 
@@ -848,19 +923,7 @@ function HomePageContent() {
           }}
           booking={selectedEditBooking}
           existingBookings={bookings}
-          relatedBookings={
-            selectedEditBooking
-              ? bookings.filter((b) => {
-                  const targetRef = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
-                  const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
-                  return (
-                    (targetRef && bRef === targetRef) ||
-                    ((b.guest_name || '').toLowerCase() === (selectedEditBooking.guest_name || '').toLowerCase() &&
-                      b.mobile_number === selectedEditBooking.mobile_number)
-                  );
-                })
-              : []
-          }
+          relatedBookings={editRelatedBookings}
           onSave={handleSaveEdit}
         />
       )}
@@ -883,20 +946,7 @@ function HomePageContent() {
         }}
         booking={selectedCollectionBooking}
         currentUserDisplayName={currentUser.displayName}
-        relatedBookings={
-          selectedCollectionBooking
-            ? bookings.filter((b) => {
-                if (b.status === 'CANCELLED') return false;
-                const targetRef = selectedCollectionBooking.group_id || extractGroupIdFromNotes(selectedCollectionBooking.notes);
-                const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
-                return (
-                  (targetRef && bRef === targetRef) ||
-                  ((b.guest_name || '').toLowerCase() === (selectedCollectionBooking.guest_name || '').toLowerCase() &&
-                    b.mobile_number === selectedCollectionBooking.mobile_number)
-                );
-              })
-            : []
-        }
+        relatedBookings={collectionRelatedBookings}
         onSaveCollection={handleSaveCollection}
       />
 
@@ -907,20 +957,7 @@ function HomePageContent() {
           setSelectedReceiptBooking(null);
         }}
         booking={selectedReceiptBooking}
-        relatedBookings={
-          selectedReceiptBooking
-            ? bookings.filter((b) => {
-                if (b.status === 'CANCELLED') return false;
-                const targetRef = selectedReceiptBooking.group_id || extractGroupIdFromNotes(selectedReceiptBooking.notes);
-                const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
-                return (
-                  (targetRef && bRef === targetRef) ||
-                  ((b.guest_name || '').toLowerCase() === (selectedReceiptBooking.guest_name || '').toLowerCase() &&
-                    b.mobile_number === selectedReceiptBooking.mobile_number)
-                );
-              })
-            : []
-        }
+        relatedBookings={receiptRelatedBookings}
       />
 
         <AuditLogModal

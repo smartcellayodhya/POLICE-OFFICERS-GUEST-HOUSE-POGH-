@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import { Booking } from '@/lib/types';
 import { formatMonthKey, formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import {
@@ -17,7 +17,6 @@ import {
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import { printDocumentDirectly } from '@/lib/pdfUtils';
-import * as XLSX from 'xlsx';
 import {
   Calendar,
   IndianRupee,
@@ -50,6 +49,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
   const printRef = useRef<HTMLDivElement>(null);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearch = useDeferredValue(searchQuery);
   const [selectedPrintMonth, setSelectedPrintMonth] = useState<string>('ALL');
   const [activePrintingMonth, setActivePrintingMonth] = useState<string>('ALL');
 
@@ -226,8 +226,9 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     setExpandedMonth((prev) => (prev === monthKey ? null : monthKey));
   };
 
-  // Export to Excel
-  const handleExportExcel = () => {
+  // Export to Excel (Dynamically loaded on-demand)
+  const handleExportExcel = async () => {
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: Monthly Summary
@@ -375,21 +376,23 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     }, 60);
   };
 
-  // Filtered list if search query entered
-  const filteredMonths = monthlyData.filter((m) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    const monthLabel = formatMonthKey(m.monthKey, 'hi').toLowerCase();
-    const monthLabelEn = formatMonthKey(m.monthKey, 'en').toLowerCase();
-    if (monthLabel.includes(q) || monthLabelEn.includes(q) || m.monthKey.includes(q)) return true;
+  // Filtered list if search query entered (memoized with deferredSearch for 60fps typing)
+  const filteredMonths = useMemo(() => {
+    if (!deferredSearch.trim()) return monthlyData;
+    const q = deferredSearch.toLowerCase().trim();
+    return monthlyData.filter((m) => {
+      const monthLabel = formatMonthKey(m.monthKey, 'hi').toLowerCase();
+      const monthLabelEn = formatMonthKey(m.monthKey, 'en').toLowerCase();
+      if (monthLabel.includes(q) || monthLabelEn.includes(q) || m.monthKey.includes(q)) return true;
 
-    return m.bookings.some(
-      (b) =>
-        b.guest_name.toLowerCase().includes(q) ||
-        (b.reference || '').toLowerCase().includes(q) ||
-        (b.dispatch_no || '').includes(q)
-    );
-  });
+      return m.bookings.some(
+        (b) =>
+          (b.guest_name || '').toLowerCase().includes(q) ||
+          (b.reference || '').toLowerCase().includes(q) ||
+          (b.dispatch_no || '').includes(q)
+      );
+    });
+  }, [monthlyData, deferredSearch]);
 
   // Current month being printed for single-month print mode
   const singleMonthPrintData = useMemo(() => {

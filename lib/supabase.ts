@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Booking } from './types';
-import { INITIAL_DEMO_BOOKINGS } from './constants';
+import { INITIAL_DEMO_BOOKINGS } from './demoData';
 
 const LOCAL_STORAGE_KEY = 'pogh_bookings_cache';
 const SUPABASE_CONFIG_KEY = 'pogh_supabase_config';

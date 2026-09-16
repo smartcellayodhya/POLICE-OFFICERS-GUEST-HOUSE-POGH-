@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useDeferredValue } from 'react';
 import { Booking } from '@/lib/types';
 import { SUITS } from '@/lib/constants';
 import {
@@ -53,24 +53,35 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
   const [sortAscending, setSortAscending] = useState<boolean>(true);
   const [jumpDate, setJumpDate] = useState<string>('');
   const [visibleCount, setVisibleCount] = useState<number>(20);
+  const deferredSearch = useDeferredValue(searchQuery);
 
   const datePickerRef = useRef<HTMLInputElement>(null);
 
-  // Helper to find booking for a suit on a specific date
+  // Pre-index active bookings by date for O(1) instantaneous lookup
+  const bookingsByDate = useMemo(() => {
+    const map = new Map<string, Booking[]>();
+    bookings.forEach((b) => {
+      if ((b.status || '').toUpperCase() === 'CANCELLED' || !b.booking_date) return;
+      const list = map.get(b.booking_date);
+      if (list) {
+        list.push(b);
+      } else {
+        map.set(b.booking_date, [b]);
+      }
+    });
+    return map;
+  }, [bookings]);
+
+  // Helper to find booking for a suit on a specific date (O(1) day lookup)
   const getBookingForSuitOnDate = (suitKey: string, dateStr: string): Booking | undefined => {
-    return bookings.find(
-      (b) =>
-        b.booking_date === dateStr &&
-        b.status !== 'CANCELLED' &&
-        Number(b[suitKey as keyof Booking]) > 0
-    );
+    const dayBookings = bookingsByDate.get(dateStr);
+    if (!dayBookings) return undefined;
+    return dayBookings.find((b) => Number(b[suitKey as keyof Booking]) > 0);
   };
 
   // Group suites for a date with comma separation (e.g. "Suit 2, Suit 3") to eliminate duplicacy
-  const getDateOccupancyGroups = (dateStr: string, allBookings: Booking[]) => {
-    const dayBookings = allBookings.filter(
-      (b) => b.booking_date === dateStr && b.status !== 'CANCELLED'
-    );
+  const getDateOccupancyGroups = (dateStr: string, _allBookings?: Booking[]) => {
+    const dayBookings = bookingsByDate.get(dateStr) || [];
 
     const occupiedSuitIds = new Set<string>();
 
@@ -222,8 +233,8 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
     }
 
     // 2. Search query filter (search in date, guest name, mobile, reference)
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
+    if (deferredSearch.trim()) {
+      const q = deferredSearch.toLowerCase().trim();
       result = result.filter((d) => {
         // Match date string
         if (d.includes(q)) return true;
@@ -232,10 +243,8 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
         const hindiDate = formatToHindiDate(d).toLowerCase();
         if (hindiDate.includes(q)) return true;
 
-        // Match any booking on this date
-        const dayBookings = bookings.filter(
-          (b) => b.booking_date === d && b.status !== 'CANCELLED'
-        );
+        // Instant O(1) hashmap lookup
+        const dayBookings = bookingsByDate.get(d) || [];
         return dayBookings.some(
           (b) =>
             (b.guest_name || '').toLowerCase().includes(q) ||

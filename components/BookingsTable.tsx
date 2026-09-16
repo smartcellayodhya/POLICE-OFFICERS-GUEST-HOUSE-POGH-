@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useDeferredValue } from 'react';
 import { Booking, BookingStatus } from '@/lib/types';
 import { formatToDisplayDate, calculateStayNights, formatToISODate, formatToHindiDate } from '@/lib/dateUtils';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
@@ -99,10 +99,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   const [suitFilter, setSuitFilter] = useState('ALL');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [visibleLimit, setVisibleLimit] = useState<number>(30);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const deferredSearch = useDeferredValue(searchTerm);
 
-  // Close card action menu when clicking outside
+  // Close card action menu when clicking outside - attached only when a menu is open
   useEffect(() => {
+    if (!activeMenuId) return;
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest('.card-action-menu')) {
@@ -111,7 +114,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [activeMenuId]);
 
   // 1. Group raw day-wise booking records into consolidated Stays
   const groupedStays: GroupedStay[] = useMemo(() => {
@@ -252,9 +255,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       if (fromDate && stay.checkInDate < fromDate && stay.checkOutDate < fromDate) return false;
       if (toDate && stay.checkInDate > toDate) return false;
 
-      // Search term filter
-      if (!searchTerm.trim()) return true;
-      const q = searchTerm.toLowerCase().trim();
+      // Search term filter (uses deferred value for 60fps typing)
+      if (!deferredSearch.trim()) return true;
+      const q = deferredSearch.toLowerCase().trim();
 
       return (
         (stay.guestName || '').toLowerCase().includes(q) ||
@@ -266,7 +269,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         (stay.checkOutDate || '').includes(q)
       );
     });
-  }, [groupedStays, searchTerm, statusFilter, referenceFilter, suitFilter, fromDate, toDate]);
+  }, [groupedStays, deferredSearch, statusFilter, referenceFilter, suitFilter, fromDate, toDate]);
 
   const setThisMonth = () => {
     const now = new Date();
@@ -338,12 +341,12 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   };
 
   // Export filtered stays to genuine formatted Excel file
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const recordsToExport: Booking[] = [];
     filteredStays.forEach((stay) => {
       stay.allBookings.forEach((b) => recordsToExport.push(b));
     });
-    exportBookingsToExcel(
+    await exportBookingsToExcel(
       recordsToExport,
       `POGH_Ayodhya_Bookings_${formatToISODate(new Date())}.xlsx`,
       language
@@ -491,9 +494,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-            {filteredStays.map((stay) => {
-              const isInHouse = stay.status === 'CHECKED_IN';
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+              {filteredStays.slice(0, visibleLimit).map((stay) => {
+                const isInHouse = stay.status === 'CHECKED_IN';
               const isCheckedOut = stay.status === 'CHECKED_OUT';
               const isCancelled = stay.status === 'CANCELLED';
               const isMenuOpen = activeMenuId === stay.id;
@@ -810,6 +814,34 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
               );
             })}
           </div>
+
+          {/* Progressive Rendering Pagination Bar */}
+          {filteredStays.length > visibleLimit && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200/90 rounded-2xl animate-in fade-in duration-150">
+              <div className="text-xs text-slate-600 font-medium">
+                {language === 'hi'
+                  ? `कुल ${filteredStays.length} में से ${Math.min(visibleLimit, filteredStays.length)} रिकॉर्ड्स प्रदर्शित हैं।`
+                  : `Showing ${Math.min(visibleLimit, filteredStays.length)} of ${filteredStays.length} records.`}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setVisibleLimit((prev) => prev + 30)}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl transition shadow-xs cursor-pointer active:scale-95"
+                >
+                  {language === 'hi'
+                    ? `+${Math.min(30, filteredStays.length - visibleLimit)} और रिकॉर्ड्स देखें`
+                    : `Load +${Math.min(30, filteredStays.length - visibleLimit)} More`}
+                </button>
+                <button
+                  onClick={() => setVisibleLimit(filteredStays.length)}
+                  className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition cursor-pointer"
+                >
+                  {language === 'hi' ? 'सभी देखें' : 'Show All'}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
         )}
       </div>
 

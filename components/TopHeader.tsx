@@ -18,7 +18,7 @@ interface TopHeaderProps {
   onLogout: () => void;
 }
 
-export const TopHeader: React.FC<TopHeaderProps> = ({
+const TopHeaderComponent: React.FC<TopHeaderProps> = ({
   currentUser,
   activeTab,
   onOpenMobileMenu,
@@ -98,4 +98,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     </header>
   );
 };
+
+export const TopHeader = React.memo(TopHeaderComponent);
 

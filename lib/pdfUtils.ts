@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-
 interface ExportPDFOptions {
   element: HTMLElement;
   filename: string;
@@ -10,8 +7,18 @@ interface ExportPDFOptions {
  * Downloads a DOM element as a high-quality, full-page A4 PDF.
  * Specifically engineered to prevent mobile viewport clipping,
  * mobile scroll cutoffs, and multi-page overflow.
+ * Libraries (jsPDF, html2canvas) are dynamically loaded on-demand
+ * to keep the initial page bundle lightweight and fast.
  */
 export async function downloadElementAsPDF({ element, filename }: ExportPDFOptions): Promise<void> {
+  // Dynamically load heavy libraries only when export is requested
+  const [html2canvasModule, jsPDFModule] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ]);
+  const html2canvas = html2canvasModule.default;
+  const jsPDF = jsPDFModule.default;
+
   // Standard A4 width at 96 DPI is 794px
   const standardA4WidthPx = 794;
 

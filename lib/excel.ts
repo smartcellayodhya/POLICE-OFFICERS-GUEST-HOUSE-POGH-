@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { Booking } from './types';
 import { formatToDisplayDate, calculateStayNights } from './dateUtils';
 import {
@@ -15,7 +14,7 @@ import {
   getBookingSuitsList,
 } from './bookingUtils';
 
-export function exportBookingsToExcel(
+export async function exportBookingsToExcel(
   bookings: Booking[],
   fileName = 'POGH_Ayodhya_Bookings.xlsx',
   lang: 'hi' | 'en' = 'en'
@@ -24,6 +23,8 @@ export function exportBookingsToExcel(
     alert(lang === 'hi' ? 'एक्सपोर्ट करने के लिए कोई रिकॉर्ड उपलब्ध नहीं है।' : 'No records available to export.');
     return;
   }
+
+  const XLSX = await import('xlsx');
 
   const rows = bookings.map((b) => {
     const notesCin = extractCheckInDateFromNotes(b.notes);

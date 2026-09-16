@@ -17,7 +17,7 @@ interface StatsCardsProps {
   bookings: Booking[];
 }
 
-export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
+const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings }) => {
   const { language, t } = useLanguage();
 
   const todayStr = formatToISODate(new Date());
@@ -201,3 +201,5 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ bookings }) => {
     </div>
   );
 };
+
+export const StatsCards = React.memo(StatsCardsComponent);

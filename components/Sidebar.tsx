@@ -23,7 +23,7 @@ interface SidebarProps {
   onLogout?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+const SidebarComponent: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   isOpen,
@@ -140,3 +140,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
+export const Sidebar = React.memo(SidebarComponent);
