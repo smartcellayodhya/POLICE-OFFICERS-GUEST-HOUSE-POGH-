@@ -142,8 +142,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           
-          {/* Account Selector (Shown on Login Screen or when Admin is logged in) */}
-          {(!currentUser || isAdmin) && (
+          {/* Account Selector (Strictly Admin Only) */}
+          {isAdmin && (
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-slate-500" />

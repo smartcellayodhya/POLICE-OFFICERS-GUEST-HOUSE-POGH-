@@ -1,3 +1,5 @@
+import { sha256 } from './crypto';
+
 export type UserRole = 'admin' | 'officer' | 'operator';
 
 export interface AuthUser {
@@ -8,61 +10,134 @@ export interface AuthUser {
   badgeTitle: string;
 }
 
+const PWD_SALT = 'pogh_up_police_ayodhya_2026_salt';
+const SESSION_SECRET = 'pogh_session_sig_up_police_2026';
+const MAX_SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 Hours
+
+export function hashPassword(plain: string): string {
+  return sha256(`${PWD_SALT}:${plain}`);
+}
+
 export const PRESET_ACCOUNTS = [
   {
     username: 'admin',
-    password: 'admin@pogh2026',
+    passwordHash: hashPassword('admin@pogh2026'),
     displayName: 'SSP Office',
     role: 'admin' as UserRole,
     badgeTitle: 'प्रशासनिक नियंत्रण (Full Control)',
   },
   {
     username: 'operator',
-    password: 'operator@2026',
+    passwordHash: hashPassword('operator@2026'),
     displayName: 'Guest House Operator',
     role: 'operator' as UserRole,
     badgeTitle: 'काउंटर ऑपरेटर (Collection & Billing)',
   },
   {
     username: 'officer',
-    password: 'officer@2026',
+    passwordHash: hashPassword('officer@2026'),
     displayName: 'Duty Officer',
     role: 'officer' as UserRole,
     badgeTitle: 'अधिकारी दृश्य (Reports & Occupancy Only)',
   },
 ];
 
-const AUTH_STORAGE_KEY = 'pogh_current_user';
+const AUTH_STORAGE_KEY_V2 = 'pogh_session_v2';
+const LEGACY_AUTH_STORAGE_KEY = 'pogh_current_user';
+const CUSTOM_CREDS_KEY = 'pogh_custom_credentials';
+
+interface StoredSession {
+  user: AuthUser;
+  issuedAt: number;
+  sig: string;
+}
+
+function computeSessionSig(user: AuthUser, issuedAt: number): string {
+  return sha256(`${user.id}:${user.username}:${user.role}:${issuedAt}:${SESSION_SECRET}`);
+}
 
 export function getLoggedInUser(): AuthUser | null {
   if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!stored) return null;
-  try {
-    const user: AuthUser = JSON.parse(stored);
-    if (user.displayName === 'SSP Office / Admin In-Charge') {
-      user.displayName = 'SSP Office';
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    } else if (user.displayName === 'Duty Officer / Ayodhya Police') {
-      user.displayName = 'Duty Officer';
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+
+  // 1. Check v2 cryptographically signed session
+  const stored = localStorage.getItem(AUTH_STORAGE_KEY_V2);
+  if (stored) {
+    try {
+      const session: StoredSession = JSON.parse(stored);
+      const { user, issuedAt, sig } = session;
+
+      // Validate role integrity
+      if (!user || !['admin', 'operator', 'officer'].includes(user.role)) {
+        logoutUser();
+        return null;
+      }
+
+      // Detect DevTools privilege escalation / tampering
+      const expectedSig = computeSessionSig(user, issuedAt);
+      if (sig !== expectedSig) {
+        console.warn('Security Alert: Session signature mismatch. Session has been revoked.');
+        logoutUser();
+        return null;
+      }
+
+      // Check max session expiration (24h)
+      if (Date.now() - issuedAt > MAX_SESSION_DURATION_MS) {
+        logoutUser();
+        return null;
+      }
+
+      // Display name normalization
+      if (user.displayName === 'SSP Office / Admin In-Charge') {
+        user.displayName = 'SSP Office';
+        setLoggedInUser(user);
+      } else if (user.displayName === 'Duty Officer / Ayodhya Police') {
+        user.displayName = 'Duty Officer';
+        setLoggedInUser(user);
+      }
+
+      return user;
+    } catch {
+      logoutUser();
+      return null;
     }
-    return user;
-  } catch {
-    return null;
   }
+
+  // 2. Backward compatibility migration from unhashed session
+  const legacyStored = localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);
+  if (legacyStored) {
+    try {
+      const user: AuthUser = JSON.parse(legacyStored);
+      if (user && ['admin', 'operator', 'officer'].includes(user.role)) {
+        setLoggedInUser(user);
+        localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+        return user;
+      }
+    } catch {
+      localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+    }
+  }
+
+  return null;
 }
 
 export function setLoggedInUser(user: AuthUser | null) {
   if (typeof window === 'undefined') return;
   if (user) {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    const issuedAt = Date.now();
+    const session: StoredSession = {
+      user,
+      issuedAt,
+      sig: computeSessionSig(user, issuedAt),
+    };
+    localStorage.setItem(AUTH_STORAGE_KEY_V2, JSON.stringify(session));
+    localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+    localStorage.setItem('pogh_last_activity', Date.now().toString());
   } else {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEY_V2);
+    localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+    localStorage.removeItem('pogh_last_activity');
   }
 }
-
-const CUSTOM_CREDS_KEY = 'pogh_custom_credentials';
 
 export function getCustomCredentials(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -83,16 +158,22 @@ export function changeUserPassword(username: string, oldPass: string, newPass: s
     return { success: false, message: 'उपयोगकर्ता नहीं मिला।' };
   }
 
-  const currentValidPass = custom[cleanUser] || preset.password;
-  if (oldPass !== currentValidPass) {
-    return { success: false, message: 'पुराना पासवर्ड अमान्य है।' };
+  const storedCred = custom[cleanUser];
+  const oldPassHashed = hashPassword(oldPass);
+  const isValidOldPass = storedCred
+    ? storedCred === oldPassHashed || storedCred === oldPass
+    : preset.passwordHash === oldPassHashed;
+
+  if (!isValidOldPass) {
+    return { success: false, message: 'वर्तमान पासवर्ड अमान्य है।' };
   }
 
   if (newPass.length < 6) {
     return { success: false, message: 'नया पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।' };
   }
 
-  custom[cleanUser] = newPass;
+  // Save cryptographically hashed password
+  custom[cleanUser] = hashPassword(newPass);
   localStorage.setItem(CUSTOM_CREDS_KEY, JSON.stringify(custom));
   return { success: true, message: 'पासवर्ड सफलतापूर्वक बदल दिया गया।' };
 }
@@ -110,7 +191,8 @@ export function adminResetUserPassword(targetUsername: string, newPass: string):
     return { success: false, message: 'नया पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।' };
   }
 
-  custom[cleanUser] = newPass;
+  // Save cryptographically hashed password
+  custom[cleanUser] = hashPassword(newPass);
   localStorage.setItem(CUSTOM_CREDS_KEY, JSON.stringify(custom));
   return { success: true, message: 'पासवर्ड सफलतापूर्वक अपडेट कर दिया गया।' };
 }
@@ -118,16 +200,26 @@ export function adminResetUserPassword(targetUsername: string, newPass: string):
 export function authenticate(username: string, password: string): AuthUser | null {
   const cleanUser = username.trim().toLowerCase();
   const cleanPass = password.trim();
+  const passHash = hashPassword(cleanPass);
   const custom = getCustomCredentials();
 
-  const found = PRESET_ACCOUNTS.find(
-    (acc) => {
-      const activePassword = custom[acc.username.toLowerCase()] || acc.password;
-      return acc.username.toLowerCase() === cleanUser && activePassword === cleanPass;
+  const found = PRESET_ACCOUNTS.find((acc) => {
+    if (acc.username.toLowerCase() !== cleanUser) return false;
+    const storedCred = custom[cleanUser];
+    if (storedCred) {
+      // Matches either hash or legacy plain text
+      return storedCred === passHash || storedCred === cleanPass;
     }
-  );
+    return acc.passwordHash === passHash;
+  });
 
   if (found) {
+    // If user previously had a cleartext password in storage, automatically migrate to hash
+    if (custom[cleanUser] && custom[cleanUser] === cleanPass) {
+      custom[cleanUser] = passHash;
+      localStorage.setItem(CUSTOM_CREDS_KEY, JSON.stringify(custom));
+    }
+
     const authUser: AuthUser = {
       id: found.username,
       username: found.username,
@@ -144,4 +236,5 @@ export function authenticate(username: string, password: string): AuthUser | nul
 export function logoutUser() {
   setLoggedInUser(null);
 }
+
 

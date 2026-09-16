@@ -140,6 +140,33 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
 }
 
 /**
+ * Sanitizes an HTML element for print rendering by stripping
+ * script tags, iframes, and inline event handlers to prevent XSS.
+ */
+function sanitizeHtmlForPrint(source: HTMLElement): string {
+  const clone = source.cloneNode(true) as HTMLElement;
+
+  // 1. Remove dangerous executable tags
+  const dangerousTags = clone.querySelectorAll('script, iframe, object, embed');
+  dangerousTags.forEach((el) => el.remove());
+
+  // 2. Strip all inline event handlers (e.g. onclick, onload, onerror)
+  const allElements = clone.querySelectorAll('*');
+  allElements.forEach((el) => {
+    const attrNames = el.getAttributeNames();
+    for (const attr of attrNames) {
+      const lower = attr.toLowerCase();
+      const val = el.getAttribute(attr)?.trim().toLowerCase() || '';
+      if (lower.startsWith('on') || val.startsWith('javascript:')) {
+        el.removeAttribute(attr);
+      }
+    }
+  });
+
+  return clone.innerHTML;
+}
+
+/**
  * Prints a document element directly via an isolated iframe.
  * Prevents the main application DOM (RoomMatrix, BookingsTable)
  * from inflating the document height and creating repeated duplicate pages.
@@ -172,6 +199,8 @@ export function printDocumentDirectly(
   styles.forEach((style) => {
     stylesHtml += style.outerHTML;
   });
+
+  const sanitizedContent = sanitizeHtmlForPrint(element);
 
   doc.open();
   doc.write(`
@@ -230,7 +259,7 @@ export function printDocumentDirectly(
       </head>
       <body>
         <div id="print-root">
-          ${element.innerHTML}
+          ${sanitizedContent}
         </div>
       </body>
     </html>

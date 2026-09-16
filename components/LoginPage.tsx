@@ -1,37 +1,96 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthUser, authenticate } from '@/lib/auth';
-import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, Loader2, Globe } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, Loader2, ShieldAlert, Clock } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser) => void;
+  logoutReason?: 'manual' | 'inactivity' | null;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 60 * 1000; // 60 Seconds cooldown
+
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, logoutReason }) => {
   const { language, setLanguage } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState<number>(0);
+
+  // Check existing lockout on mount and tick countdown
+  useEffect(() => {
+    const checkLockout = () => {
+      try {
+        const lockoutUntil = parseInt(sessionStorage.getItem('pogh_login_lockout_until') || '0', 10);
+        const now = Date.now();
+        if (lockoutUntil > now) {
+          setLockoutSecondsLeft(Math.ceil((lockoutUntil - now) / 1000));
+        } else {
+          setLockoutSecondsLeft(0);
+          sessionStorage.removeItem('pogh_login_lockout_until');
+        }
+      } catch {
+        setLockoutSecondsLeft(0);
+      }
+    };
+
+    checkLockout();
+    const timer = setInterval(checkLockout, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutSecondsLeft > 0) return;
+
     setError('');
     setLoading(true);
 
     setTimeout(() => {
       const user = authenticate(username, password);
       if (user) {
+        // Reset brute-force counter on successful login
+        try {
+          sessionStorage.removeItem('pogh_login_failed_attempts');
+          sessionStorage.removeItem('pogh_login_lockout_until');
+        } catch {}
         onLoginSuccess(user);
       } else {
-        setError(
-          language === 'hi'
-            ? 'अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है।'
-            : 'Invalid username or password entered.'
-        );
+        try {
+          const prev = parseInt(sessionStorage.getItem('pogh_login_failed_attempts') || '0', 10);
+          const currentAttempts = prev + 1;
+          sessionStorage.setItem('pogh_login_failed_attempts', currentAttempts.toString());
+
+          if (currentAttempts >= MAX_FAILED_ATTEMPTS) {
+            const lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
+            sessionStorage.setItem('pogh_login_lockout_until', lockoutUntil.toString());
+            sessionStorage.removeItem('pogh_login_failed_attempts');
+            setLockoutSecondsLeft(60);
+            setError(
+              language === 'hi'
+                ? `अत्यधिक असफल प्रयासों (${MAX_FAILED_ATTEMPTS} बार) के कारण लॉगिन 60 सेकंड के लिए ब्लॉक कर दिया गया है।`
+                : `Login temporarily locked for 60 seconds due to ${MAX_FAILED_ATTEMPTS} consecutive failed attempts.`
+            );
+          } else {
+            const remaining = MAX_FAILED_ATTEMPTS - currentAttempts;
+            setError(
+              language === 'hi'
+                ? `अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है। (${remaining} प्रयास शेष)`
+                : `Invalid username or password entered. (${remaining} attempts remaining)`
+            );
+          }
+        } catch {
+          setError(
+            language === 'hi'
+              ? 'अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है।'
+              : 'Invalid username or password entered.'
+          );
+        }
         setLoading(false);
       }
     }, 400);
@@ -97,6 +156,40 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </p>
         </div>
 
+        {/* Inactivity Auto-Logout Alert Banner */}
+        {logoutReason === 'inactivity' && (
+          <div className="mx-5 sm:mx-8 mt-5 p-3.5 rounded-2xl bg-amber-500/15 border border-amber-400/30 text-amber-200 text-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-300">
+                {language === 'hi' ? 'सुरक्षा सूचना: सत्र स्वतः समाप्त (Auto Logged Out)' : 'Security Notice: Session Timed Out'}
+              </p>
+              <p className="text-[11px] text-amber-200/80 mt-0.5 leading-relaxed">
+                {language === 'hi'
+                  ? 'अक्रियता (15 मिनट निष्क्रिय रहने) के कारण आपका सत्र सुरक्षा कारणों से स्वतः समाप्त कर दिया गया है। कृपया पुनः लॉगिन करें।'
+                  : 'Your session was automatically logged out after 15 minutes of inactivity for security. Please sign in again.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Lockout Banner */}
+        {lockoutSecondsLeft > 0 && (
+          <div className="mx-5 sm:mx-8 mt-5 p-3.5 rounded-2xl bg-rose-950/80 border border-rose-700/80 text-rose-200 text-xs flex items-center gap-2.5 animate-in fade-in duration-200">
+            <Clock className="w-5 h-5 text-rose-400 shrink-0 animate-pulse" />
+            <div>
+              <p className="font-bold text-rose-300">
+                {language === 'hi' ? 'लॉगिन अस्थायी रूप से अवरुद्ध है' : 'Login Temporarily Locked'}
+              </p>
+              <p className="text-[11px] text-rose-200/80 mt-0.5">
+                {language === 'hi'
+                  ? `अत्यधिक गलत प्रयासों के कारण प्रतीक्षा करें: ${lockoutSecondsLeft} सेकंड शेष`
+                  : `Too many failed attempts. Cooldown: ${lockoutSecondsLeft}s remaining`}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-8 space-y-3.5 sm:space-y-4">
           
@@ -109,11 +202,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               type="text"
               required
               autoFocus
+              disabled={lockoutSecondsLeft > 0}
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={language === 'hi' ? 'उपयोगकर्ता नाम दर्ज करें' : 'Enter username'}
-              className="w-full px-4 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
+              className="w-full px-4 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition disabled:opacity-40 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -126,24 +220,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                disabled={lockoutSecondsLeft > 0}
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={language === 'hi' ? 'पासवर्ड दर्ज करें' : 'Enter password'}
-                className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition"
+                className="w-full pl-4 pr-11 py-2.5 text-sm bg-slate-950/90 text-white placeholder-slate-500 rounded-xl border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition disabled:opacity-40 disabled:cursor-not-allowed"
               />
               <button
                 type="button"
+                disabled={lockoutSecondsLeft > 0}
                 onClick={() => setShowPassword(!showPassword)}
                 title={showPassword ? (language === 'hi' ? 'पासवर्ड छुपाएं' : 'Hide password') : (language === 'hi' ? 'पासवर्ड देखें' : 'Show password')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition disabled:opacity-40"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {error && (
+          {error && lockoutSecondsLeft === 0 && (
             <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-800/80 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in duration-150">
               <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
               <span>{error}</span>
@@ -152,13 +248,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3 mt-3 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-500/20 transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            disabled={loading || lockoutSecondsLeft > 0}
+            className="w-full py-3 mt-3 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-500/20 transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
                 <span>{language === 'hi' ? 'सत्यापित किया जा रहा है...' : 'Authenticating...'}</span>
+              </>
+            ) : lockoutSecondsLeft > 0 ? (
+              <>
+                <Clock className="w-4 h-4" />
+                <span>{language === 'hi' ? `प्रतीक्षा करें (${lockoutSecondsLeft}s)` : `Please wait (${lockoutSecondsLeft}s)`}</span>
               </>
             ) : (
               <>

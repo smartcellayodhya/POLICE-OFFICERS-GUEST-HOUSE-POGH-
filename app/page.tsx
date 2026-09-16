@@ -45,6 +45,7 @@ function HomePageContent() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
+  const [logoutReason, setLogoutReason] = useState<'manual' | 'inactivity' | null>(null);
 
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -113,7 +114,12 @@ function HomePageContent() {
       const tabParam = params.get('tab');
 
       if (path === 'monthly' || path === 'monthly-collection' || tabParam === 'monthly') {
-        setActiveTab('monthly');
+        if (user?.role === 'officer') {
+          setActiveTab('dashboard');
+          window.history.replaceState({}, '', '/');
+        } else {
+          setActiveTab('monthly');
+        }
       } else if (path === 'matrix' || tabParam === 'matrix') {
         setActiveTab('matrix');
       } else if (path === 'bookings' || tabParam === 'bookings') {
@@ -124,7 +130,68 @@ function HomePageContent() {
     }
   }, []);
 
+  // 15-Minute Inactivity Auto-Logout
+  const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const updateActivity = () => {
+      const now = Date.now();
+      try {
+        localStorage.setItem('pogh_last_activity', now.toString());
+      } catch {}
+    };
+
+    updateActivity();
+
+    let lastRecorded = Date.now();
+    const handleUserActivity = () => {
+      const now = Date.now();
+      if (now - lastRecorded > 3000) {
+        lastRecorded = now;
+        updateActivity();
+      }
+    };
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach((ev) => window.addEventListener(ev, handleUserActivity, { passive: true }));
+
+    const intervalId = setInterval(() => {
+      const last = parseInt(localStorage.getItem('pogh_last_activity') || '0', 10);
+      const now = Date.now();
+      if (last > 0 && now - last > INACTIVITY_TIMEOUT_MS) {
+        setLogoutReason('inactivity');
+        logoutUser();
+        setCurrentUser(null);
+      }
+    }, 10000);
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
+      clearInterval(intervalId);
+    };
+  }, [currentUser]);
+
+  // Role Guard: Prevent Officer role from accessing Monthly Collection
+  useEffect(() => {
+    if (currentUser?.role === 'officer' && activeTab === 'monthly') {
+      setActiveTab('dashboard');
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/');
+      }
+    }
+  }, [currentUser, activeTab]);
+
   const handleSelectTab = (tab: NavTab) => {
+    if (currentUser?.role === 'officer' && tab === 'monthly') {
+      alert(
+        language === 'hi'
+          ? 'माह-वार कलेक्शन केवल प्रशासनिक (Admin) एवं ऑपरेटर हेतु अधिकृत है।'
+          : 'Monthly Collection is restricted to Admin & Operator roles only.'
+      );
+      return;
+    }
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       const url = tab === 'dashboard' ? '/' : `/${tab}`;
@@ -133,6 +200,7 @@ function HomePageContent() {
   };
 
   const handleLogout = () => {
+    setLogoutReason('manual');
     logoutUser();
     setCurrentUser(null);
     setShowSplash(false);
@@ -667,7 +735,9 @@ function HomePageContent() {
       <>
         {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
         <LoginPage
+          logoutReason={logoutReason}
           onLoginSuccess={(user) => {
+            setLogoutReason(null);
             setShowSplash(false);
             setCurrentUser(user);
           }}
