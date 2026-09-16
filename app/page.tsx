@@ -766,27 +766,7 @@ function HomePageContent() {
       })
     : [];
 
-  if (!authChecked) {
-    return null;
-  }
-
-  if (!currentUser) {
-    return (
-      <>
-        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-        <LoginPage
-          logoutReason={logoutReason}
-          onLoginSuccess={(user) => {
-            setLogoutReason(null);
-            setShowSplash(false);
-            setCurrentUser(user);
-          }}
-        />
-      </>
-    );
-  }
-
-  // Memoized related bookings - computed only when the respective modal is open
+  // Memoized related bookings - computed unconditionally to adhere to React Rules of Hooks
   const editRelatedBookings = useMemo(() => {
     if (!isEditModalOpen || !selectedEditBooking) return [];
     const targetRef = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
@@ -831,8 +811,28 @@ function HomePageContent() {
     });
   }, [isReceiptModalOpen, selectedReceiptBooking, bookings]);
 
-  const isAdmin = currentUser.role === 'admin';
-  const isOperator = currentUser.role === 'operator';
+  const isAdmin = currentUser?.role === 'admin';
+  const isOperator = currentUser?.role === 'operator';
+
+  if (!authChecked) {
+    return null;
+  }
+
+  if (!currentUser) {
+    return (
+      <>
+        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+        <LoginPage
+          logoutReason={logoutReason}
+          onLoginSuccess={(user) => {
+            setLogoutReason(null);
+            setShowSplash(false);
+            setCurrentUser(user);
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <>
