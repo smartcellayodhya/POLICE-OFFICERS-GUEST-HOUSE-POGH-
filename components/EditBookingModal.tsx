@@ -62,6 +62,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [guestName, setGuestName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [reference, setReference] = useState('SSP SIR');
+  const [otherReferenceName, setOtherReferenceName] = useState('');
 
   // Stay Type: Standard vs Hourly
   const [stayType, setStayType] = useState<'STANDARD' | 'HOURLY'>('STANDARD');
@@ -115,7 +116,14 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     if (booking) {
       setGuestName(booking.guest_name || '');
       setMobileNumber(booking.mobile_number || '');
-      setReference(booking.reference || 'SSP SIR');
+      const savedRef = booking.reference || 'SSP SIR';
+      if (REFERENCES.includes(savedRef)) {
+        setReference(savedRef);
+        setOtherReferenceName('');
+      } else {
+        setReference('OTHER');
+        setOtherReferenceName(savedRef);
+      }
       setCheckInTime(booking.check_in_time || '12:00 PM');
       setCheckOutTime(booking.check_out_time || '12:00 PM');
       
@@ -357,7 +365,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       const updatedData: Partial<Booking> = {
         guest_name: guestName.trim(),
         mobile_number: cleanedMobile,
-        reference: reference.trim(),
+        reference: (reference === 'OTHER' && otherReferenceName.trim()) ? otherReferenceName.trim() : reference.trim(),
         check_in_time: checkInTime.trim(),
         check_out_time: checkOutTime.trim(),
         booking_type: stayType,
@@ -519,7 +527,10 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               </label>
               <select
                 value={reference}
-                onChange={(e) => setReference(e.target.value)}
+                onChange={(e) => {
+                  setReference(e.target.value);
+                  if (e.target.value !== 'OTHER') setOtherReferenceName('');
+                }}
                 className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
               >
                 {REFERENCES.map((ref) => (
@@ -528,6 +539,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   </option>
                 ))}
               </select>
+              {reference === 'OTHER' && (
+                <input
+                  type="text"
+                  value={otherReferenceName}
+                  onChange={(e) => setOtherReferenceName(e.target.value)}
+                  placeholder={language === 'hi' ? 'अधिकारी का नाम लिखें...' : 'Enter officer name...'}
+                  className="w-full mt-2 px-3.5 py-2 text-sm rounded-lg border border-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-amber-50"
+                />
+              )}
             </div>
 
             <div>

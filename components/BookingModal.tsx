@@ -40,6 +40,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [guestName, setGuestName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [reference, setReference] = useState('SSP SIR');
+  const [otherReferenceName, setOtherReferenceName] = useState('');
 
   const getNextDayISO = (dateStr: string): string => {
     const d = new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : ''));
@@ -104,6 +105,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setGuestName('');
     setMobileNumber('');
     setReference('SSP SIR');
+    setOtherReferenceName('');
     setStayType('STANDARD');
     setHourlyHours(4);
     setHourlyRate('');
@@ -355,7 +357,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         booking_date: dateStr,
         guest_name: guestName.trim(),
         mobile_number: cleanedMobile,
-        reference: reference.trim(),
+        reference: (reference === 'OTHER' && otherReferenceName.trim()) ? otherReferenceName.trim() : reference.trim(),
         suit_1: selectedSuits.suit_1 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
         suit_2: selectedSuits.suit_2 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
         suit_3: selectedSuits.suit_3 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
@@ -502,7 +504,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </label>
               <select
                 value={reference}
-                onChange={(e) => setReference(e.target.value)}
+                onChange={(e) => {
+                  setReference(e.target.value);
+                  if (e.target.value !== 'OTHER') setOtherReferenceName('');
+                }}
                 className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
               >
                 {REFERENCES.map((ref) => (
@@ -511,6 +516,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </option>
                 ))}
               </select>
+              {reference === 'OTHER' && (
+                <input
+                  type="text"
+                  value={otherReferenceName}
+                  onChange={(e) => setOtherReferenceName(e.target.value)}
+                  placeholder={language === 'hi' ? 'अधिकारी का नाम लिखें...' : 'Enter officer name...'}
+                  className="w-full mt-2 px-3.5 py-2 text-sm rounded-lg border border-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-amber-50"
+                />
+              )}
             </div>
 
             <div>
