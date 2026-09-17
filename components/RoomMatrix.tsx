@@ -210,8 +210,8 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
       </div>
 
       {/* Direct 4 Rooms Compact Status Display (with Multi-slot Hourly Support) */}
-      <div className="p-4 sm:p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="p-3 sm:p-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           {SUITS.map((suit) => {
             const suitBookings = getBookingsForSuit(suit.id);
 
@@ -220,16 +220,16 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
               return (
                 <div
                   key={suit.id}
-                  className="p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 flex flex-col justify-between shadow-xs"
+                  className="p-3 sm:p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 flex flex-col justify-between shadow-2xs hover:shadow-xs transition"
                 >
                   <div>
-                    <div className="pb-2 border-b border-emerald-200/70">
-                      <span className="font-extrabold text-slate-900 text-sm">{suit.name}</span>
+                    <div className="pb-1.5 sm:pb-2 border-b border-emerald-200/70 flex items-center justify-between">
+                      <span className="font-extrabold text-slate-900 text-xs sm:text-sm">{suit.name}</span>
                     </div>
-                    <div className="my-3">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        {t('available')}
+                    <div className="my-2 sm:my-3">
+                      <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 shrink-0" />
+                        <span>{t('available')}</span>
                       </span>
                     </div>
                   </div>
@@ -237,9 +237,9 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                     <button
                       type="button"
                       onClick={() => onQuickBook(selectedDate, suit.id)}
-                      className="w-full mt-2 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer"
+                      className="w-full mt-2 h-7 sm:h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                       <span>{language === 'hi' ? 'क्विक बुक' : 'Quick Book'}</span>
                     </button>
                   )}
@@ -292,7 +292,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                 <div
                   key={suit.id}
                   onClick={() => onSelectBooking(booking)}
-                  className={`p-3.5 sm:p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md ${
+                  className={`p-3 sm:p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs ${
                     isHourly
                       ? 'bg-amber-50/80 border-amber-300 text-amber-950'
                       : isInHouse
@@ -303,10 +303,10 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                 >
                   <div>
                     {/* Header */}
-                    <div className="pb-2 border-b border-slate-200/70 flex items-center justify-between">
-                      <span className="font-extrabold text-slate-900 text-sm">{suit.name}</span>
+                    <div className="pb-1.5 sm:pb-2 border-b border-slate-200/70 flex items-center justify-between">
+                      <span className="font-extrabold text-slate-900 text-xs sm:text-sm">{suit.name}</span>
                       {isHourly && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-2xs">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-500 text-white shadow-2xs">
                           <Clock className="w-2.5 h-2.5" />
                           <span>{stayHrs} {language === 'hi' ? 'घंटे' : 'hrs'}</span>
                         </span>
@@ -314,9 +314,9 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                     </div>
 
                     {/* Status Pill & Meal Tag */}
-                    <div className="my-2 flex items-center justify-between gap-1">
+                    <div className="my-1.5 sm:my-2 flex items-center justify-between gap-1">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shadow-2xs ${
+                        className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold shadow-2xs ${
                           isInHouse
                             ? 'bg-emerald-600 text-white'
                             : isHourly
@@ -327,11 +327,11 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                         {isInHouse
                           ? `● ${t('checkedIn')}`
                           : isHourly
-                          ? `⏱️ ${language === 'hi' ? 'अल्पकालिक' : 'Hourly'}`
+                          ? `⏱️ ${language === 'hi' ? 'अल्प' : 'Hourly'}`
                           : `● ${t('confirmed')}`}
                       </span>
 
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
+                      <span className="text-[9px] sm:text-[10px] font-medium px-1.5 sm:px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200 truncate">
                         {booking.meal_type_status === 'FREE'
                           ? (language === 'hi' ? 'निःशुल्क' : 'Free')
                           : (booking.meal_type_status === 'COMPLIMENTARY'
@@ -339,7 +339,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                             : (booking.meal_type_status === 'NOT REQUIRED'
                               ? (language === 'hi' ? 'लागू नहीं' : 'N/A')
                               : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE'
-                                ? (language === 'hi' ? 'नियमानुसार' : 'As per Applicable')
+                                ? (language === 'hi' ? 'नियमानुसार' : 'As per App')
                                 : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
                       </span>
                     </div>
@@ -348,28 +348,28 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                     <div className="text-xs font-bold text-slate-800 truncate">
                       {formatGuestDisplayName(booking.guest_name)}
                     </div>
-                    <div className="text-[11px] text-slate-500 font-mono truncate mt-0.5">
+                    <div className="text-[10px] sm:text-[11px] text-slate-500 font-mono truncate mt-0.5">
                       {booking.mobile_number} {booking.reference ? `• ${booking.reference}` : ''}
                     </div>
 
                     {/* Time slot for hourly */}
                     {isHourly && (
-                      <div className="mt-1.5 px-2 py-0.5 rounded bg-amber-100/70 border border-amber-200 text-[10px] font-bold text-amber-900 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-700 shrink-0" />
+                      <div className="mt-1 px-1.5 py-0.5 rounded bg-amber-100/70 border border-amber-200 text-[9px] sm:text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-700 shrink-0" />
                         <span className="truncate">{booking.check_in_time || '10:00 AM'} - {booking.check_out_time || '02:00 PM'}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Clean Footer Action Bar */}
-                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between gap-1.5">
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex flex-col gap-1 sm:gap-1.5">
+                    <div className="flex items-center justify-between gap-1 sm:gap-1.5">
                       <button
                         type="button"
                         onClick={() => onSelectBooking(booking)}
-                        className="flex-1 h-8 px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                        className="flex-1 h-7 sm:h-8 px-1.5 sm:px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-0.5 sm:gap-1 transition cursor-pointer"
                       >
-                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
                         <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
                       </button>
 
@@ -380,10 +380,10 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                             e.stopPropagation();
                             onOpenRecordCollection(booking);
                           }}
-                          className="flex-1 h-8 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer active:scale-95"
+                          className="flex-1 h-7 sm:h-8 px-1.5 sm:px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-0.5 sm:gap-1 transition cursor-pointer active:scale-95"
                           title={language === 'hi' ? 'कलेक्शन व भोजन बिल दर्ज करें' : 'Record Collection & Food Bill'}
                         >
-                          <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
+                          <IndianRupee className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
                           <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
                         </button>
                       )}
