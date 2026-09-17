@@ -8,17 +8,34 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
   const dispLine = details.dispatch_no ? `पत्रांक: पी.ओ.जी.एच. / 2026 / ${details.dispatch_no}\n` : '';
   const refLine = details.booking_ref_no ? `बुकिंग संदर्भ: ${details.booking_ref_no}\n` : '';
 
-  const rentLine = details.total_amount && details.total_amount > 0
+  const isHourly = details.booking_type === 'HOURLY';
+  const isSingleDay = details.check_in_date === details.check_out_date;
+
+  const rentLine = isHourly
+    ? details.hourly_rate && details.hourly_rate > 0
+      ? `- कमरा किराया दर: ₹${details.hourly_rate}/- प्रति घंटा (कुल ${details.stay_hours || 2} घंटे)\n`
+      : details.total_amount && details.total_amount > 0
+      ? `- कमरा किराया (अल्पकालिक): ₹${details.total_amount}/-\n`
+      : `- कमरा किराया: As per applicable\n`
+    : details.total_amount && details.total_amount > 0
     ? `- प्रति रूम प्रति दिन किराया: ₹${details.total_amount}/-\n`
     : `- प्रति रूम प्रति दिन किराया: As per applicable\n`;
 
-  const isSingleDay = details.check_in_date === details.check_out_date;
-  const datePhrase = isSingleDay
+  const datePhrase = isHourly
+    ? `दिनांक ${cin_h} को समय ${details.check_in_time || '10:00'} से ${details.check_out_time || '14:00'} तक (${details.stay_hours || 2} घंटे अल्पकालिक ठहराव हेतु)`
+    : isSingleDay
     ? `दिनांक ${cin_h} को (01 दिवस हेतु)`
     : `दिनांक ${cin_h} से ${cout_h} तक`;
-  const dateRangeDisplay = isSingleDay
+
+  const dateRangeDisplay = isHourly
+    ? `दि० ${cin_h} (समय ${details.check_in_time || '10:00'} से ${details.check_out_time || '14:00'} तक)`
+    : isSingleDay
     ? `दि० ${cin_h} (01 दिवस)`
     : `दि० ${cin_h} से ${cout_h} तक`;
+
+  const durationLine = isHourly
+    ? `- ठहराव अवधि: अल्पकालिक (${details.stay_hours || 2} घंटे)\n`
+    : `- कुल दिन: ${details.total_days} दिन\n`;
 
   const timeLine = (details.check_in_time || details.check_out_time)
     ? `- चेक-इन / चेक-आउट: ${details.check_in_time || '12:00 PM'} / ${details.check_out_time || '12:00 PM'}\n`
@@ -49,8 +66,7 @@ ${dispLine}${refLine}विषय: पुलिस ऑफिसर्स गे�
 - कब से कब तक: ${dateRangeDisplay}
 - रूम की संख्या: ${details.suits.length}
 - सूट नम्बर: ${suitsList}
-${timeLine}- कुल दिन: ${details.total_days} दिन
-- भोजन व्यवस्था: ${mealDisplay}
+${timeLine}${durationLine}- भोजन व्यवस्था: ${mealDisplay}
 ${rentLine}
 संपर्क सूत्र ऑफिसर्स गेस्ट हाउस- ${details.contact_person || 'उ0नि0 यदुनाथ मो0न0-8317041684'}
 
@@ -60,7 +76,9 @@ ${rentLine}
 
 export function getWhatsAppUrl(details: LetterDetails): string {
   let cleanMobile = (details.mobile_number || '').replace(/\D/g, '');
-  if (cleanMobile.length === 10) {
+  if (cleanMobile.length === 11 && cleanMobile.startsWith('0')) {
+    cleanMobile = '91' + cleanMobile.slice(1);
+  } else if (cleanMobile.length === 10) {
     cleanMobile = '91' + cleanMobile;
   }
   const msg = generateWhatsAppMessage(details);

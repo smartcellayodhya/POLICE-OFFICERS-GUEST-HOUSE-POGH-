@@ -78,7 +78,33 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
     setSubmitting(true);
 
-    setTimeout(() => {
+    (async () => {
+      let serverUpdated = false;
+      try {
+        const token = localStorage.getItem('pogh_auth_token');
+        const sRes = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            currentPassword: oldPassword,
+            newPassword: newPassword,
+          }),
+        });
+        const sData = await sRes.json();
+        if (sRes.ok && sData.success) {
+          serverUpdated = true;
+        } else if (!sRes.ok && sData.error) {
+          setSubmitting(false);
+          setErrorMsg(sData.error);
+          return;
+        }
+      } catch (err) {
+        console.warn('Server password change error, falling back to local:', err);
+      }
+
       let res: { success: boolean; message: string };
 
       if (isAdminResettingOther) {
@@ -89,7 +115,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
       setSubmitting(false);
 
-      if (!res.success) {
+      if (!res.success && !serverUpdated) {
         setErrorMsg(res.message);
       } else {
         setSuccessMsg(language === 'hi' ? 'पासवर्ड सफलतापूर्वक बदल दिया गया है!' : 'Password updated successfully!');
@@ -109,7 +135,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           onClose();
         }, 1200);
       }
-    }, 300);
+    })();
   };
 
   return (

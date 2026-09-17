@@ -60,7 +60,12 @@ export function encodeNotesWithMeta(
   paymentMode?: string,
   collectedBy?: string,
   collectionNote?: string,
-  expenditure?: number
+  expenditure?: number,
+  bookingType?: 'STANDARD' | 'HOURLY',
+  stayHours?: number,
+  hourlyRate?: number,
+  checkInTime?: string,
+  checkOutTime?: string
 ): string {
   const cleanNotes = (notes || '').replace(/\[META:.*?\]/g, '').trim();
   const metaObj: Record<string, any> = {
@@ -75,9 +80,63 @@ export function encodeNotesWithMeta(
   if (paymentMode) metaObj.payment_mode = paymentMode;
   if (collectedBy) metaObj.collected_by = collectedBy;
   if (collectionNote) metaObj.collection_note = collectionNote;
+  if (bookingType) metaObj.booking_type = bookingType;
+  if (stayHours !== undefined && stayHours > 0) metaObj.stay_hours = stayHours;
+  if (hourlyRate !== undefined && hourlyRate > 0) metaObj.hourly_rate = hourlyRate;
+  if (checkInTime) metaObj.check_in_time = checkInTime;
+  if (checkOutTime) metaObj.check_out_time = checkOutTime;
 
   const metaTag = `[META:${JSON.stringify(metaObj)}]`;
   return cleanNotes ? `${cleanNotes} ${metaTag}` : metaTag;
+}
+
+// Structured metadata interface
+export interface BookingMeta {
+  groupId?: string;
+  dispatchNo?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  ratePerRoom?: number;
+  foodAmount?: number;
+  expenditure?: number;
+  paymentMode?: string;
+  collectedBy?: string;
+  collectionNote?: string;
+  bookingType?: 'STANDARD' | 'HOURLY';
+  stayHours?: number;
+  hourlyRate?: number;
+  checkInTime?: string;
+  checkOutTime?: string;
+}
+
+export function parseBookingMeta(notes?: string): BookingMeta {
+  if (!notes) return {};
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return {
+        groupId: parsed.group_id || parsed.groupId || '',
+        dispatchNo: parsed.dispatch_no || parsed.dispatchNo || '',
+        checkInDate: parsed.check_in_date || parsed.checkInDate || '',
+        checkOutDate: parsed.check_out_date || parsed.checkOutDate || '',
+        ratePerRoom: Number(parsed.rate_per_room || parsed.ratePerRoom) || 0,
+        foodAmount: parsed.food_amount !== undefined ? Number(parsed.food_amount) : undefined,
+        expenditure: parsed.expenditure !== undefined ? Number(parsed.expenditure) : undefined,
+        paymentMode: parsed.payment_mode || undefined,
+        collectedBy: parsed.collected_by || undefined,
+        collectionNote: parsed.collection_note || undefined,
+        bookingType: parsed.booking_type === 'HOURLY' ? 'HOURLY' : 'STANDARD',
+        stayHours: Number(parsed.stay_hours) || 0,
+        hourlyRate: Number(parsed.hourly_rate) || 0,
+        checkInTime: parsed.check_in_time || parsed.checkInTime || undefined,
+        checkOutTime: parsed.check_out_time || parsed.checkOutTime || undefined,
+      };
+    } catch {
+      // ignore
+    }
+  }
+  return {};
 }
 
 export function extractGroupIdFromNotes(notes?: string): string {
@@ -220,6 +279,143 @@ export function extractExpenditureFromNotes(notes?: string): number {
   return 0;
 }
 
+export function extractBookingTypeFromNotes(notes?: string): 'STANDARD' | 'HOURLY' {
+  if (!notes) return 'STANDARD';
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (parsed.booking_type === 'HOURLY') return 'HOURLY';
+    } catch {
+      // ignore
+    }
+  }
+  return 'STANDARD';
+}
+
+export function extractStayHoursFromNotes(notes?: string): number {
+  if (!notes) return 0;
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return Number(parsed.stay_hours) || 0;
+    } catch {
+      // ignore
+    }
+  }
+  return 0;
+}
+
+export function extractHourlyRateFromNotes(notes?: string): number {
+  if (!notes) return 0;
+  const match = notes.match(/\[META:(\{.*?\})\]/);
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      return Number(parsed.hourly_rate) || 0;
+    } catch {
+      // ignore
+    }
+  }
+  return 0;
+}
+
+/**
+ * Checks if a booking is an hourly / short stay booking.
+ */
+export function isHourlyBooking(b?: Booking | null): boolean {
+  if (!b) return false;
+  if (b.booking_type === 'HOURLY') return true;
+  if (extractBookingTypeFromNotes(b.notes) === 'HOURLY') return true;
+  if ((b.stay_hours || 0) > 0 || extractStayHoursFromNotes(b.notes) > 0) return true;
+  return false;
+}
+
+/**
+ * Parses time string (e.g. "10:00 AM", "02:30 PM", "14:30") to minutes from midnight (0-1439).
+ */
+export function parseTimeToMinutes(timeStr?: string): number | null {
+  if (!timeStr) return null;
+  const clean = timeStr.trim().toUpperCase();
+
+  const match12 = clean.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10);
+    const minutes = match12[2] ? parseInt(match12[2], 10) : 0;
+    const isPM = match12[3].toUpperCase() === 'PM';
+    if (hours === 12) {
+      hours = isPM ? 12 : 0;
+    } else if (isPM) {
+      hours += 12;
+    }
+    return hours * 60 + minutes;
+  }
+
+  const match24 = clean.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    const hours = parseInt(match24[1], 10);
+    const minutes = parseInt(match24[2], 10);
+    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+      return hours * 60 + minutes;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Formats minutes from midnight to a 12-hour AM/PM string, e.g. 600 -> "10:00 AM", 840 -> "02:00 PM".
+ */
+export function formatMinutesToTime(totalMinutes: number): string {
+  const norm = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours24 = Math.floor(norm / 60);
+  const minutes = norm % 60;
+  const isPM = hours24 >= 12;
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  const minStr = String(minutes).padStart(2, '0');
+  const period = isPM ? 'PM' : 'AM';
+  return `${String(hours12).padStart(2, '0')}:${minStr} ${period}`;
+}
+
+/**
+ * Calculates stay duration in hours from check-in and check-out times.
+ */
+export function calculateStayHours(checkInTime?: string, checkOutTime?: string): number {
+  const tIn = parseTimeToMinutes(checkInTime);
+  const tOut = parseTimeToMinutes(checkOutTime);
+  if (tIn === null || tOut === null) return 4;
+  let diff = tOut - tIn;
+  if (diff <= 0) diff += 1440; // overnight/past midnight
+  const hrs = Math.round((diff / 60) * 10) / 10;
+  return hrs > 0 ? hrs : 1;
+}
+
+/**
+ * Checks whether two time slots on the same day overlap.
+ */
+export function doTimeSlotsOverlap(
+  cin1?: string,
+  cout1?: string,
+  cin2?: string,
+  cout2?: string,
+  bufferMinutes: number = 0
+): boolean {
+  const s1 = parseTimeToMinutes(cin1);
+  const e1 = parseTimeToMinutes(cout1);
+  const s2 = parseTimeToMinutes(cin2);
+  const e2 = parseTimeToMinutes(cout2);
+
+  if (s1 === null || e1 === null || s2 === null || e2 === null) {
+    return true; // Conservatively flag overlap if format invalid
+  }
+
+  const end1 = e1 <= s1 ? e1 + 1440 : e1;
+  const end2 = e2 <= s2 ? e2 + 1440 : e2;
+
+  return Math.max(s1, s2) < Math.min(end1 + bufferMinutes, end2 + bufferMinutes);
+}
+
 export function cleanNotesText(notes?: string): string {
   if (!notes) return '';
   return notes.replace(/\[META:.*?\]/g, '').trim();
@@ -231,15 +427,23 @@ export function cleanNotesText(notes?: string): string {
 export function calculateBookingRent(b: Booking): number {
   if (b.status === 'CANCELLED') return 0;
 
-  const metaRate = extractRatePerRoomFromNotes(b.notes);
   const roomsCount =
     (Number(b.suit_1) > 0 ? 1 : 0) +
     (Number(b.suit_2) > 0 ? 1 : 0) +
     (Number(b.suit_3) > 0 ? 1 : 0) +
-    (Number(b.suit_4) > 0 ? 1 : 0);
+    (Number(b.suit_4) > 0 ? 1 : 0) || 1;
 
+  if (isHourlyBooking(b)) {
+    const hourlyRate = b.hourly_rate || extractHourlyRateFromNotes(b.notes);
+    const stayHours = b.stay_hours || extractStayHoursFromNotes(b.notes) || calculateStayHours(b.check_in_time, b.check_out_time);
+    if (hourlyRate > 0 && stayHours > 0) {
+      return hourlyRate * stayHours * roomsCount;
+    }
+  }
+
+  const metaRate = extractRatePerRoomFromNotes(b.notes);
   if (metaRate > 0) {
-    return metaRate * (roomsCount || 1);
+    return metaRate * roomsCount;
   }
 
   const rawTotal = Number(b.total_amount) || 0;
@@ -367,6 +571,7 @@ export interface SuitConflictResult {
   isBooked: boolean;
   booking?: Booking;
   conflictingDate?: string;
+  conflictingTime?: string;
   guestName?: string;
   isMaintenance?: boolean;
 }
@@ -374,12 +579,16 @@ export interface SuitConflictResult {
 /**
  * Checks whether a suit is already booked on any date of a stay dates array.
  * Optionally excludes a set of booking IDs (e.g. current booking group being edited).
+ * Supports intelligent time-slot checking when target stay is hourly.
  */
 export function findConflictingBooking(
   existingBookings: Booking[],
   suitId: string,
   stayDates: string[],
-  excludeBookingIds?: Set<string>
+  excludeBookingIds?: Set<string>,
+  targetCheckInTime?: string,
+  targetCheckOutTime?: string,
+  targetIsHourly?: boolean
 ): SuitConflictResult {
   if (!existingBookings || existingBookings.length === 0 || stayDates.length === 0) {
     return { isBooked: false };
@@ -399,10 +608,35 @@ export function findConflictingBooking(
       }
       if (isBookingOccupyingDate(b, dateStr)) {
         const isMaint = status === 'MAINTENANCE' || !!b.is_maintenance;
+        const existingIsHourly = isHourlyBooking(b);
+
+        // If both the candidate and existing bookings are hourly on this single date:
+        if (targetIsHourly && existingIsHourly && stayDates.length === 1) {
+          const bCin = b.check_in_time || '12:00 PM';
+          const bCout = b.check_out_time || '12:00 PM';
+          const tCin = targetCheckInTime || '12:00 PM';
+          const tCout = targetCheckOutTime || '12:00 PM';
+
+          const overlaps = doTimeSlotsOverlap(tCin, tCout, bCin, bCout);
+          if (!overlaps) {
+            // Separate time slot on the same day -> no conflict!
+            continue;
+          }
+          return {
+            isBooked: true,
+            booking: b,
+            conflictingDate: dateStr,
+            conflictingTime: `${bCin} - ${bCout}`,
+            guestName: b.guest_name,
+            isMaintenance: isMaint,
+          };
+        }
+
         return {
           isBooked: true,
           booking: b,
           conflictingDate: dateStr,
+          conflictingTime: existingIsHourly ? `${b.check_in_time || '12:00 PM'} - ${b.check_out_time || '12:00 PM'}` : undefined,
           guestName: b.guest_name,
           isMaintenance: isMaint,
         };

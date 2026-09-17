@@ -12,6 +12,9 @@ import {
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
   getBookingSuitsList,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  extractHourlyRateFromNotes,
 } from './bookingUtils';
 
 /**
@@ -40,11 +43,15 @@ export async function exportBookingsToExcel(
   const XLSX = await import('xlsx');
 
   const rows = bookings.map((b) => {
+    const isHourly = isHourlyBooking(b);
+    const stayHours = extractStayHoursFromNotes(b.notes) || (b.stay_hours ? Number(b.stay_hours) : 2);
+    const hourlyRate = extractHourlyRateFromNotes(b.notes) || (b.hourly_rate ? Number(b.hourly_rate) : undefined);
+
     const notesCin = extractCheckInDateFromNotes(b.notes);
     const notesCout = extractCheckOutDateFromNotes(b.notes);
     const checkIn = notesCin || b.booking_date;
     const checkOut = notesCout || b.booking_date;
-    const stayNights = calculateStayNights(checkIn, checkOut);
+    const stayNights = isHourly ? 1 : calculateStayNights(checkIn, checkOut);
     const refNo = b.group_id || extractGroupIdFromNotes(b.notes) || `POGH-${b.id.slice(0, 4)}`;
     const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
 
@@ -53,7 +60,9 @@ export async function exportBookingsToExcel(
     const metaRate = extractRatePerRoomFromNotes(b.notes);
     const suitRate = Math.max(Number(b.suit_1) || 0, Number(b.suit_2) || 0, Number(b.suit_3) || 0, Number(b.suit_4) || 0);
     const perRoomRent = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(b.total_amount) || 0);
-    const totalRent = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
+    const totalRent = isHourly
+      ? (hourlyRate && hourlyRate > 0 ? hourlyRate * stayHours * numRooms : Number(b.total_amount) || 0)
+      : (perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0);
 
     const foodAmount = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
     const expenditure = extractExpenditureFromNotes(b.notes) || Number(b.expenditure) || 0;
@@ -81,13 +90,17 @@ export async function exportBookingsToExcel(
         'पत्र क्रमांक': dispatchNo,
         'आगमन तिथि': formatToDisplayDate(checkIn),
         'प्रस्थान तिथि': formatToDisplayDate(checkOut),
-        'अवधि': `${stayNights} रात्रि (${stayNights} दिन)`,
+        'अवधि': isHourly
+          ? `अल्पकालिक (${stayHours} घंटे: ${b.check_in_time || '10:00'}-${b.check_out_time || '14:00'})`
+          : `${stayNights} रात्रि (${stayNights} दिन)`,
         'अतिथि का नाम': b.guest_name,
         'मोबाइल नंबर': b.mobile_number,
         'संदर्भ': b.reference || '-',
         'आवंटित सूट': suits.join(', ') || 'Suit 1',
         'कमरों की संख्या': numRooms,
-        'दैनिक किराया (₹)': perRoomRent > 0 ? perRoomRent : 'नियमानुसार',
+        'दैनिक किराया (₹)': isHourly
+          ? (hourlyRate ? `₹${hourlyRate}/घंटा` : 'अल्पकालिक')
+          : (perRoomRent > 0 ? perRoomRent : 'नियमानुसार'),
         'कमरा किराया (₹)': totalRent > 0 ? totalRent : 0,
         'खान-पान संग्रह (₹)': foodAmount > 0 ? foodAmount : 0,
         'व्यय / खर्च (₹)': expenditure > 0 ? expenditure : 0,
@@ -105,7 +118,9 @@ export async function exportBookingsToExcel(
       'Dispatch No': dispatchNo,
       'Check-In Date': formatToDisplayDate(checkIn),
       'Check-Out Date': formatToDisplayDate(checkOut),
-      'Stay Duration': `${stayNights} Night(s)`,
+      'Stay Duration': isHourly
+        ? `Hourly (${stayHours} hrs: ${b.check_in_time || '10:00'}-${b.check_out_time || '14:00'})`
+        : `${stayNights} Night(s)`,
       'Guest Name': b.guest_name,
       'Mobile Number': b.mobile_number,
       'Reference': b.reference || '-',

@@ -14,6 +14,9 @@ import {
   extractCollectionNoteFromNotes,
   getBookingSuitsList,
   formatGuestDisplayName,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  extractHourlyRateFromNotes,
 } from '@/lib/bookingUtils';
 import { calculateStayNights, formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
 import {
@@ -29,6 +32,7 @@ import {
   Phone,
   FileText,
   TrendingDown,
+  Clock,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 
@@ -72,6 +76,9 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
   useEffect(() => {
     if (booking && isOpen) {
       // Determine existing rate
+      const isHourly = isHourlyBooking(booking);
+      const stayHours = booking.stay_hours || extractStayHoursFromNotes(booking.notes) || 1;
+      const hourlyRate = booking.hourly_rate || extractHourlyRateFromNotes(booking.notes) || 0;
       const metaRate = extractRatePerRoomFromNotes(booking.notes);
       const suitRate = Math.max(
         Number(booking.suit_1) || 0,
@@ -79,7 +86,10 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
         Number(booking.suit_3) || 0,
         Number(booking.suit_4) || 0
       );
-      const defaultRate = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(booking.total_amount) || 0);
+      let defaultRate = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(booking.total_amount) || 0);
+      if (isHourly && defaultRate === 0 && hourlyRate > 0) {
+        defaultRate = hourlyRate * stayHours;
+      }
       setRoomRentInput(defaultRate > 0 ? String(defaultRate) : '');
 
       // Existing food amount
@@ -114,6 +124,10 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
 
   if (!isOpen || !booking) return null;
 
+  const isHourly = isHourlyBooking(booking);
+  const stayHours = booking.stay_hours || extractStayHoursFromNotes(booking.notes) || 1;
+  const hourlyRate = booking.hourly_rate || extractHourlyRateFromNotes(booking.notes) || 0;
+
   const sortedDates = allGuestBookings.map((b) => b.booking_date).sort();
   const notesCin = extractCheckInDateFromNotes(booking.notes);
   const notesCout = extractCheckOutDateFromNotes(booking.notes);
@@ -142,7 +156,8 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
 
   // Live Math
   const parsedRent = Number(roomRentInput) || 0;
-  const totalRoomRent = parsedRent * numRooms * stayNights;
+  // For hourly stays, parsedRent is already the per-room rent for the stay (not multiplied by nights)
+  const totalRoomRent = isHourly ? (parsedRent * numRooms) : (parsedRent * numRooms * stayNights);
   const parsedFood = Number(foodAmountInput) || 0;
   const parsedExp = Number(expenditureInput) || 0;
   const grossCollection = totalRoomRent + parsedFood;
@@ -223,12 +238,18 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
               </div>
               <div className="text-right text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200 font-medium">
                 <div>
-                  {language === 'hi'
-                    ? `${formatToHindiDate(checkInDate)} से ${formatToHindiDate(checkOutDate)}`
-                    : `${formatToDisplayDate(checkInDate)} to ${formatToDisplayDate(checkOutDate)}`}
+                  {isHourly
+                    ? (language === 'hi' ? formatToHindiDate(checkInDate) : formatToDisplayDate(checkInDate))
+                    : (language === 'hi'
+                        ? `${formatToHindiDate(checkInDate)} से ${formatToHindiDate(checkOutDate)}`
+                        : `${formatToDisplayDate(checkInDate)} to ${formatToDisplayDate(checkOutDate)}`)}
                 </div>
                 <div className="font-bold text-slate-800 font-mono">
-                  {language === 'hi' ? `${stayNights} रात्रि / दिन` : `${stayNights} ${stayNights > 1 ? 'Nights' : 'Night'}`}
+                  {isHourly
+                    ? (language === 'hi'
+                        ? `अल्पकालिक (${booking.check_in_time || '10:00'} - ${booking.check_out_time || '14:00'} [${stayHours} घंटे])`
+                        : `Hourly (${booking.check_in_time || '10:00'} - ${booking.check_out_time || '14:00'} [${stayHours}h])`)
+                    : (language === 'hi' ? `${stayNights} रात्रि / दिन` : `${stayNights} ${stayNights > 1 ? 'Nights' : 'Night'}`)}
                 </div>
               </div>
             </div>
@@ -238,11 +259,19 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
               <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <IndianRupee className="w-3.5 h-3.5 text-amber-600" />
-                  <span>{language === 'hi' ? 'कमरा किराया (प्रति कमरा / दिन)' : 'Room Rent (Per Room / Day)'}</span>
+                  <span>
+                    {isHourly
+                      ? (language === 'hi' ? `कमरा शुल्क (${stayHours} घंटे स्टे / प्रति कमरा)` : `Room Charges (${stayHours}h stay / per room)`)
+                      : (language === 'hi' ? 'कमरा किराया (प्रति कमरा / दिन)' : 'Room Rent (Per Room / Day)')}
+                  </span>
                 </span>
                 {parsedRent > 0 && (
                   <span className="text-[11px] font-mono font-semibold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                    {numRooms} × ₹{parsedRent} × {stayNights} = ₹{totalRoomRent.toLocaleString('en-IN')}
+                    {isHourly
+                      ? (hourlyRate > 0 && parsedRent === hourlyRate * stayHours
+                          ? `${numRooms} × (₹${hourlyRate}/h × ${stayHours}h) = ₹${totalRoomRent.toLocaleString('en-IN')}`
+                          : `${numRooms} × ₹${parsedRent} = ₹${totalRoomRent.toLocaleString('en-IN')}`)
+                      : `${numRooms} × ₹${parsedRent} × ${stayNights} = ₹${totalRoomRent.toLocaleString('en-IN')}`}
                   </span>
                 )}
               </label>

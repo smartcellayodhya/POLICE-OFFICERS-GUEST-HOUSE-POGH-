@@ -11,6 +11,9 @@ import {
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
   formatGuestDisplayName,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  extractHourlyRateFromNotes,
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Share2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
@@ -68,6 +71,10 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const allGuestBookings = relatedBookings.length > 0 ? relatedBookings : [booking];
   const sortedDates = allGuestBookings.map((b) => b.booking_date).sort();
 
+  const isHourly = isHourlyBooking(booking);
+  const stayHours = extractStayHoursFromNotes(booking.notes) || (booking.stay_hours ? Number(booking.stay_hours) : 2);
+  const hourlyRate = extractHourlyRateFromNotes(booking.notes) || (booking.hourly_rate ? Number(booking.hourly_rate) : undefined);
+
   const notesCin = extractCheckInDateFromNotes(booking.notes);
   const notesCout = extractCheckOutDateFromNotes(booking.notes);
 
@@ -75,7 +82,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   let checkOutDate = notesCout || sortedDates[sortedDates.length - 1];
 
   // If there's only 1 booking record and no notesCout, default next-day checkout for overnight stays
-  if (!notesCout && sortedDates.length === 1) {
+  if (!isHourly && !notesCout && sortedDates.length === 1) {
     const nextDay = new Date(checkInDate + 'T00:00:00');
     nextDay.setDate(nextDay.getDate() + 1);
     checkOutDate = formatToISODate(nextDay);
@@ -85,7 +92,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
   const dCin = new Date(checkInDate + 'T00:00:00');
   const dCout = new Date(checkOutDate + 'T00:00:00');
   const diffDays = Math.round((dCout.getTime() - dCin.getTime()) / 86400000);
-  const totalDays = diffDays > 0 ? diffDays : 1;
+  const totalDays = isHourly ? 1 : (diffDays > 0 ? diffDays : 1);
 
   // Reference and dispatch number
   const bookingRef =
@@ -168,6 +175,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     meal_type_status: booking.meal_type_status || 'PAID',
     contact_person: contactPerson,
     dates: sortedDates,
+    booking_type: (isHourly ? 'HOURLY' : 'STANDARD') as 'STANDARD' | 'HOURLY',
+    stay_hours: stayHours,
+    hourly_rate: hourlyRate,
   };
 
   const handlePrint = () => {
@@ -394,7 +404,11 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                       className="w-[66%] px-3.5 text-slate-800"
                       style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
-                      {isSingleDay ? `दि० ${cinHindi} (01 दिवस)` : `दि० ${cinHindi} से ${coutHindi} तक (${totalDays > 9 ? totalDays : `0${totalDays}`} दिवस)`}
+                      {isHourly
+                        ? `दि० ${cinHindi} (समय ${checkInTime} से ${checkOutTime} तक)`
+                        : isSingleDay
+                        ? `दि० ${cinHindi} (01 दिवस)`
+                        : `दि० ${cinHindi} से ${coutHindi} तक (${totalDays > 9 ? totalDays : `0${totalDays}`} दिवस)`}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
@@ -436,7 +450,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                       className="w-[66%] px-3.5 text-slate-800"
                       style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
-                      {cinHindi} ({checkInTime}) / {coutHindi} ({checkOutTime})
+                      {isHourly
+                        ? `समय ${checkInTime} से ${checkOutTime} (दिनांक ${cinHindi})`
+                        : `${cinHindi} (${checkInTime}) / ${coutHindi} (${checkOutTime})`}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
@@ -444,13 +460,13 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                       className="w-[34%] px-3.5 font-semibold text-slate-700 border-r border-slate-200"
                       style={{ verticalAlign: 'middle', borderRightColor: '#e2e8f0', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
-                      कुल दिन
+                      {isHourly ? 'ठहराव की अवधि' : 'कुल दिन'}
                     </td>
                     <td
                       className="w-[66%] px-3.5 text-slate-800"
                       style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
-                      {totalDays} दिन ({totalDays} रात्रि)
+                      {isHourly ? `अल्पकालिक ठहराव (${stayHours} घंटे)` : `${totalDays} दिन (${totalDays} रात्रि)`}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">
@@ -475,13 +491,17 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                       className="w-[34%] px-3.5 font-semibold text-amber-900 border-r border-amber-300"
                       style={{ verticalAlign: 'middle', borderRightColor: '#fde68a', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
-                      प्रति रूम प्रति दिन किराया
+                      {isHourly
+                        ? (hourlyRate && hourlyRate > 0 ? 'किराया (प्रति कमरा / प्रति घंटा)' : 'कमरा किराया (अल्पकालिक)')
+                        : 'प्रति रूम प्रति दिन किराया'}
                     </td>
                     <td
                       className="w-[66%] px-3.5 text-amber-950 font-sans text-sm font-bold"
                       style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
-                      {rentDisplay}
+                      {isHourly
+                        ? (hourlyRate && hourlyRate > 0 ? `₹${hourlyRate}/- प्रति घंटा` : rentDisplay)
+                        : rentDisplay}
                     </td>
                   </tr>
                 </tbody>

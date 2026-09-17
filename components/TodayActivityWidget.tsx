@@ -10,6 +10,8 @@ import {
   isBookingOccupyingDate,
   isSuitAllocatedInBooking,
   extractGroupIdFromNotes,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import {
@@ -53,14 +55,17 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
     const seenGroups = new Set<string>();
     const uniqueBookings: Booking[] = [];
     active.forEach((b) => {
-      const ref = b.group_id || extractGroupIdFromNotes(b.notes) || b.id;
+      const isHourly = isHourlyBooking(b);
+      const ref = isHourly ? `hourly_${b.id}` : (b.group_id || extractGroupIdFromNotes(b.notes) || b.id);
       if (!seenGroups.has(ref)) {
         seenGroups.add(ref);
-        const exact = active.find(
-          (x) =>
-            (x.group_id || extractGroupIdFromNotes(x.notes) || x.id) === ref &&
-            x.booking_date === todayStr
-        );
+        const exact = isHourly
+          ? b
+          : active.find(
+              (x) =>
+                (x.group_id || extractGroupIdFromNotes(x.notes) || x.id) === ref &&
+                x.booking_date === todayStr
+            );
         uniqueBookings.push(exact || b);
       }
     });
@@ -68,18 +73,20 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
   }, [bookings, todayStr]);
 
   // Which rooms are occupied vs available today
-  const { occupiedSuits, availableSuits } = useMemo(() => {
-    const occupiedMap = new Map<string, Booking>();
+  const { suitBookingsMap, availableSuits } = useMemo(() => {
+    const map = new Map<string, Booking[]>();
     todayBookings.forEach((b) => {
       SUITS.forEach((s) => {
         if (isSuitAllocatedInBooking(b, s.id)) {
-          occupiedMap.set(s.id, b);
+          const current = map.get(s.id) || [];
+          current.push(b);
+          map.set(s.id, current);
         }
       });
     });
 
-    const avail = SUITS.filter((s) => !occupiedMap.has(s.id));
-    return { occupiedSuits: occupiedMap, availableSuits: avail };
+    const avail = SUITS.filter((s) => !map.has(s.id) || map.get(s.id)!.length === 0);
+    return { suitBookingsMap: map, availableSuits: avail };
   }, [todayBookings]);
 
   return (
@@ -127,6 +134,8 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
               });
               const isInHouse = b.status === 'CHECKED_IN';
               const cleanName = formatGuestDisplayName(b.guest_name);
+              const isHourly = isHourlyBooking(b);
+              const stayHours = extractStayHoursFromNotes(b.notes);
 
               return (
                 <div
@@ -135,11 +144,13 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                   className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 cursor-pointer hover:shadow-xs ${
                     isInHouse
                       ? 'bg-emerald-50/50 border-emerald-300'
+                      : isHourly
+                      ? 'bg-violet-50/40 border-violet-200 hover:border-violet-300'
                       : 'bg-slate-50/80 border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-bold text-slate-900 truncate">
                         {cleanName}
                       </span>
@@ -152,6 +163,14 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                       >
                         {isInHouse ? t('checkedIn') : t('confirmed')}
                       </span>
+                      {isHourly && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-300 flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5 text-violet-600" />
+                          <span>
+                            {b.check_in_time || '10:00'} - {b.check_out_time || '14:00'} ({stayHours || 2}h)
+                          </span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-2">
@@ -210,8 +229,9 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
 
           <div className="space-y-2">
             {SUITS.map((suit) => {
-              const booking = occupiedSuits.get(suit.id);
-              const isAvailable = !booking;
+              const suitBookings = suitBookingsMap.get(suit.id) || [];
+              const isAvailable = suitBookings.length === 0;
+              const allHourly = !isAvailable && suitBookings.every((b) => isHourlyBooking(b));
 
               return (
                 <div
@@ -219,6 +239,8 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                   className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
                     isAvailable
                       ? 'bg-emerald-50/40 border-emerald-200'
+                      : allHourly
+                      ? 'bg-violet-50/40 border-violet-200'
                       : 'bg-slate-50 border-slate-200'
                   }`}
                 >
@@ -240,9 +262,31 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
                         <span>{language === 'hi' ? 'उपलब्ध' : 'Available'}</span>
                       </span>
                     )
+                  ) : allHourly ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col items-end gap-0.5">
+                        {suitBookings.map((b) => (
+                          <span
+                            key={b.id}
+                            className="text-[10px] font-bold text-violet-800 bg-violet-100/70 px-1.5 py-0.5 rounded border border-violet-200 font-mono"
+                          >
+                            ⏱️ {b.check_in_time || '10:00'}-{b.check_out_time || '14:00'}
+                          </span>
+                        ))}
+                      </div>
+                      {isAdmin && onQuickBook && (
+                        <button
+                          onClick={() => onQuickBook(todayStr, suit.id)}
+                          className="px-1.5 py-1 rounded bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold transition shadow-2xs"
+                          title={language === 'hi' ? 'अन्य समय स्लॉट बुक करें' : 'Book another slot'}
+                        >
+                          + स्लॉट
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 truncate max-w-[110px]">
-                      {booking?.guest_name ? formatGuestDisplayName(booking.guest_name).split(' ')[1] || booking.guest_name : (language === 'hi' ? 'आरक्षित' : 'Reserved')}
+                      {suitBookings[0]?.guest_name ? formatGuestDisplayName(suitBookings[0].guest_name).split(' ')[1] || suitBookings[0].guest_name : (language === 'hi' ? 'आरक्षित' : 'Reserved')}
                     </span>
                   )}
                 </div>

@@ -9,7 +9,7 @@ import {
   formatToISODate,
   getDayOfWeekName,
 } from '@/lib/dateUtils';
-import { formatGuestDisplayName } from '@/lib/bookingUtils';
+import { formatGuestDisplayName, isHourlyBooking, extractStayHoursFromNotes } from '@/lib/bookingUtils';
 import {
   Calendar,
   ChevronLeft,
@@ -133,11 +133,17 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
 
       if (bSuits.length === 0) return;
 
-      const guestKey = `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`;
-      const existing = guestGroups.find((g) => {
-        const gKey = `${(g.primaryBooking.guest_name || '').trim().toLowerCase()}_${(g.primaryBooking.mobile_number || '').trim()}`;
-        return gKey === guestKey;
-      });
+      const isHourly = isHourlyBooking(b);
+      const guestKey = isHourly
+        ? `hourly_${b.id}`
+        : `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`;
+      const existing = isHourly
+        ? undefined
+        : guestGroups.find((g) => {
+            if (isHourlyBooking(g.primaryBooking)) return false;
+            const gKey = `${(g.primaryBooking.guest_name || '').trim().toLowerCase()}_${(g.primaryBooking.mobile_number || '').trim()}`;
+            return gKey === guestKey;
+          });
 
       if (existing) {
         bSuits.forEach((sid) => {
@@ -521,6 +527,15 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                                   {group.booking.mobile_number}
                                 </p>
                               )}
+                              {group.booking && isHourlyBooking(group.booking) && (
+                                <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300">
+                                  <Clock className="w-3 h-3 text-amber-700 shrink-0" />
+                                  <span>
+                                    {group.booking.check_in_time || '10:00'} - {group.booking.check_out_time || '14:00'}
+                                    {` (${group.booking.stay_hours || extractStayHoursFromNotes(group.booking.notes) || 2}h)`}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -529,20 +544,18 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                       {/* Bottom Row: Quick Book or View Letter Button */}
                       <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between">
                         {group.isAvailable ? (
-                          isPast ? (
-                            <span className="text-[10px] text-slate-400 font-semibold w-full text-center">
-                              {language === 'hi' ? 'बीती तारीख (केवल रिकॉर्ड)' : 'Past Date (Record only)'}
-                            </span>
-                          ) : isAdmin && onQuickBook ? (
+                          isAdmin && onQuickBook ? (
                             <div className="w-full flex items-center gap-1.5 flex-wrap">
                               {group.suitIds.length === 1 ? (
                                 <button
                                   type="button"
                                   onClick={() => onQuickBook(dateStr, group.suitIds[0])}
-                                  className="w-full flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-2xs active:scale-95"
+                                  className={`w-full flex items-center justify-center gap-1 py-1 px-2 rounded-lg text-white text-[11px] font-bold transition shadow-2xs active:scale-95 ${
+                                    isPast ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                                  }`}
                                 >
                                   <Plus className="w-3 h-3 stroke-[2.5]" />
-                                  <span>{language === 'hi' ? 'त्वरित बुकिंग' : 'Quick Book'}</span>
+                                  <span>{isPast ? (language === 'hi' ? '+ पुरानी बुकिंग' : '+ Past Book') : (language === 'hi' ? 'त्वरित बुकिंग' : 'Quick Book')}</span>
                                 </button>
                               ) : (
                                 group.suitIds.map((sid) => {
@@ -552,7 +565,9 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                                       key={sid}
                                       type="button"
                                       onClick={() => onQuickBook(dateStr, sid)}
-                                      className="flex-1 min-w-[75px] flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition shadow-2xs active:scale-95"
+                                      className={`flex-1 min-w-[75px] flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg text-white text-[10px] font-bold transition shadow-2xs active:scale-95 ${
+                                        isPast ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                                      }`}
                                     >
                                       <Plus className="w-2.5 h-2.5" />
                                       <span>{sObj?.name || sid}</span>
@@ -563,7 +578,9 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                             </div>
                           ) : (
                             <span className="text-[10px] text-emerald-600 font-semibold w-full text-center">
-                              {language === 'hi' ? 'आरक्षण हेतु खुला' : 'Open for booking'}
+                              {isPast
+                                ? (language === 'hi' ? 'बीती तारीख (केवल रिकॉर्ड)' : 'Past Date (Record only)')
+                                : (language === 'hi' ? 'आरक्षण हेतु खुला' : 'Open for booking')}
                             </span>
                           )
                         ) : (

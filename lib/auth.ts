@@ -120,7 +120,23 @@ export function getLoggedInUser(): AuthUser | null {
   return null;
 }
 
-export function setLoggedInUser(user: AuthUser | null) {
+const AUTH_TOKEN_KEY = 'pogh_auth_token';
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function setAuthToken(token: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  }
+}
+
+export function setLoggedInUser(user: AuthUser | null, token?: string) {
   if (typeof window === 'undefined') return;
   if (user) {
     const issuedAt = Date.now();
@@ -132,10 +148,24 @@ export function setLoggedInUser(user: AuthUser | null) {
     localStorage.setItem(AUTH_STORAGE_KEY_V2, JSON.stringify(session));
     localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
     localStorage.setItem('pogh_last_activity', Date.now().toString());
+    if (token) {
+      setAuthToken(token);
+    }
   } else {
     localStorage.removeItem(AUTH_STORAGE_KEY_V2);
     localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
     localStorage.removeItem('pogh_last_activity');
+    setAuthToken(null);
+  }
+}
+
+export function logoutUser() {
+  setLoggedInUser(null);
+  setAuthToken(null);
+  if (typeof window !== 'undefined') {
+    try {
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    } catch {}
   }
 }
 
@@ -231,10 +261,6 @@ export function authenticate(username: string, password: string): AuthUser | nul
     return authUser;
   }
   return null;
-}
-
-export function logoutUser() {
-  setLoggedInUser(null);
 }
 
 

@@ -13,6 +13,9 @@ import {
   extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  extractHourlyRateFromNotes,
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Receipt, CheckCircle2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
@@ -68,13 +71,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const allGuestBookings = relatedBookings.length > 0 ? relatedBookings : [booking];
   const sortedDates = allGuestBookings.map((b) => b.booking_date).sort();
 
+  const isHourly = isHourlyBooking(booking);
+  const stayHours = extractStayHoursFromNotes(booking.notes) || (booking.stay_hours ? Number(booking.stay_hours) : 2);
+  const hourlyRate = extractHourlyRateFromNotes(booking.notes) || (booking.hourly_rate ? Number(booking.hourly_rate) : undefined);
+
   const notesCin = extractCheckInDateFromNotes(booking.notes);
   const notesCout = extractCheckOutDateFromNotes(booking.notes);
 
   const checkInDate = notesCin || sortedDates[0];
   let checkOutDate = notesCout || sortedDates[sortedDates.length - 1];
 
-  if (!notesCout && sortedDates.length === 1) {
+  if (!isHourly && !notesCout && sortedDates.length === 1) {
     const nextDay = new Date(checkInDate + 'T00:00:00');
     nextDay.setDate(nextDay.getDate() + 1);
     checkOutDate = formatToISODate(nextDay);
@@ -83,7 +90,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const dCin = new Date(checkInDate + 'T00:00:00');
   const dCout = new Date(checkOutDate + 'T00:00:00');
   const diffDays = Math.round((dCout.getTime() - dCin.getTime()) / 86400000);
-  const totalDays = diffDays > 0 ? diffDays : 1;
+  const totalDays = isHourly ? 1 : (diffDays > 0 ? diffDays : 1);
 
   const bookingRef =
     booking.group_id ||
@@ -118,7 +125,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         : Number(booking.total_amount) || 0));
 
   const dailyTotalRent = singleRoomRent * numRooms;
-  const totalRentAmount = dailyTotalRent * totalDays;
+  let totalRentAmount = 0;
+  if (isHourly) {
+    if (hourlyRate && hourlyRate > 0) {
+      totalRentAmount = hourlyRate * stayHours * numRooms;
+    } else if (Number(booking.total_amount) > 0) {
+      totalRentAmount = Number(booking.total_amount);
+    } else {
+      totalRentAmount = singleRoomRent * numRooms;
+    }
+  } else {
+    totalRentAmount = dailyTotalRent * totalDays;
+  }
 
   const foodAmount = booking.food_amount !== undefined && Number(booking.food_amount) >= 0
     ? Number(booking.food_amount)
@@ -260,8 +278,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <p className="text-right"><span className="font-bold text-slate-700">आवंटित सूट:</span> <span className="font-bold text-blue-900">{suitsDisplay}</span></p>
               </div>
               <div className="grid grid-cols-2 pt-1 border-t border-slate-200">
-                <p><span className="font-bold text-slate-700">अवधि:</span> {checkInDate === checkOutDate ? cinHindi : `${cinHindi} से ${coutHindi}`}</p>
-                <p className="text-right"><span className="font-bold text-slate-700">कुल दिन:</span> <span className="font-bold">{totalDays} दिवस ({totalDays} रात्रि)</span></p>
+                <p>
+                  <span className="font-bold text-slate-700">अवधि:</span>{' '}
+                  {isHourly
+                    ? `${cinHindi} (समय ${checkInTime} से ${checkOutTime})`
+                    : checkInDate === checkOutDate ? cinHindi : `${cinHindi} से ${coutHindi}`}
+                </p>
+                <p className="text-right">
+                  <span className="font-bold text-slate-700">{isHourly ? 'प्रकार / समय:' : 'कुल दिन:'}</span>{' '}
+                  <span className="font-bold">
+                    {isHourly ? `अल्पकालिक ठहराव (${stayHours} घंटे)` : `${totalDays} दिवस (${totalDays} रात्रि)`}
+                  </span>
+                </p>
               </div>
             </div>
 
@@ -272,8 +300,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <tr className="bg-slate-800 text-white font-bold text-left">
                     <th className="p-2 border border-slate-300">क्र०</th>
                     <th className="p-2 border border-slate-300">मद / विवरण</th>
-                    <th className="p-2 border border-slate-300 text-center">दिन</th>
-                    <th className="p-2 border border-slate-300 text-right">दर (प्रति दिन)</th>
+                    <th className="p-2 border border-slate-300 text-center">{isHourly ? 'अवधि' : 'दिन'}</th>
+                    <th className="p-2 border border-slate-300 text-right">{isHourly ? 'दर' : 'दर (प्रति दिन)'}</th>
                     <th className="p-2 border border-slate-300 text-right">कुल धनराशि (₹)</th>
                   </tr>
                 </thead>
@@ -281,11 +309,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <tr>
                     <td className="p-2 border border-slate-300 text-center font-bold">1</td>
                     <td className="p-2 border border-slate-300">
-                      कमरा किराया: {suitsDisplay} ({numRooms} कमरा)
+                      कमरा किराया {isHourly ? '(अल्पकालिक)' : ''}: {suitsDisplay} ({numRooms} कमरा)
                     </td>
-                    <td className="p-2 border border-slate-300 text-center">{totalDays}</td>
+                    <td className="p-2 border border-slate-300 text-center font-bold">
+                      {isHourly ? `${stayHours} घंटे` : totalDays}
+                    </td>
                     <td className="p-2 border border-slate-300 text-right font-mono">
-                      {singleRoomRent > 0 ? (numRooms > 1 ? `₹${singleRoomRent} × ${numRooms} = ₹${dailyTotalRent}` : `₹${singleRoomRent}`) : 'As per applicable'}
+                      {isHourly ? (
+                        hourlyRate && hourlyRate > 0 ? (
+                          numRooms > 1
+                            ? `₹${hourlyRate}/घंटा × ${numRooms} कमरा`
+                            : `₹${hourlyRate}/घंटा`
+                        ) : (
+                          `₹${totalRentAmount} (फ्लैट दर)`
+                        )
+                      ) : (
+                        singleRoomRent > 0 ? (numRooms > 1 ? `₹${singleRoomRent} × ${numRooms} = ₹${dailyTotalRent}` : `₹${singleRoomRent}`) : 'As per applicable'
+                      )}
                     </td>
                     <td className="p-2 border border-slate-300 text-right font-bold font-mono">
                       {totalRentAmount > 0 ? `₹${totalRentAmount}` : 'As per applicable'}

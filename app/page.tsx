@@ -15,9 +15,18 @@ import {
   extractCheckOutDateFromNotes,
   cleanNotesText,
   encodeNotesWithMeta,
+  parseBookingMeta,
+  extractStayHoursFromNotes,
+  extractHourlyRateFromNotes,
 } from '@/lib/bookingUtils';
 import { AuthUser, getLoggedInUser, logoutUser } from '@/lib/auth';
 import { formatToISODate } from '@/lib/dateUtils';
+import {
+  apiFetchBookings,
+  apiCreateBookings,
+  apiUpdateBooking,
+  apiDeleteBooking,
+} from '@/lib/apiClient';
 
 import { LoginPage } from '@/components/LoginPage';
 import { Sidebar, NavTab } from '@/components/Sidebar';
@@ -250,6 +259,39 @@ function HomePageContent() {
   const fetchBookings = useCallback(async () => {
     const configured = isSupabaseConfigured();
 
+    const hydrateBooking = (b: any): Booking => {
+      const meta = parseBookingMeta(b.notes);
+      const isHr = b.booking_type === 'HOURLY' || meta.bookingType === 'HOURLY' || (meta.stayHours !== undefined && meta.stayHours > 0);
+      return {
+        ...b,
+        group_id: b.group_id || meta.groupId || extractGroupIdFromNotes(b.notes),
+        dispatch_no: b.dispatch_no || meta.dispatchNo || extractDispatchNoFromNotes(b.notes),
+        booking_type: isHr ? 'HOURLY' : (b.booking_type || 'STANDARD'),
+        stay_hours: b.stay_hours || meta.stayHours || extractStayHoursFromNotes(b.notes) || undefined,
+        hourly_rate: b.hourly_rate || meta.hourlyRate || extractHourlyRateFromNotes(b.notes) || undefined,
+        food_amount: b.food_amount !== undefined && Number(b.food_amount) > 0 ? Number(b.food_amount) : meta.foodAmount,
+        expenditure: b.expenditure !== undefined && Number(b.expenditure) > 0 ? Number(b.expenditure) : meta.expenditure,
+        payment_mode: b.payment_mode || meta.paymentMode,
+        collected_by: b.collected_by || meta.collectedBy,
+        check_in_time: b.check_in_time || meta.checkInTime || '12:00 PM',
+        check_out_time: b.check_out_time || meta.checkOutTime || '12:00 PM',
+      };
+    };
+
+    // 1. Try secure Server API first
+    try {
+      const serverRes = await apiFetchBookings();
+      if (serverRes.success && serverRes.bookings && Array.isArray(serverRes.bookings)) {
+        const hydrated = (serverRes.bookings as any[]).map(hydrateBooking);
+        setBookings(hydrated);
+        saveLocalBookings(hydrated);
+        setLoading(false);
+        return;
+      }
+    } catch (apiErr) {
+      console.warn('Server bookings API unavailable, trying direct connection / cache:', apiErr);
+    }
+
     if (configured) {
       const client = getSupabaseClient();
       if (client) {
@@ -260,20 +302,22 @@ function HomePageContent() {
             .order('booking_date', { ascending: false });
 
           if (!error && data) {
-            setBookings(data);
-            saveLocalBookings(data);
+            const hydrated = (data as any[]).map(hydrateBooking);
+            setBookings(hydrated);
+            saveLocalBookings(hydrated);
             setLoading(false);
             return;
           }
         } catch (err) {
-          console.error('Error fetching Supabase bookings:', err);
+          console.error('Error fetching Supabase bookings directly:', err);
         }
       }
     }
 
     // Fallback to local storage
     const local = getLocalBookings();
-    setBookings(local);
+    const hydratedLocal = (local || []).map(hydrateBooking);
+    setBookings(hydratedLocal);
     setLoading(false);
   }, []);
 
@@ -318,10 +362,27 @@ function HomePageContent() {
       return;
     }
 
+    // 1. Try secure Server API first
+    try {
+      const apiRes = await apiCreateBookings(newBookings);
+      if (apiRes.success) {
+        await fetchBookings();
+        if (newBookings.length > 0 && !newBookings[0].is_maintenance) {
+          setSelectedLetterBooking(newBookings[0]);
+          setIsLetterModalOpen(true);
+        }
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Server API create failed, trying direct/local fallback:', err.message);
+    }
+
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
       if (client) {
-        const payload = newBookings.map((b) => ({
+        const fullPayload = newBookings.map((b) => ({
+          group_id: b.group_id,
+          dispatch_no: b.dispatch_no,
           booking_date: b.booking_date,
           guest_name: b.guest_name,
           mobile_number: b.mobile_number,
@@ -333,12 +394,35 @@ function HomePageContent() {
           total_amount: b.total_amount,
           meal_type_status: b.meal_type_status,
           status: b.status || 'CONFIRMED',
+          check_in_time: b.check_in_time,
+          check_out_time: b.check_out_time,
+          booking_type: b.booking_type,
+          stay_hours: b.stay_hours,
+          hourly_rate: b.hourly_rate,
           notes: b.notes || '',
         }));
 
-        const { error } = await client.from('pogh_bookings').insert(payload);
+        let { error } = await client.from('pogh_bookings').insert(fullPayload);
         if (error) {
-          throw new Error(error.message);
+          console.warn('Full payload insert failed, falling back to core columns:', error.message);
+          const corePayload = newBookings.map((b) => ({
+            booking_date: b.booking_date,
+            guest_name: b.guest_name,
+            mobile_number: b.mobile_number,
+            reference: b.reference,
+            suit_1: b.suit_1,
+            suit_2: b.suit_2,
+            suit_3: b.suit_3,
+            suit_4: b.suit_4,
+            total_amount: b.total_amount,
+            meal_type_status: b.meal_type_status,
+            status: b.status || 'CONFIRMED',
+            notes: b.notes || '',
+          }));
+          const fallbackRes = await client.from('pogh_bookings').insert(corePayload);
+          if (fallbackRes.error) {
+            throw new Error(fallbackRes.error.message);
+          }
         }
         await fetchBookings();
 
@@ -373,6 +457,18 @@ function HomePageContent() {
     if (groupId) {
       const confirmDelete = window.confirm(`क्या आप इस बुकिंग समूह (${groupId}) के सभी दिवस रिकॉर्ड हटाना चाहते हैं?`);
       if (!confirmDelete) return;
+
+      // 1. Try secure Server API first
+      try {
+        const apiRes = await apiDeleteBooking({ groupId });
+        if (apiRes.success) {
+          logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
+          await fetchBookings();
+          return;
+        }
+      } catch (err: any) {
+        console.warn('Server delete failed, trying fallback:', err.message);
+      }
 
       if (isSupabaseConfigured()) {
         const client = getSupabaseClient();
@@ -416,6 +512,18 @@ function HomePageContent() {
     const confirmSingle = window.confirm('क्या आप यह बुकिंग रिकॉर्ड स्थायी रूप से हटाना चाहते हैं?');
     if (!confirmSingle) return;
 
+    // 1. Try secure Server API first
+    try {
+      const apiRes = await apiDeleteBooking({ id });
+      if (apiRes.success) {
+        logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}`);
+        await fetchBookings();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Server delete failed, trying fallback:', err.message);
+    }
+
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
       if (client) {
@@ -448,6 +556,23 @@ function HomePageContent() {
     }
 
     const refCode = booking.group_id || extractGroupIdFromNotes(booking.notes);
+
+    // 1. Try secure Server API first
+    try {
+      const apiRes = await apiUpdateBooking({
+        id: booking.id,
+        groupId: refCode,
+        updatedData: { status: newStatus },
+        applyToAll: updateAllDates && Boolean(refCode),
+      });
+      if (apiRes.success) {
+        logActivity('STATUS_CHANGE', `स्थिति बदली: ${newStatus}`, `अतिथि: ${booking.guest_name}, संदर्भ: ${refCode}`);
+        await fetchBookings();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Server status update failed, trying fallback:', err.message);
+    }
 
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
@@ -515,11 +640,6 @@ function HomePageContent() {
   // Quick booking from room matrix / 7-days forecast view
   const handleQuickBook = (dateStr: string, suitKey: string) => {
     if (currentUser?.role !== 'admin') return;
-    const today = formatToISODate(new Date());
-    if (dateStr < today) {
-      alert('बीती तारीख में नया आरक्षण नहीं किया जा सकता। कृपया आज या आगामी तारीख चुनें।');
-      return;
-    }
     setInitialBookingDate(dateStr);
     setInitialBookingSuit(suitKey);
     setIsBookingModalOpen(true);
@@ -546,6 +666,22 @@ function HomePageContent() {
     if (!selectedEditBooking) return;
     const refCode = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
 
+    // 1. Try secure Server API first
+    try {
+      const apiRes = await apiUpdateBooking({
+        id: selectedEditBooking.id,
+        groupId: refCode,
+        updatedData,
+        applyToAll: applyToAll && Boolean(refCode),
+      });
+      if (apiRes.success) {
+        await fetchBookings();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Server update failed, trying fallback:', err.message);
+    }
+
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
       if (client) {
@@ -556,25 +692,76 @@ function HomePageContent() {
 
           let error = null;
           if (targetIds.length > 0) {
-            const res = await client
+            let res = await client
               .from('pogh_bookings')
               .update(updatedData)
               .in('id', targetIds);
+            if (res.error) {
+              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
+              const corePayload: Record<string, any> = {
+                guest_name: updatedData.guest_name,
+                mobile_number: updatedData.mobile_number,
+                reference: updatedData.reference,
+                total_amount: updatedData.total_amount,
+                meal_type_status: updatedData.meal_type_status,
+                status: updatedData.status,
+                suit_1: updatedData.suit_1,
+                suit_2: updatedData.suit_2,
+                suit_3: updatedData.suit_3,
+                suit_4: updatedData.suit_4,
+                notes: updatedData.notes,
+              };
+              res = await client.from('pogh_bookings').update(corePayload).in('id', targetIds);
+            }
             error = res.error;
           } else {
-            const res = await client
+            let res = await client
               .from('pogh_bookings')
               .update(updatedData)
               .or(`notes.ilike.%"group_id":"${refCode}"%,notes.ilike.%"groupId":"${refCode}"%`);
+            if (res.error) {
+              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
+              const corePayload: Record<string, any> = {
+                guest_name: updatedData.guest_name,
+                mobile_number: updatedData.mobile_number,
+                reference: updatedData.reference,
+                total_amount: updatedData.total_amount,
+                meal_type_status: updatedData.meal_type_status,
+                status: updatedData.status,
+                suit_1: updatedData.suit_1,
+                suit_2: updatedData.suit_2,
+                suit_3: updatedData.suit_3,
+                suit_4: updatedData.suit_4,
+                notes: updatedData.notes,
+              };
+              res = await client.from('pogh_bookings').update(corePayload).or(`notes.ilike.%"group_id":"${refCode}"%,notes.ilike.%"groupId":"${refCode}"%`);
+            }
             error = res.error;
           }
           if (error) throw new Error(error.message);
         } else {
-          const { error } = await client
+          let { error } = await client
             .from('pogh_bookings')
             .update(updatedData)
             .eq('id', selectedEditBooking.id);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.warn('Full payload update failed, falling back to core columns:', error.message);
+            const corePayload: Record<string, any> = {
+              guest_name: updatedData.guest_name,
+              mobile_number: updatedData.mobile_number,
+              reference: updatedData.reference,
+              total_amount: updatedData.total_amount,
+              meal_type_status: updatedData.meal_type_status,
+              status: updatedData.status,
+              suit_1: updatedData.suit_1,
+              suit_2: updatedData.suit_2,
+              suit_3: updatedData.suit_3,
+              suit_4: updatedData.suit_4,
+              notes: updatedData.notes,
+            };
+            const fallbackRes = await client.from('pogh_bookings').update(corePayload).eq('id', selectedEditBooking.id);
+            if (fallbackRes.error) throw new Error(fallbackRes.error.message);
+          }
         }
         await fetchBookings();
         return;
@@ -629,6 +816,12 @@ function HomePageContent() {
 
     const collectorName = currentUser?.displayName || 'Guest House Operator';
 
+    // Safely preserve hourly stay metadata
+    const existingMeta = parseBookingMeta(targetBooking.notes);
+    const bType = (targetBooking.booking_type || existingMeta.bookingType) as ('STANDARD' | 'HOURLY') || 'STANDARD';
+    const sHours = targetBooking.stay_hours || existingMeta.stayHours;
+    const hRate = targetBooking.hourly_rate || existingMeta.hourlyRate;
+
     const finalNotes = encodeNotesWithMeta(
       currentNotesClean,
       targetRef,
@@ -640,7 +833,10 @@ function HomePageContent() {
       data.paymentMode,
       collectorName,
       data.remarks,
-      data.expenditure
+      data.expenditure,
+      bType,
+      sHours,
+      hRate
     );
 
     const roomsCount =
@@ -660,7 +856,30 @@ function HomePageContent() {
       suit_2: Number(targetBooking.suit_2) > 0 ? (data.roomRentPerDay > 0 ? data.roomRentPerDay : 1) : 0,
       suit_3: Number(targetBooking.suit_3) > 0 ? (data.roomRentPerDay > 0 ? data.roomRentPerDay : 1) : 0,
       suit_4: Number(targetBooking.suit_4) > 0 ? (data.roomRentPerDay > 0 ? data.roomRentPerDay : 1) : 0,
+      booking_type: bType,
+      stay_hours: sHours,
+      hourly_rate: hRate,
+      food_amount: data.foodAmount,
+      expenditure: data.expenditure,
+      payment_mode: data.paymentMode,
+      collected_by: collectorName,
     };
+
+    // 1. Try secure Server API first
+    try {
+      const apiRes = await apiUpdateBooking({
+        id: targetBooking.id,
+        groupId: targetRef,
+        updatedData: dbPayload,
+        applyToAll: Boolean(targetRef),
+      });
+      if (apiRes.success) {
+        await fetchBookings();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Server collection update failed, trying fallback:', err.message);
+    }
 
     if (isSupabaseConfigured()) {
       const client = getSupabaseClient();
@@ -672,25 +891,64 @@ function HomePageContent() {
 
           let error = null;
           if (targetIds.length > 0) {
-            const res = await client
+            let res = await client
               .from('pogh_bookings')
               .update(dbPayload)
               .in('id', targetIds);
+            if (res.error) {
+              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
+              const corePayload: Record<string, any> = {
+                total_amount: dbPayload.total_amount,
+                status: dbPayload.status,
+                notes: dbPayload.notes,
+                suit_1: dbPayload.suit_1,
+                suit_2: dbPayload.suit_2,
+                suit_3: dbPayload.suit_3,
+                suit_4: dbPayload.suit_4,
+              };
+              res = await client.from('pogh_bookings').update(corePayload).in('id', targetIds);
+            }
             error = res.error;
           } else {
-            const res = await client
+            let res = await client
               .from('pogh_bookings')
               .update(dbPayload)
               .or(`notes.ilike.%"group_id":"${targetRef}"%,notes.ilike.%"groupId":"${targetRef}"%`);
+            if (res.error) {
+              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
+              const corePayload: Record<string, any> = {
+                total_amount: dbPayload.total_amount,
+                status: dbPayload.status,
+                notes: dbPayload.notes,
+                suit_1: dbPayload.suit_1,
+                suit_2: dbPayload.suit_2,
+                suit_3: dbPayload.suit_3,
+                suit_4: dbPayload.suit_4,
+              };
+              res = await client.from('pogh_bookings').update(corePayload).or(`notes.ilike.%"group_id":"${targetRef}"%,notes.ilike.%"groupId":"${targetRef}"%`);
+            }
             error = res.error;
           }
           if (error) throw new Error(error.message);
         } else {
-          const { error } = await client
+          let { error } = await client
             .from('pogh_bookings')
             .update(dbPayload)
             .eq('id', targetBooking.id);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.warn('Full payload update failed, falling back to core columns:', error.message);
+            const corePayload: Record<string, any> = {
+              total_amount: dbPayload.total_amount,
+              status: dbPayload.status,
+              notes: dbPayload.notes,
+              suit_1: dbPayload.suit_1,
+              suit_2: dbPayload.suit_2,
+              suit_3: dbPayload.suit_3,
+              suit_4: dbPayload.suit_4,
+            };
+            const fallbackRes = await client.from('pogh_bookings').update(corePayload).eq('id', targetBooking.id);
+            if (fallbackRes.error) throw new Error(fallbackRes.error.message);
+          }
         }
         await fetchBookings();
       }
@@ -873,7 +1131,10 @@ function HomePageContent() {
           {/* Tab 1: Executive Dashboard (Stats + Room Matrix + Today's Active Guests Widget) */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              <StatsCards bookings={bookings} />
+              <StatsCards 
+                bookings={bookings} 
+                onOpenMonthlyCollection={() => handleSelectTab('monthly')}
+              />
               
               <RoomMatrix
                 bookings={bookings}

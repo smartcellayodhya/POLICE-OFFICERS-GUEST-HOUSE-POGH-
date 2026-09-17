@@ -14,6 +14,7 @@ import {
   calculateBookingExpenditure,
   calculateBookingNetCollection,
   extractPaymentModeFromNotes,
+  isHourlyBooking,
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import { printDocumentDirectly } from '@/lib/pdfUtils';
@@ -134,20 +135,22 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       monthMap[monthKey].totalRent += rent;
       monthMap[monthKey].totalFood += food;
       monthMap[monthKey].totalExpenditure += exp;
-      monthMap[monthKey].grandTotal += net;
       monthMap[monthKey].roomsCount += rooms;
     });
 
     // Convert to sorted array (latest month first)
     const list = Object.values(monthMap).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
-    // Also sort bookings within each month descending by date
+    // Compute consistent monthly net grand total: Math.max(0, (totalRent + totalFood) - totalExpenditure)
+    // and sort bookings within each month descending by date
     list.forEach((m) => {
+      const monthGross = m.totalRent + m.totalFood;
+      m.grandTotal = Math.max(0, monthGross - m.totalExpenditure);
       m.bookings.sort((a, b) => b.booking_date.localeCompare(a.booking_date));
     });
 
     return list;
-  }, [bookings]);
+  }, [bookings, isPrimaryForStayCharges]);
 
   // Overall KPIs
   const overallStats = useMemo(() => {
@@ -693,7 +696,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       handlePrint(m.monthKey);
                     }}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 border border-slate-200 text-xs font-bold transition shadow-2xs active:scale-95"
-                    title={`${monthHindi} की आधिकारिक स्टेटमेंट प्रिंट करें`}
+                    title={language === 'hi' ? `${monthHindi} की आधिकारिक स्टेटमेंट प्रिंट करें` : `Print official statement for ${monthEnglish}`}
                   >
                     <Printer className="w-3.5 h-3.5 text-slate-600" />
                     <span className="hidden xs:inline sm:inline">{language === 'hi' ? 'प्रिंट' : 'Print'}</span>
@@ -786,7 +789,12 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                               className="hover:bg-amber-50/50 transition cursor-pointer group"
                             >
                               <td className="py-3 px-3.5 font-semibold text-slate-900 whitespace-nowrap">
-                                {b.booking_date}
+                                <div>{b.booking_date}</div>
+                                {isHourlyBooking(b) && (
+                                  <div className="text-[10px] text-amber-800 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-0.5 inline-block">
+                                    {b.check_in_time || '10:00'} - {b.check_out_time || '14:00'} ({b.stay_hours || 2}h)
+                                  </div>
+                                )}
                               </td>
                               <td className="py-3 px-2.5 font-bold text-slate-600 whitespace-nowrap">
                                 {dispatchNo !== '-' ? `#${dispatchNo}` : '-'}

@@ -15,6 +15,9 @@ import {
   extractCollectedByFromNotes,
   formatGuestDisplayName,
   calculateBookingRent,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  extractHourlyRateFromNotes,
 } from '@/lib/bookingUtils';
 import { exportBookingsToExcel } from '@/lib/excel';
 import { REFERENCES, SUITS } from '@/lib/constants';
@@ -79,6 +82,9 @@ interface GroupedStay {
   status: BookingStatus;
   notes: string;
   dispatchNo: string;
+  isHourly: boolean;
+  stayHours?: number;
+  hourlyRate?: number;
 }
 
 export const BookingsTable: React.FC<BookingsTableProps> = ({
@@ -95,6 +101,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   const { language, t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [stayTypeFilter, setStayTypeFilter] = useState<'ALL' | 'STANDARD' | 'HOURLY'>('ALL');
   const [referenceFilter, setReferenceFilter] = useState('ALL');
   const [suitFilter, setSuitFilter] = useState('ALL');
   const [fromDate, setFromDate] = useState('');
@@ -201,6 +208,10 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         overallStatus = 'CANCELLED';
       }
 
+      const isHourly = isHourlyBooking(primary);
+      const stayHours = extractStayHoursFromNotes(primary.notes) || (primary.stay_hours ? Number(primary.stay_hours) : undefined);
+      const hourlyRate = extractHourlyRateFromNotes(primary.notes) || (primary.hourly_rate ? Number(primary.hourly_rate) : undefined);
+
       result.push({
         id: primary.id,
         groupId: gId,
@@ -224,6 +235,9 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         status: overallStatus,
         notes: primary.notes || '',
         dispatchNo: dispNo,
+        isHourly,
+        stayHours,
+        hourlyRate,
       });
     });
 
@@ -232,9 +246,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     return result;
   }, [bookings]);
 
-  // 2. Filter grouped stays by search term, status, reference, suit, and date range
+  // 2. Filter grouped stays by search term, status, stay type, reference, suit, and date range
   const filteredStays = useMemo(() => {
     return groupedStays.filter((stay) => {
+      // Stay type filter
+      if (stayTypeFilter === 'HOURLY' && !stay.isHourly) return false;
+      if (stayTypeFilter === 'STANDARD' && stay.isHourly) return false;
+
       // Status filter
       if (statusFilter !== 'ALL') {
         if (stay.status !== statusFilter) return false;
@@ -269,7 +287,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         (stay.checkOutDate || '').includes(q)
       );
     });
-  }, [groupedStays, deferredSearch, statusFilter, referenceFilter, suitFilter, fromDate, toDate]);
+  }, [groupedStays, deferredSearch, statusFilter, stayTypeFilter, referenceFilter, suitFilter, fromDate, toDate]);
 
   const setThisMonth = () => {
     const now = new Date();
@@ -295,6 +313,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     setToDate('');
     setSearchTerm('');
     setStatusFilter('ALL');
+    setStayTypeFilter('ALL');
     setReferenceFilter('ALL');
     setSuitFilter('ALL');
   };
@@ -459,6 +478,20 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             </select>
           </div>
 
+          {/* Stay Type Selector */}
+          <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+            <Clock className="w-3 h-3 text-slate-400" />
+            <select
+              value={stayTypeFilter}
+              onChange={(e) => setStayTypeFilter(e.target.value as any)}
+              className="outline-none text-slate-800 text-xs bg-transparent cursor-pointer font-medium"
+            >
+              <option value="ALL">{language === 'hi' ? 'सभी प्रकार' : 'All Types'}</option>
+              <option value="STANDARD">{language === 'hi' ? 'पूर्ण दिवस / रात्रि' : 'Full Day / Overnight'}</option>
+              <option value="HOURLY">{language === 'hi' ? 'घंटे अनुसार (अल्पकालिक)' : 'Hourly (Short Stay)'}</option>
+            </select>
+          </div>
+
           {/* Quick Month Buttons */}
           <button
             onClick={setThisMonth}
@@ -473,7 +506,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
             {language === 'hi' ? 'गत माह' : 'Last Month'}
           </button>
 
-          {(fromDate || toDate || searchTerm || referenceFilter !== 'ALL' || suitFilter !== 'ALL' || statusFilter !== 'ALL') && (
+          {(fromDate || toDate || searchTerm || referenceFilter !== 'ALL' || suitFilter !== 'ALL' || statusFilter !== 'ALL' || stayTypeFilter !== 'ALL') && (
             <button
               onClick={clearFilters}
               className="px-2 py-1 text-rose-600 hover:text-rose-700 font-bold text-[11px] hover:underline cursor-pointer"
@@ -534,15 +567,26 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       </div>
 
                       {/* Stay Duration Display */}
-                      <span className="text-[11px] sm:text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
-                        {stay.checkInDate === stay.checkOutDate
-                          ? (language === 'hi'
-                              ? `${formatToHindiDate(stay.checkInDate)} (1 दिन)`
-                              : `${formatToDisplayDate(stay.checkInDate)} (1 Day)`)
-                          : (language === 'hi'
-                              ? `${formatToHindiDate(stay.checkInDate)} से ${formatToHindiDate(stay.checkOutDate)} (${stay.stayNights} रात्रि)`
-                              : `${formatToDisplayDate(stay.checkInDate)} to ${formatToDisplayDate(stay.checkOutDate)} (${stay.stayNights} ${stay.stayNights > 1 ? 'Nights' : 'Night'})`)}
-                      </span>
+                      {stay.isHourly ? (
+                        <span className="text-[11px] sm:text-xs font-bold text-violet-900 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200 flex items-center gap-1 shrink-0">
+                          <Clock className="w-3 h-3 text-violet-600 shrink-0" />
+                          <span>
+                            {language === 'hi' ? formatToHindiDate(stay.checkInDate) : formatToDisplayDate(stay.checkInDate)}
+                            {' '}• {stay.primaryBooking.check_in_time || '10:00'} - {stay.primaryBooking.check_out_time || '14:00'}
+                            {' '}({language === 'hi' ? `${stay.stayHours || 2} घंटे` : `${stay.stayHours || 2}h`})
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] sm:text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
+                          {stay.checkInDate === stay.checkOutDate
+                            ? (language === 'hi'
+                                ? `${formatToHindiDate(stay.checkInDate)} (1 दिन)`
+                                : `${formatToDisplayDate(stay.checkInDate)} (1 Day)`)
+                            : (language === 'hi'
+                                ? `${formatToHindiDate(stay.checkInDate)} से ${formatToHindiDate(stay.checkOutDate)} (${stay.stayNights} रात्रि)`
+                                : `${formatToDisplayDate(stay.checkInDate)} to ${formatToDisplayDate(stay.checkOutDate)} (${stay.stayNights} ${stay.stayNights > 1 ? 'Nights' : 'Night'})`)}
+                        </span>
+                      )}
                     </div>
 
                     {/* Guest Name, Mobile & Status Pill */}
@@ -564,26 +608,130 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         </div>
                       </div>
 
-                      {/* Status Pill */}
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold shrink-0 shadow-2xs ${
-                          isCancelled
-                            ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      {/* Status Pill & Top-Right 3-Dots Action Menu */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold shrink-0 shadow-2xs ${
+                            isCancelled
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : isInHouse
+                              ? 'bg-emerald-600 text-white'
+                              : isCheckedOut
+                              ? 'bg-slate-500 text-white'
+                              : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}
+                        >
+                          {isCancelled
+                            ? t('cancelled')
                             : isInHouse
-                            ? 'bg-emerald-600 text-white'
+                            ? t('checkedIn')
                             : isCheckedOut
-                            ? 'bg-slate-500 text-white'
-                            : 'bg-amber-100 text-amber-900 border border-amber-300'
-                        }`}
-                      >
-                        {isCancelled
-                          ? t('cancelled')
-                          : isInHouse
-                          ? t('checkedIn')
-                          : isCheckedOut
-                          ? t('checkedOut')
-                          : t('confirmed')}
-                      </span>
+                            ? t('checkedOut')
+                            : t('confirmed')}
+                        </span>
+
+                        {/* Top-Right 3-Dots Dropdown Menu (Clean, Non-Duplicate Actions) */}
+                        <div className="relative card-action-menu">
+                          <button
+                            type="button"
+                            onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
+                            className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-200 flex items-center justify-center transition cursor-pointer"
+                            title={language === 'hi' ? 'अधिक विकल्प' : 'More Options'}
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {isMenuOpen && (
+                            <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                              {/* Receipt */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  onOpenReceipt(stay.primaryBooking);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition text-left cursor-pointer"
+                              >
+                                <Receipt className="w-3.5 h-3.5 text-amber-600" />
+                                <span>{language === 'hi' ? 'किराया रसीद' : 'Payment Receipt'}</span>
+                              </button>
+
+                              {/* WhatsApp Share */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  const customIncharge = typeof window !== 'undefined' ? localStorage.getItem('pogh_contact_person') : null;
+                                  const url = getWhatsAppUrl({
+                                    guest_name: stay.guestName,
+                                    mobile_number: stay.mobileNumber,
+                                    reference: stay.reference,
+                                    booking_ref_no: stay.groupId,
+                                    dispatch_no: stay.dispatchNo,
+                                    check_in_date: stay.checkInDate,
+                                    check_out_date: stay.checkOutDate,
+                                    check_in_time: stay.primaryBooking.check_in_time || '12:00 PM',
+                                    check_out_time: stay.primaryBooking.check_out_time || '12:00 PM',
+                                    suits: stay.suits,
+                                    total_days: stay.stayNights,
+                                    total_amount: stay.totalCollection,
+                                    meal_type_status: stay.mealStatus,
+                                    contact_person: customIncharge || undefined,
+                                    dates: stay.allBookings.map((b) => b.booking_date),
+                                  });
+                                  window.open(url, '_blank');
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition text-left cursor-pointer"
+                              >
+                                <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>{language === 'hi' ? 'व्हाट्सएप भेजें' : 'Share WhatsApp'}</span>
+                              </button>
+
+                              {/* Cancel / Restore (Admin & Operator) */}
+                              {(isAdmin || isOperator) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleCancelClick(stay);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition text-left cursor-pointer"
+                                >
+                                  {isCancelled ? (
+                                    <>
+                                      <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>{language === 'hi' ? 'बुकिंग बहाल करें' : 'Restore Booking'}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-3.5 h-3.5 text-amber-600" />
+                                      <span>{language === 'hi' ? 'बुकिंग निरस्त करें' : 'Cancel Booking'}</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+
+                              {/* Delete Record (Admin Only) */}
+                              {isAdmin && (
+                                <>
+                                  <div className="my-1 border-t border-slate-100" />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      handleDeleteClick(stay);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition text-left cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                    <span>{language === 'hi' ? 'रिकॉर्ड हटाएं' : 'Delete Stay'}</span>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Allocated Suits Badges */}
@@ -635,12 +783,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                       )}
                     </div>
 
-                    {/* Standardized Responsive Action Strip */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto relative card-action-menu shrink-0">
+                    {/* Standardized Responsive Action Strip: 100% Inside Card, Zero Overflow */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
                       
                       {/* 1. Quick Status / Lifecycle Action (Full width on mobile for easy tap, auto on desktop) */}
                       {(isAdmin || isOperator) && (
                         <button
+                          type="button"
                           onClick={() => handleLifecycleClick(stay)}
                           className={`h-9 px-3.5 rounded-lg text-xs sm:text-[13px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs whitespace-nowrap w-full sm:w-auto ${
                             isInHouse
@@ -671,146 +820,49 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                         </button>
                       )}
 
-                      {/* Secondary Actions Row: Symmetrically distributed across width on mobile, inline on desktop */}
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        {/* 2. Collection Action */}
+                      {/* 2. Secondary Actions Row: Clean 3-column equal grid on Mobile, Inline flex on Desktop */}
+                      <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        {/* Collection Action */}
                         {(isAdmin || isOperator) && onOpenRecordCollection && (
                           <button
+                            type="button"
                             onClick={() => onOpenRecordCollection(stay.primaryBooking)}
-                            className="flex-1 sm:flex-initial h-9 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs sm:text-[13px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                            className="h-9 px-1.5 sm:px-3 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
                             title={language === 'hi' ? 'किराया व भोजन कलेक्शन दर्ज करें' : 'Record Collection'}
                           >
-                            <IndianRupee className="w-4 h-4 text-amber-700" />
+                            <IndianRupee className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                             <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
                           </button>
                         )}
 
-                        {/* 3. Allotment Letter */}
+                        {/* Allotment Letter */}
                         <button
+                          type="button"
                           onClick={() => onOpenLetter(stay.primaryBooking)}
-                          className="flex-1 sm:flex-initial h-9 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs sm:text-[13px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                          className="h-9 px-1.5 sm:px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
                           title={language === 'hi' ? 'आवंटन पत्र देखें' : 'View Letter'}
                         >
-                          <FileText className="w-4 h-4 text-slate-500" />
+                          <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                           <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
                         </button>
 
-                        {/* 4. More Options Dropdown (⋮) */}
-                        <div className="relative shrink-0">
+                        {/* Edit / Extend Button (Admin Only) */}
+                        {isAdmin && (
                           <button
-                            onClick={() => setActiveMenuId(isMenuOpen ? null : stay.id)}
-                            className="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer"
-                            title={language === 'hi' ? 'अधिक विकल्प' : 'More Options'}
+                            type="button"
+                            onClick={() => onEditBooking(stay.primaryBooking)}
+                            className="h-9 px-1.5 sm:px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
+                            title={language === 'hi' ? 'विवरण संशोधित करें अथवा समय बढ़ाएं' : 'Edit Booking or Extend Time'}
                           >
-                            <MoreVertical className="w-4 h-4" />
+                            <Edit3 className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                            <span>{stay.isHourly ? (language === 'hi' ? 'समय बढ़ाएं' : 'Extend') : (language === 'hi' ? 'संशोधित' : 'Edit')}</span>
                           </button>
-
-                          {isMenuOpen && (
-                            <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                            
-                            {/* Receipt */}
-                            <button
-                              onClick={() => {
-                                setActiveMenuId(null);
-                                onOpenReceipt(stay.primaryBooking);
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition text-left cursor-pointer"
-                            >
-                              <Receipt className="w-3.5 h-3.5 text-amber-600" />
-                              <span>{language === 'hi' ? 'किराया रसीद' : 'Payment Receipt'}</span>
-                            </button>
-
-                            {/* WhatsApp Share */}
-                            <button
-                              onClick={() => {
-                                setActiveMenuId(null);
-                                const customIncharge = typeof window !== 'undefined' ? localStorage.getItem('pogh_contact_person') : null;
-                                const url = getWhatsAppUrl({
-                                  guest_name: stay.guestName,
-                                  mobile_number: stay.mobileNumber,
-                                  reference: stay.reference,
-                                  booking_ref_no: stay.groupId,
-                                  dispatch_no: stay.dispatchNo,
-                                  check_in_date: stay.checkInDate,
-                                  check_out_date: stay.checkOutDate,
-                                  check_in_time: stay.primaryBooking.check_in_time || '12:00 PM',
-                                  check_out_time: stay.primaryBooking.check_out_time || '12:00 PM',
-                                  suits: stay.suits,
-                                  total_days: stay.stayNights,
-                                  total_amount: stay.totalCollection,
-                                  meal_type_status: stay.mealStatus,
-                                  contact_person: customIncharge || undefined,
-                                  dates: stay.allBookings.map((b) => b.booking_date),
-                                });
-                                window.open(url, '_blank');
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition text-left cursor-pointer"
-                            >
-                              <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>{language === 'hi' ? 'व्हाट्सएप भेजें' : 'Share WhatsApp'}</span>
-                            </button>
-
-                            {/* Cancel / Restore (Admin & Operator) */}
-                            {(isAdmin || isOperator) && (
-                              <button
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  handleCancelClick(stay);
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition text-left cursor-pointer"
-                              >
-                                {isCancelled ? (
-                                  <>
-                                    <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span>{language === 'hi' ? 'बुकिंग बहाल करें' : 'Restore Booking'}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <XCircle className="w-3.5 h-3.5 text-amber-600" />
-                                    <span>{language === 'hi' ? 'बुकिंग निरस्त करें' : 'Cancel Booking'}</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
-
-                            {isAdmin && (
-                              <>
-                                <div className="my-1 border-t border-slate-100" />
-
-                                {/* Edit Booking */}
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    onEditBooking(stay.primaryBooking);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition text-left cursor-pointer"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5 text-slate-600" />
-                                  <span>{language === 'hi' ? 'विवरण संशोधित करें' : 'Edit Booking'}</span>
-                                </button>
-
-                                {/* Delete Record */}
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handleDeleteClick(stay);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition text-left cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                  <span>{language === 'hi' ? 'रिकॉर्ड हटाएं' : 'Delete Stay'}</span>
-                                </button>
-                              </>
-                            )}
-
-                          </div>
                         )}
                       </div>
                     </div>
 
                   </div>
                 </div>
-              </div>
               );
             })}
           </div>

@@ -6,6 +6,8 @@
 -- 1. Create Bookings Table
 CREATE TABLE IF NOT EXISTS public.pogh_bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id TEXT,
+    dispatch_no TEXT,
     booking_date DATE NOT NULL,
     guest_name TEXT NOT NULL,
     mobile_number TEXT NOT NULL,
@@ -16,7 +18,17 @@ CREATE TABLE IF NOT EXISTS public.pogh_bookings (
     suit_4 NUMERIC(10, 2) DEFAULT 0.00,
     total_amount NUMERIC(10, 2) DEFAULT 0.00,
     meal_type_status TEXT NOT NULL DEFAULT 'PAID', -- 'PAID', 'FREE', 'PENDING'
-    status TEXT NOT NULL DEFAULT 'CONFIRMED',      -- 'CONFIRMED', 'CANCELLED'
+    status TEXT NOT NULL DEFAULT 'CONFIRMED',      -- 'CONFIRMED', 'CANCELLED', 'CHECKED_IN', 'CHECKED_OUT'
+    check_in_time TEXT DEFAULT '12:00 PM',
+    check_out_time TEXT DEFAULT '12:00 PM',
+    booking_type TEXT DEFAULT 'STANDARD',         -- 'STANDARD', 'HOURLY'
+    stay_hours NUMERIC(6, 2) DEFAULT 0,
+    hourly_rate NUMERIC(10, 2) DEFAULT 0,
+    food_amount NUMERIC(10, 2) DEFAULT 0.00,
+    expenditure NUMERIC(10, 2) DEFAULT 0.00,
+    payment_mode TEXT DEFAULT 'CASH',             -- 'CASH', 'UPI', 'CARD'
+    collected_by TEXT,
+    is_maintenance BOOLEAN DEFAULT FALSE,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('Asia/Kolkata', now()),
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('Asia/Kolkata', now())
@@ -56,8 +68,36 @@ ALTER TABLE public.pogh_bookings
     ADD COLUMN IF NOT EXISTS dispatch_no TEXT,
     ADD COLUMN IF NOT EXISTS check_in_time TEXT DEFAULT '12:00 PM',
     ADD COLUMN IF NOT EXISTS check_out_time TEXT DEFAULT '12:00 PM',
-    ADD COLUMN IF NOT EXISTS is_maintenance BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS is_maintenance BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS booking_type TEXT DEFAULT 'STANDARD',
+    ADD COLUMN IF NOT EXISTS stay_hours NUMERIC(6, 2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC(10, 2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS food_amount NUMERIC(10, 2) DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS expenditure NUMERIC(10, 2) DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS payment_mode TEXT DEFAULT 'CASH',
+    ADD COLUMN IF NOT EXISTS collected_by TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_pogh_group_id ON public.pogh_bookings (group_id);
 CREATE INDEX IF NOT EXISTS idx_pogh_reference ON public.pogh_bookings (reference);
+
+-- ====================================================================
+-- 8. PRODUCTION HARDENING / RLS LOCKDOWN (Execute in Supabase SQL Editor)
+-- Running this block prevents any internet visitor from modifying or deleting
+-- bookings directly via anon key. Mutations can only occur via the secure Next.js server!
+-- ====================================================================
+-- Drop the wide-open public full access policy
+DROP POLICY IF EXISTS "Allow public full access" ON public.pogh_bookings;
+
+-- Allow public read-only (enables live dashboards & realtime subscription across devices)
+CREATE POLICY "Allow public read-only" ON public.pogh_bookings
+    FOR SELECT
+    USING (true);
+
+-- Allow full access only to the backend service role (Next.js server API)
+CREATE POLICY "Allow service role full access" ON public.pogh_bookings
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
 

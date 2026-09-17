@@ -9,8 +9,11 @@ import {
   generateDispatchNumber,
   encodeNotesWithMeta,
   findConflictingBooking,
+  parseTimeToMinutes,
+  formatMinutesToTime,
+  calculateStayHours,
 } from '@/lib/bookingUtils';
-import { X, Calendar, User, Phone, Tag, Utensils, AlertTriangle, CheckCircle2, Hash, Clock, Wrench, Lock } from 'lucide-react';
+import { X, Calendar, User, Phone, Tag, Utensils, AlertTriangle, CheckCircle2, Hash, Clock, Wrench, Lock, Timer, IndianRupee, History } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
 
@@ -45,6 +48,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return formatToISODate(d);
   };
 
+  // Stay Type: Standard Overnight vs Hourly / Short Stay
+  const [stayType, setStayType] = useState<'STANDARD' | 'HOURLY'>('STANDARD');
+  const [hourlyHours, setHourlyHours] = useState<number>(4);
+  const [hourlyRate, setHourlyRate] = useState<string>('');
+
   const [checkInDate, setCheckInDate] = useState(initialDate || today);
   const [checkOutDate, setCheckOutDate] = useState(() => getNextDayISO(initialDate || today));
   
@@ -66,10 +74,39 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [autoRef, setAutoRef] = useState('');
   const [autoDispatch, setAutoDispatch] = useState('');
 
+  const handleSelectPresetHours = (hrs: number) => {
+    setHourlyHours(hrs);
+    const inMin = parseTimeToMinutes(checkInTime) ?? 600; // default 10:00 AM
+    const outMin = inMin + hrs * 60;
+    setCheckOutTime(formatMinutesToTime(outMin));
+  };
+
+  const handleCheckInTimeChange = (newVal: string) => {
+    setCheckInTime(newVal);
+    if (stayType === 'HOURLY') {
+      const inMin = parseTimeToMinutes(newVal);
+      if (inMin !== null) {
+        const outMin = inMin + hourlyHours * 60;
+        setCheckOutTime(formatMinutesToTime(outMin));
+      }
+    }
+  };
+
+  const handleCheckOutTimeChange = (newVal: string) => {
+    setCheckOutTime(newVal);
+    if (stayType === 'HOURLY') {
+      const hrs = calculateStayHours(checkInTime, newVal);
+      if (hrs > 0) setHourlyHours(hrs);
+    }
+  };
+
   const resetForm = useCallback(() => {
     setGuestName('');
     setMobileNumber('');
     setReference('SSP SIR');
+    setStayType('STANDARD');
+    setHourlyHours(4);
+    setHourlyRate('');
     const baseDate = initialDate || formatToISODate(new Date());
     setCheckInDate(baseDate);
     const d = new Date(baseDate + (baseDate.length === 10 ? 'T00:00:00' : ''));
@@ -139,28 +176,37 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const bookingDates = getStayDates(checkInDate, checkOutDate);
-  const totalDays = calculateStayNights(checkInDate, checkOutDate);
+  const bookingDates = stayType === 'HOURLY' ? [checkInDate] : getStayDates(checkInDate, checkOutDate);
+  const totalDays = stayType === 'HOURLY' ? 1 : calculateStayNights(checkInDate, checkOutDate);
 
-  // Check real-time availability of each suit for the selected date range
+  // Check real-time availability of each suit for the selected date range and time slot
   const getSuitAvailability = useCallback(
     (suitId: string) => {
-      const dates = getStayDates(checkInDate, checkOutDate);
-      const res = findConflictingBooking(existingBookings, suitId, dates);
+      const dates = stayType === 'HOURLY' ? [checkInDate] : getStayDates(checkInDate, checkOutDate);
+      const res = findConflictingBooking(
+        existingBookings,
+        suitId,
+        dates,
+        undefined,
+        checkInTime,
+        checkOutTime,
+        stayType === 'HOURLY'
+      );
       if (res.isBooked && res.booking) {
         return {
           isBooked: true,
           date: res.conflictingDate || dates[0] || checkInDate,
+          time: res.conflictingTime,
           guestName: res.guestName || res.booking.guest_name,
           isMaintenance: !!res.isMaintenance,
         };
       }
-      return { isBooked: false, date: '', guestName: '', isMaintenance: false };
+      return { isBooked: false, date: '', time: '', guestName: '', isMaintenance: false };
     },
-    [checkInDate, checkOutDate, existingBookings]
+    [checkInDate, checkOutDate, existingBookings, stayType, checkInTime, checkOutTime]
   );
 
-  // Automatically uncheck any suit that becomes booked if the user changes the dates
+  // Automatically uncheck any suit that becomes booked if the user changes the dates or times
   useEffect(() => {
     setSelectedSuits((prev) => {
       let changed = false;
@@ -182,12 +228,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     const conflictsList: string[] = [];
     SUITS.forEach((s) => {
       if (selectedSuits[s.id]) {
-        const conflict = findConflictingBooking(existingBookings, s.id, bookingDates);
+        const conflict = findConflictingBooking(
+          existingBookings,
+          s.id,
+          bookingDates,
+          undefined,
+          checkInTime,
+          checkOutTime,
+          stayType === 'HOURLY'
+        );
         if (conflict.isBooked && conflict.booking) {
+          const timeDetail = conflict.conflictingTime ? ` (समय: ${conflict.conflictingTime})` : '';
           conflictsList.push(
             language === 'hi'
-              ? `${s.name} दिनांक ${formatToDisplayDate(conflict.conflictingDate || '')} को ${conflict.guestName || conflict.booking.guest_name} के लिए पहले से आरक्षित है।`
-              : `${s.name} is already booked on ${formatToDisplayDate(conflict.conflictingDate || '')} for ${conflict.guestName || conflict.booking.guest_name}.`
+              ? `${s.name} दिनांक ${formatToDisplayDate(conflict.conflictingDate || '')}${timeDetail} को ${conflict.guestName || conflict.booking.guest_name} के लिए पहले से आरक्षित है।`
+              : `${s.name} is already booked on ${formatToDisplayDate(conflict.conflictingDate || '')}${timeDetail} for ${conflict.guestName || conflict.booking.guest_name}.`
           );
         }
       }
@@ -221,9 +276,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       return;
     }
 
-    if (checkOutDate <= checkInDate) {
-      alert(language === 'hi' ? 'प्रस्थान तिथि (Check-out Date) आगमन तिथि से अगले दिन की होनी चाहिए।' : 'Check-out date must be after check-in date.');
-      return;
+    if (stayType === 'STANDARD') {
+      if (checkOutDate <= checkInDate) {
+        alert(language === 'hi' ? 'प्रस्थान तिथि (Check-out Date) आगमन तिथि से अगले दिन की होनी चाहिए।' : 'Check-out date must be after check-in date.');
+        return;
+      }
+    } else {
+      if (checkOutDate < checkInDate) {
+        alert(language === 'hi' ? 'प्रस्थान तिथि आगमन तिथि से पूर्व की नहीं हो सकती।' : 'Check-out date cannot be before check-in date.');
+        return;
+      }
+      if (checkInDate === checkOutDate && checkInTime.trim() === checkOutTime.trim()) {
+        alert(language === 'hi' ? 'घंटेवार स्टे में आगमन एवं प्रस्थान का समय समान नहीं हो सकता।' : 'Check-in and check-out times cannot be identical for hourly stay.');
+        return;
+      }
+      if (hourlyHours <= 0) {
+        alert(language === 'hi' ? 'कृपया न्यूनतम 1 घंटे की अवधि चुनें।' : 'Please select a duration of at least 1 hour.');
+        return;
+      }
     }
 
     const hasAnySuit = Object.values(selectedSuits).some(Boolean);
@@ -236,17 +306,47 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       alert(
         (language === 'hi' ? 'कमरा पहले से आरक्षित है:\n' : 'Room is already booked:\n') +
         conflicts.join('\n') +
-        (language === 'hi' ? '\n\nकृपया अन्य तिथि अथवा कमरा चुनें।' : '\n\nPlease select another date or room.')
+        (language === 'hi' ? '\n\nकृपया अन्य तिथि, समय स्लॉट अथवा कमरा चुनें।' : '\n\nPlease select another date, time slot or room.')
       );
       return;
     }
 
     setSubmitting(true);
     try {
-      const perRoomRent = manualAmount.trim() ? Number(manualAmount) : 0;
       const numRooms = Object.values(selectedSuits).filter(Boolean).length || 1;
-      const dayTotalAmount = perRoomRent * numRooms;
-      const finalNotes = encodeNotesWithMeta(notes.trim(), autoRef, autoDispatch, checkInDate, checkOutDate, perRoomRent);
+      const hrRate = Number(hourlyRate) || 0;
+      let perRoomRent = manualAmount.trim() ? Number(manualAmount) : 0;
+      let dayTotalAmount = 0;
+
+      if (stayType === 'HOURLY') {
+        if (hrRate > 0) {
+          perRoomRent = hrRate * hourlyHours;
+          dayTotalAmount = perRoomRent * numRooms;
+        } else if (perRoomRent > 0) {
+          dayTotalAmount = perRoomRent * numRooms;
+        }
+      } else {
+        dayTotalAmount = perRoomRent * numRooms;
+      }
+
+      const finalNotes = encodeNotesWithMeta(
+        notes.trim(),
+        autoRef,
+        autoDispatch,
+        checkInDate,
+        checkOutDate,
+        perRoomRent,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        stayType,
+        stayType === 'HOURLY' ? hourlyHours : undefined,
+        stayType === 'HOURLY' && hrRate > 0 ? hrRate : undefined,
+        checkInTime.trim(),
+        checkOutTime.trim()
+      );
 
       const recordsToCreate: Booking[] = bookingDates.map((dateStr) => ({
         id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
@@ -265,6 +365,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         status: isMaintenance ? 'MAINTENANCE' : 'CONFIRMED',
         check_in_time: checkInTime.trim(),
         check_out_time: checkOutTime.trim(),
+        booking_type: stayType,
+        stay_hours: stayType === 'HOURLY' ? hourlyHours : undefined,
+        hourly_rate: stayType === 'HOURLY' && hrRate > 0 ? hrRate : undefined,
         is_maintenance: isMaintenance,
         notes: finalNotes,
         created_at: new Date().toISOString(),
@@ -274,8 +377,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
       logActivity(
         isMaintenance ? 'MAINTENANCE' : 'CREATE',
-        isMaintenance ? `कमरा मरम्मत ब्लॉक: ${autoRef}` : `नई बुकिंग: ${autoRef}`,
-        `अतिथि: ${guestName}, तारीख: ${checkInDate} से ${checkOutDate}, स्थिति: ${isMaintenance ? 'MAINTENANCE' : 'CONFIRMED'}`
+        isMaintenance ? `कमरा मरम्मत ब्लॉक: ${autoRef}` : `${stayType === 'HOURLY' ? 'अल्पकालिक बुकिंग' : 'नई बुकिंग'}: ${autoRef}`,
+        `अतिथि: ${guestName}, तारीख: ${checkInDate} से ${checkOutDate}${stayType === 'HOURLY' ? ` (${hourlyHours} घंटे, ${checkInTime} - ${checkOutTime})` : ''}, स्थिति: ${isMaintenance ? 'MAINTENANCE' : 'CONFIRMED'}`
       );
 
       resetForm();
@@ -429,21 +532,100 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           </div>
 
+          {/* Stay Type Toggle: Standard vs Hourly */}
+          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => {
+                setStayType('STANDARD');
+                const next = getNextDayISO(checkInDate);
+                setCheckOutDate(next);
+              }}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                stayType === 'STANDARD'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <span>{language === 'hi' ? 'पूर्ण दिवस / रात्रि ठहराव' : 'Standard Overnight Stay'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStayType('HOURLY');
+                setCheckOutDate(checkInDate);
+                if (!checkInTime || checkInTime === '12:00 PM') {
+                  setCheckInTime('10:00 AM');
+                  setCheckOutTime('02:00 PM');
+                  setHourlyHours(4);
+                }
+              }}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                stayType === 'HOURLY'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'घंटे अनुसार (अल्पकालिक)' : 'Hourly / Short Stay'}</span>
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            {stayType === 'HOURLY' ? (
+              <div className="col-span-full">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Timer className="w-3.5 h-3.5 text-amber-600" />
+                    {language === 'hi' ? 'त्वरित अवधि चयन (घंटे):' : 'Quick Stay Duration (Hours):'}
+                  </label>
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md border border-amber-200">
+                    ⏱️ {hourlyHours} {language === 'hi' ? 'घंटे' : 'hrs'} ({checkInTime} - {checkOutTime})
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[2, 3, 4, 6, 8, 12].map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => handleSelectPresetHours(h)}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                        hourlyHours === h
+                          ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-amber-400 hover:bg-amber-50/40'
+                      }`}
+                    >
+                      {h} {language === 'hi' ? 'घंटे' : 'hrs'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                {language === 'hi' ? 'आगमन तिथि' : 'Check-in Date'}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                  {language === 'hi' ? (stayType === 'HOURLY' ? 'ठहराव की तारीख' : 'आगमन तिथि') : (stayType === 'HOURLY' ? 'Stay Date' : 'Check-in Date')}
+                </label>
+                {checkInDate < today && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                    <History className="w-2.5 h-2.5 text-amber-700" />
+                    <span>{language === 'hi' ? 'पूर्व तिथि प्रविष्टि' : 'Past Date Entry'}</span>
+                  </span>
+                )}
+              </div>
               <input
                 type="date"
                 required
-                min={formatToISODate(new Date())}
                 value={checkInDate}
                 onChange={(e) => {
                   const newIn = e.target.value;
                   setCheckInDate(newIn);
-                  if (checkOutDate <= newIn) {
+                  if (stayType === 'HOURLY') {
+                    setCheckOutDate(newIn);
+                  } else if (checkOutDate <= newIn) {
                     setCheckOutDate(getNextDayISO(newIn));
                   }
                 }}
@@ -459,10 +641,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <input
                 type="date"
                 required
-                min={getNextDayISO(checkInDate)}
+                min={stayType === 'HOURLY' ? checkInDate : getNextDayISO(checkInDate)}
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white"
+                disabled={stayType === 'HOURLY'}
+                className={`w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 ${
+                  stayType === 'HOURLY' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'
+                }`}
               />
             </div>
 
@@ -475,8 +660,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <input
                 type="text"
                 value={checkInTime}
-                onChange={(e) => setCheckInTime(e.target.value)}
-                placeholder="12:00 PM"
+                onChange={(e) => handleCheckInTimeChange(e.target.value)}
+                placeholder="10:00 AM"
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
               />
             </div>
@@ -489,14 +674,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <input
                 type="text"
                 value={checkOutTime}
-                onChange={(e) => setCheckOutTime(e.target.value)}
-                placeholder="12:00 PM"
+                onChange={(e) => handleCheckOutTimeChange(e.target.value)}
+                placeholder="02:00 PM"
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
               />
             </div>
 
-            <div className="col-span-full text-xs font-semibold text-slate-600 flex items-center justify-end pt-1 border-t border-slate-200">
-              <span>{language === 'hi' ? `कुल प्रवास अवधि: ${totalDays} रात्रि (${totalDays} दिवस)` : `Total Stay: ${totalDays} Night(s)`}</span>
+            <div className="col-span-full text-xs font-semibold text-slate-600 flex items-center justify-between pt-1 border-t border-slate-200">
+              <span className="text-[11px] text-slate-500">
+                {stayType === 'HOURLY'
+                  ? (language === 'hi' ? 'घंटे अनुसार बुकिंग: उसी दिन का समय स्लॉट' : 'Hourly Stay: Same-day time slot')
+                  : (language === 'hi' ? 'सामान्य ठहराव: दोपहर 12:00 से अगले दिन 12:00' : 'Standard Stay: 12:00 PM to Next Day 12:00 PM')}
+              </span>
+              <span className="font-bold text-slate-800">
+                {stayType === 'HOURLY'
+                  ? (language === 'hi' ? `कुल अवधि: ${hourlyHours} घंटे (अल्पकालिक)` : `Total Stay: ${hourlyHours} Hour(s)`)
+                  : (language === 'hi' ? `कुल प्रवास अवधि: ${totalDays} रात्रि (${totalDays} दिवस)` : `Total Stay: ${totalDays} Night(s)`)}
+              </span>
             </div>
           </div>
 
@@ -616,30 +810,97 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <div>
-              <label className="text-xs font-bold text-slate-800">
-                {language === 'hi' ? 'प्रति कमरा दैनिक किराया (₹)' : 'Room Rent Per Day (₹)'}
-              </label>
-            </div>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
-              <input
-                type="number"
-                min="0"
-                value={manualAmount}
-                onChange={(e) => setManualAmount(e.target.value)}
-                placeholder={language === 'hi' ? 'लागू कमरा किराया दर दर्ज करें' : 'Enter room rent per day'}
-                className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono"
-              />
-            </div>
-            {Number(manualAmount) > 0 && (
-              <div className="flex items-center justify-between text-xs font-semibold text-amber-900 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
-                <span>{language === 'hi' ? 'कुल देय किराया:' : 'Total Payable Rent:'}</span>
-                <span className="font-mono font-bold">
-                  {Object.values(selectedSuits).filter(Boolean).length || 1} {language === 'hi' ? 'कमरा' : 'Room(s)'} × ₹{Number(manualAmount)} × {totalDays} {language === 'hi' ? 'दिन' : 'Day(s)'} = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount) * totalDays).toLocaleString('en-IN')}/-
-                </span>
-              </div>
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+            {stayType === 'HOURLY' ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      {language === 'hi' ? 'प्रति घंटा दर (₹/घंटा)' : 'Hourly Rate (₹/Hour)'}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={hourlyRate}
+                        onChange={(e) => {
+                          setHourlyRate(e.target.value);
+                          if (e.target.value) setManualAmount('');
+                        }}
+                        placeholder="उदा० 100 / घंटा"
+                        className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                      <IndianRupee className="w-3.5 h-3.5 text-slate-600" />
+                      {language === 'hi' ? 'अथवा एकमुश्त किराया (₹)' : 'Or Flat Room Rent (₹)'}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={manualAmount}
+                        onChange={(e) => {
+                          setManualAmount(e.target.value);
+                          if (e.target.value) setHourlyRate('');
+                        }}
+                        placeholder="उदा० 500"
+                        className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {(Number(hourlyRate) > 0 || Number(manualAmount) > 0) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-semibold text-amber-900 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 gap-1">
+                    <span>{language === 'hi' ? 'कुल अल्पकालिक देय किराया:' : 'Total Hourly Rent:'}</span>
+                    <span className="font-mono font-bold">
+                      {Number(hourlyRate) > 0 ? (
+                        <>
+                          {Object.values(selectedSuits).filter(Boolean).length || 1} {language === 'hi' ? 'कमरा' : 'Room(s)'} × ₹{Number(hourlyRate)}/घंटा × {hourlyHours} {language === 'hi' ? 'घंटे' : 'hrs'} = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(hourlyRate) * hourlyHours).toLocaleString('en-IN')}/-
+                        </>
+                      ) : (
+                        <>
+                          {Object.values(selectedSuits).filter(Boolean).length || 1} {language === 'hi' ? 'कमरा' : 'Room(s)'} × ₹{Number(manualAmount)} = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount)).toLocaleString('en-IN')}/-
+                        </>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs font-bold text-slate-800">
+                    {language === 'hi' ? 'प्रति कमरा दैनिक किराया (₹)' : 'Room Rent Per Day (₹)'}
+                  </label>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={manualAmount}
+                    onChange={(e) => setManualAmount(e.target.value)}
+                    placeholder={language === 'hi' ? 'लागू कमरा किराया दर दर्ज करें' : 'Enter room rent per day'}
+                    className="w-full pl-8 pr-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-mono"
+                  />
+                </div>
+                {Number(manualAmount) > 0 && (
+                  <div className="flex items-center justify-between text-xs font-semibold text-amber-900 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+                    <span>{language === 'hi' ? 'कुल देय किराया:' : 'Total Payable Rent:'}</span>
+                    <span className="font-mono font-bold">
+                      {Object.values(selectedSuits).filter(Boolean).length || 1} {language === 'hi' ? 'कमरा' : 'Room(s)'} × ₹{Number(manualAmount)} × {totalDays} {language === 'hi' ? 'दिन' : 'Day(s)'} = ₹{((Object.values(selectedSuits).filter(Boolean).length || 1) * Number(manualAmount) * totalDays).toLocaleString('en-IN')}/-
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

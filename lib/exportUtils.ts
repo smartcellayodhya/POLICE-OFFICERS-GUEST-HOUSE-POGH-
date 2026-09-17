@@ -10,7 +10,22 @@ import {
   extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  extractHourlyRateFromNotes,
 } from './bookingUtils';
+import { sanitizeExcelCell } from './excel';
+
+/**
+ * Neutralizes CSV Formula Injection (CWE-1236) and safely escapes quotes.
+ */
+function formatCsvCell(val: any): string {
+  if (val === null || val === undefined) return '""';
+  const sanitized = sanitizeExcelCell(val);
+  const str = String(sanitized);
+  const escaped = str.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
 
 export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhya_Bookings.csv') {
   if (!bookings || bookings.length === 0) {
@@ -48,17 +63,23 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     if (b.suit_3 > 0) suits.push('Suit 3');
     if (b.suit_4 > 0) suits.push('Suit 4');
 
+    const isHourly = isHourlyBooking(b);
+    const stayHours = extractStayHoursFromNotes(b.notes) || (b.stay_hours ? Number(b.stay_hours) : 2);
+    const hourlyRate = extractHourlyRateFromNotes(b.notes) || (b.hourly_rate ? Number(b.hourly_rate) : undefined);
+
     const numRooms = suits.length || 1;
     const notesCin = extractCheckInDateFromNotes(b.notes);
     const notesCout = extractCheckOutDateFromNotes(b.notes);
     const checkIn = notesCin || b.booking_date;
     const checkOut = notesCout || b.booking_date;
-    const stayNights = calculateStayNights(checkIn, checkOut);
+    const stayNights = isHourly ? 1 : calculateStayNights(checkIn, checkOut);
 
     const metaRate = extractRatePerRoomFromNotes(b.notes);
     const suitRate = Math.max(Number(b.suit_1) || 0, Number(b.suit_2) || 0, Number(b.suit_3) || 0, Number(b.suit_4) || 0);
     const perRoomRent = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(b.total_amount) || 0);
-    const totalRent = perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0;
+    const totalRent = isHourly
+      ? (hourlyRate && hourlyRate > 0 ? hourlyRate * stayHours * numRooms : Number(b.total_amount) || 0)
+      : (perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0);
 
     const foodAmount = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
     const expenditure = extractExpenditureFromNotes(b.notes) || Number(b.expenditure) || 0;
@@ -71,29 +92,37 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     const cleanedNotes = cleanNotesText(b.notes);
 
     return [
-      `"${refNo}"`,
-      `"${formatToDisplayDate(checkIn)}"`,
-      `"${formatToDisplayDate(checkOut)}"`,
-      `"${stayNights} दिन"`,
-      `"${b.guest_name}"`,
-      `"${b.mobile_number}"`,
-      `"${b.reference || '-'}"`,
-      `"${suits.join(', ')}"`,
-      `"${perRoomRent > 0 ? `₹${perRoomRent}` : 'As per applicable'}"`,
-      `"${totalRent > 0 ? `₹${totalRent}` : 'As per applicable'}"`,
-      `"${foodAmount > 0 ? `₹${foodAmount}` : 0}"`,
-      `"${expenditure > 0 ? `₹${expenditure}` : 0}"`,
-      `"${netCollection > 0 ? `₹${netCollection}` : 0}"`,
-      `"${paymentMode}"`,
-      `"${collectedBy}"`,
-      `"${b.meal_type_status || 'PAID'}"`,
-      `"${b.status || 'CONFIRMED'}"`,
-      `"${cleanedNotes.replace(/"/g, '""')}"`,
+      formatCsvCell(refNo),
+      formatCsvCell(formatToDisplayDate(checkIn)),
+      formatCsvCell(formatToDisplayDate(checkOut)),
+      formatCsvCell(
+        isHourly
+          ? `अल्पकालिक (${stayHours} घंटे: ${b.check_in_time || '10:00'}-${b.check_out_time || '14:00'})`
+          : `${stayNights} दिन`
+      ),
+      formatCsvCell(b.guest_name),
+      formatCsvCell(b.mobile_number),
+      formatCsvCell(b.reference || '-'),
+      formatCsvCell(suits.join(', ')),
+      formatCsvCell(
+        isHourly && hourlyRate
+          ? `₹${hourlyRate}/घंटा`
+          : (perRoomRent > 0 ? `₹${perRoomRent}` : 'As per applicable')
+      ),
+      formatCsvCell(totalRent > 0 ? `₹${totalRent}` : 'As per applicable'),
+      formatCsvCell(foodAmount > 0 ? `₹${foodAmount}` : 0),
+      formatCsvCell(expenditure > 0 ? `₹${expenditure}` : 0),
+      formatCsvCell(netCollection > 0 ? `₹${netCollection}` : 0),
+      formatCsvCell(paymentMode),
+      formatCsvCell(collectedBy),
+      formatCsvCell(b.meal_type_status || 'PAID'),
+      formatCsvCell(b.status || 'CONFIRMED'),
+      formatCsvCell(cleanedNotes),
     ].join(',');
   });
 
   // UTF-8 BOM (\uFEFF) ensures Excel opens Hindi / Devanagari characters cleanly without encoding errors
-  const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+  const csvContent = '\uFEFF' + [headers.map(formatCsvCell).join(','), ...rows].join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
 

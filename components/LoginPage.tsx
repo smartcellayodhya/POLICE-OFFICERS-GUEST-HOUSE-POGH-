@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AuthUser, authenticate } from '@/lib/auth';
+import { AuthUser, authenticate, setLoggedInUser } from '@/lib/auth';
 import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, Loader2, ShieldAlert, Clock } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 
@@ -44,56 +44,93 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, logoutReas
     return () => clearInterval(timer);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFailedAttempt = (customMsg?: string) => {
+    try {
+      const prev = parseInt(localStorage.getItem('pogh_login_failed_attempts') || '0', 10);
+      const currentAttempts = prev + 1;
+      localStorage.setItem('pogh_login_failed_attempts', currentAttempts.toString());
+
+      if (currentAttempts >= MAX_FAILED_ATTEMPTS) {
+        const lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
+        localStorage.setItem('pogh_login_lockout_until', lockoutUntil.toString());
+        localStorage.removeItem('pogh_login_failed_attempts');
+        setLockoutSecondsLeft(60);
+        setError(
+          language === 'hi'
+            ? `अत्यधिक असफल प्रयासों (${MAX_FAILED_ATTEMPTS} बार) के कारण लॉगिन 60 सेकंड के लिए ब्लॉक कर दिया गया है।`
+            : `Login temporarily locked for 60 seconds due to ${MAX_FAILED_ATTEMPTS} consecutive failed attempts.`
+        );
+      } else {
+        const remaining = MAX_FAILED_ATTEMPTS - currentAttempts;
+        setError(
+          customMsg ||
+          (language === 'hi'
+            ? `अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है। (${remaining} प्रयास शेष)`
+            : `Invalid username or password entered. (${remaining} attempts remaining)`)
+        );
+      }
+    } catch {
+      setError(
+        customMsg ||
+        (language === 'hi'
+          ? 'अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है।'
+          : 'Invalid username or password entered.')
+      );
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (lockoutSecondsLeft > 0) return;
 
     setError('');
     setLoading(true);
 
+    try {
+      // 1. Try secure server-side login first
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.user) {
+        // Reset brute-force counter on successful login
+        try {
+          localStorage.removeItem('pogh_login_failed_attempts');
+          localStorage.removeItem('pogh_login_lockout_until');
+        } catch {}
+
+        setLoggedInUser(data.user, data.token);
+        onLoginSuccess(data.user);
+        return;
+      }
+
+      if (!res.ok) {
+        handleFailedAttempt(data.error);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Server login failed or offline, falling back to local auth engine:', err);
+    }
+
+    // 2. Offline / local fallback
     setTimeout(() => {
       const user = authenticate(username, password);
       if (user) {
-        // Reset brute-force counter on successful login
         try {
           localStorage.removeItem('pogh_login_failed_attempts');
           localStorage.removeItem('pogh_login_lockout_until');
         } catch {}
         onLoginSuccess(user);
       } else {
-        try {
-          const prev = parseInt(localStorage.getItem('pogh_login_failed_attempts') || '0', 10);
-          const currentAttempts = prev + 1;
-          localStorage.setItem('pogh_login_failed_attempts', currentAttempts.toString());
-
-          if (currentAttempts >= MAX_FAILED_ATTEMPTS) {
-            const lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
-            localStorage.setItem('pogh_login_lockout_until', lockoutUntil.toString());
-            localStorage.removeItem('pogh_login_failed_attempts');
-            setLockoutSecondsLeft(60);
-            setError(
-              language === 'hi'
-                ? `अत्यधिक असफल प्रयासों (${MAX_FAILED_ATTEMPTS} बार) के कारण लॉगिन 60 सेकंड के लिए ब्लॉक कर दिया गया है।`
-                : `Login temporarily locked for 60 seconds due to ${MAX_FAILED_ATTEMPTS} consecutive failed attempts.`
-            );
-          } else {
-            const remaining = MAX_FAILED_ATTEMPTS - currentAttempts;
-            setError(
-              language === 'hi'
-                ? `अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है। (${remaining} प्रयास शेष)`
-                : `Invalid username or password entered. (${remaining} attempts remaining)`
-            );
-          }
-        } catch {
-          setError(
-            language === 'hi'
-              ? 'अमान्य उपयोगकर्ता नाम या पासवर्ड दर्ज किया गया है।'
-              : 'Invalid username or password entered.'
-          );
-        }
-        setLoading(false);
+        handleFailedAttempt();
       }
-    }, 400);
+      setLoading(false);
+    }, 300);
   };
 
   return (

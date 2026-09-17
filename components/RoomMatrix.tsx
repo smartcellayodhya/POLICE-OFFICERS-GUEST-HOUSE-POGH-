@@ -10,6 +10,8 @@ import {
   formatGuestDisplayName,
   isBookingOccupyingDate,
   isSuitAllocatedInBooking,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
 } from '@/lib/bookingUtils';
 import {
   Calendar,
@@ -19,6 +21,9 @@ import {
   FileText,
   Wrench,
   IndianRupee,
+  Clock,
+  Plus,
+  Timer,
 } from 'lucide-react';
 
 import { useLanguage } from '@/lib/languageContext';
@@ -89,30 +94,20 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
     }
   };
 
-  // Helper to find booking for a specific suit on selectedDate
-  const getBookingForSuit = (suitKey: string): Booking | undefined => {
-    // First check exact date match
-    const exact = bookings.find(
-      (b) =>
-        b.booking_date === selectedDate &&
-        (b.status || '').toUpperCase() !== 'CANCELLED' &&
-        isSuitAllocatedInBooking(b, suitKey)
-    );
-    if (exact) return exact;
-
-    // Fallback to date range check
-    return bookings.find(
+  // Helper to find all bookings for a specific suit on selectedDate (supports multiple hourly slots)
+  const getBookingsForSuit = (suitKey: string): Booking[] => {
+    return bookings.filter(
       (b) =>
         (b.status || '').toUpperCase() !== 'CANCELLED' &&
         isSuitAllocatedInBooking(b, suitKey) &&
-        isBookingOccupyingDate(b, selectedDate)
+        (b.booking_date === selectedDate || isBookingOccupyingDate(b, selectedDate))
     );
   };
 
-  // Count occupied on this date
+  // Count occupied rooms on this date
   let occupiedCount = 0;
   SUITS.forEach((s) => {
-    if (getBookingForSuit(s.id)) occupiedCount++;
+    if (getBookingsForSuit(s.id).length > 0) occupiedCount++;
   });
 
   const dateFormatted = language === 'hi' ? formatToHindiDate(selectedDate) : formatToDisplayDate(selectedDate);
@@ -214,16 +209,51 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
 
       </div>
 
-      {/* Direct 4 Rooms Compact Status Display (Sirf status: available ya nahi) */}
+      {/* Direct 4 Rooms Compact Status Display (with Multi-slot Hourly Support) */}
       <div className="p-4 sm:p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {SUITS.map((suit) => {
-            const booking = getBookingForSuit(suit.id);
+            const suitBookings = getBookingsForSuit(suit.id);
 
-            // If Room is BOOKED or IN MAINTENANCE on this date
-            if (booking) {
+            // CASE 1: AVAILABLE (No bookings)
+            if (suitBookings.length === 0) {
+              return (
+                <div
+                  key={suit.id}
+                  className="p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 flex flex-col justify-between shadow-xs"
+                >
+                  <div>
+                    <div className="pb-2 border-b border-emerald-200/70">
+                      <span className="font-extrabold text-slate-900 text-sm">{suit.name}</span>
+                    </div>
+                    <div className="my-3">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        {t('available')}
+                      </span>
+                    </div>
+                  </div>
+                  {isAdmin && onQuickBook && (
+                    <button
+                      type="button"
+                      onClick={() => onQuickBook(selectedDate, suit.id)}
+                      className="w-full mt-2 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{language === 'hi' ? 'क्विक बुक' : 'Quick Book'}</span>
+                    </button>
+                  )}
+                </div>
+              );
+            }
+
+            // CASE 2: SINGLE BOOKING (Standard OR Single Hourly Slot OR Maintenance)
+            if (suitBookings.length === 1) {
+              const booking = suitBookings[0];
               const isMaintenance = booking.status === 'MAINTENANCE' || booking.is_maintenance;
               const isInHouse = booking.status === 'CHECKED_IN';
+              const isHourly = isHourlyBooking(booking);
+              const stayHrs = extractStayHoursFromNotes(booking.notes) || booking.stay_hours || 4;
 
               if (isMaintenance) {
                 return (
@@ -235,26 +265,19 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   >
                     <div>
                       <div className="pb-2 border-b border-purple-200">
-                        <span className="font-extrabold text-slate-900 text-sm">
-                          {suit.name}
-                        </span>
+                        <span className="font-extrabold text-slate-900 text-sm">{suit.name}</span>
                       </div>
-
                       <div className="my-2.5">
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-600 text-white shadow-xs">
                           <Wrench className="w-3 h-3" />
                           <span>{language === 'hi' ? 'मरम्मत / ब्लॉक' : 'Maintenance'}</span>
                         </span>
                       </div>
-
-                      <div className="text-xs font-bold text-purple-900 truncate">
-                        {booking.guest_name}
-                      </div>
+                      <div className="text-xs font-bold text-purple-900 truncate">{booking.guest_name}</div>
                       <div className="text-[11px] text-purple-700 font-mono truncate">
                         {cleanNotesText(booking.notes) || (language === 'hi' ? 'सेवा से बाहर' : 'Out of Service')}
                       </div>
                     </div>
-
                     <div className="mt-3 pt-2 border-t border-purple-200 flex items-center justify-between text-[11px]">
                       <span className="text-purple-800 font-bold flex items-center gap-1">
                         <FileText className="w-3 h-3" />
@@ -270,7 +293,9 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   key={suit.id}
                   onClick={() => onSelectBooking(booking)}
                   className={`p-3.5 sm:p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md ${
-                    isInHouse
+                    isHourly
+                      ? 'bg-amber-50/80 border-amber-300 text-amber-950'
+                      : isInHouse
                       ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950'
                       : 'bg-rose-50/80 border-rose-300 text-rose-950'
                   }`}
@@ -278,10 +303,14 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                 >
                   <div>
                     {/* Header */}
-                    <div className="pb-2 border-b border-slate-200/70">
-                      <span className="font-extrabold text-slate-900 text-sm">
-                        {suit.name}
-                      </span>
+                    <div className="pb-2 border-b border-slate-200/70 flex items-center justify-between">
+                      <span className="font-extrabold text-slate-900 text-sm">{suit.name}</span>
+                      {isHourly && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-2xs">
+                          <Clock className="w-2.5 h-2.5" />
+                          <span>{stayHrs} {language === 'hi' ? 'घंटे' : 'hrs'}</span>
+                        </span>
+                      )}
                     </div>
 
                     {/* Status Pill & Meal Tag */}
@@ -290,14 +319,28 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shadow-2xs ${
                           isInHouse
                             ? 'bg-emerald-600 text-white'
+                            : isHourly
+                            ? 'bg-amber-600 text-white'
                             : 'bg-rose-600 text-white'
                         }`}
                       >
-                        {isInHouse ? `● ${t('checkedIn')}` : `● ${t('confirmed')}`}
+                        {isInHouse
+                          ? `● ${t('checkedIn')}`
+                          : isHourly
+                          ? `⏱️ ${language === 'hi' ? 'अल्पकालिक' : 'Hourly'}`
+                          : `● ${t('confirmed')}`}
                       </span>
 
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
-                        {booking.meal_type_status === 'FREE' ? (language === 'hi' ? 'निःशुल्क' : 'Free') : (booking.meal_type_status === 'COMPLIMENTARY' ? (language === 'hi' ? 'शासकीय' : 'Govt') : (booking.meal_type_status === 'NOT REQUIRED' ? (language === 'hi' ? 'लागू नहीं' : 'N/A') : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE' ? (language === 'hi' ? 'नियमानुसार' : 'As per Applicable') : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
+                        {booking.meal_type_status === 'FREE'
+                          ? (language === 'hi' ? 'निःशुल्क' : 'Free')
+                          : (booking.meal_type_status === 'COMPLIMENTARY'
+                            ? (language === 'hi' ? 'शासकीय' : 'Govt')
+                            : (booking.meal_type_status === 'NOT REQUIRED'
+                              ? (language === 'hi' ? 'लागू नहीं' : 'N/A')
+                              : (booking.meal_type_status === 'AS PER APPLICABLE' || booking.meal_type_status === 'AS_PER_APPLICABLE'
+                                ? (language === 'hi' ? 'नियमानुसार' : 'As per Applicable')
+                                : (language === 'hi' ? 'सशुल्क' : 'Paid'))))}
                       </span>
                     </div>
 
@@ -308,31 +351,56 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                     <div className="text-[11px] text-slate-500 font-mono truncate mt-0.5">
                       {booking.mobile_number} {booking.reference ? `• ${booking.reference}` : ''}
                     </div>
+
+                    {/* Time slot for hourly */}
+                    {isHourly && (
+                      <div className="mt-1.5 px-2 py-0.5 rounded bg-amber-100/70 border border-amber-200 text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-700 shrink-0" />
+                        <span className="truncate">{booking.check_in_time || '10:00 AM'} - {booking.check_out_time || '02:00 PM'}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Clean Footer Action Bar */}
-                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onSelectBooking(booking)}
-                      className="flex-1 h-8 px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-slate-500" />
-                      <span>{language === 'hi' ? 'पत्र देखें' : 'View Letter'}</span>
-                    </button>
+                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onSelectBooking(booking)}
+                        className="flex-1 h-8 px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
+                      </button>
 
-                    {(isAdmin || isOperator) && onOpenRecordCollection && (
+                      {(isAdmin || isOperator) && onOpenRecordCollection && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenRecordCollection(booking);
+                          }}
+                          className="flex-1 h-8 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer active:scale-95"
+                          title={language === 'hi' ? 'कलेक्शन व भोजन बिल दर्ज करें' : 'Record Collection & Food Bill'}
+                        >
+                          <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
+                          <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* If hourly, allow booking remaining hours on same day */}
+                    {isHourly && isAdmin && onQuickBook && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onOpenRecordCollection(booking);
+                          onQuickBook(selectedDate, suit.id);
                         }}
-                        className="flex-1 h-8 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer active:scale-95"
-                        title={language === 'hi' ? 'कलेक्शन व भोजन बिल दर्ज करें' : 'Record Collection & Food Bill'}
+                        className="w-full h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
                       >
-                        <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
-                        <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
+                        <Plus className="w-3 h-3" />
+                        <span>{language === 'hi' ? '+ अन्य स्लॉट बुक करें' : '+ Book Another Slot'}</span>
                       </button>
                     )}
                   </div>
@@ -340,28 +408,52 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
               );
             }
 
-            // If Room is AVAILABLE
+            // CASE 3: MULTIPLE HOURLY BOOKINGS ON SAME DAY
             return (
               <div
                 key={suit.id}
-                className="p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 flex flex-col justify-between shadow-xs"
+                className="p-3.5 sm:p-4 rounded-2xl border-2 border-amber-400 bg-amber-50/70 text-slate-900 flex flex-col justify-between shadow-xs hover:shadow-md"
               >
                 <div>
-                  {/* Header */}
-                  <div className="pb-2 border-b border-emerald-200/70">
-                    <span className="font-extrabold text-slate-900 text-sm">
-                      {suit.name}
+                  <div className="pb-2 border-b border-amber-300/70 flex items-center justify-between">
+                    <span className="font-extrabold text-slate-900 text-sm">{suit.name}</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white shadow-2xs">
+                      <Clock className="w-2.5 h-2.5" />
+                      <span>{suitBookings.length} {language === 'hi' ? 'स्लॉट' : 'slots'}</span>
                     </span>
                   </div>
 
-                  {/* Status Badge */}
-                  <div className="my-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      {t('available')}
-                    </span>
+                  <div className="mt-2 space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {suitBookings.map((b) => (
+                      <div
+                        key={b.id}
+                        onClick={() => onSelectBooking(b)}
+                        className="p-2 rounded-xl bg-white border border-amber-200 hover:border-amber-400 transition cursor-pointer shadow-2xs"
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-900">
+                          <span className="truncate">{formatGuestDisplayName(b.guest_name)}</span>
+                          <span className="text-[10px] font-mono text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">
+                            {b.check_in_time || '10:00 AM'} - {b.check_out_time || '02:00 PM'}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono truncate mt-0.5">
+                          {b.mobile_number} {b.reference ? `• ${b.reference}` : ''}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+
+                {isAdmin && onQuickBook && (
+                  <button
+                    type="button"
+                    onClick={() => onQuickBook(selectedDate, suit.id)}
+                    className="w-full mt-2 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>{language === 'hi' ? '+ अन्य स्लॉट जोड़ें' : '+ Add Slot'}</span>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -382,6 +474,10 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-emerald-600 ring-2 ring-emerald-300" />
             <span>{t('checkedIn')}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-amber-500" />
+            <span>{language === 'hi' ? 'घंटे अनुसार / अल्पकालिक' : 'Hourly / Short Stay'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-purple-600" />

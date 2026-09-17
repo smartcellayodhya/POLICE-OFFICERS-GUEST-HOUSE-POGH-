@@ -9,7 +9,7 @@ import {
   formatToISODate,
   getDayOfWeekName,
 } from '@/lib/dateUtils';
-import { formatGuestDisplayName } from '@/lib/bookingUtils';
+import { formatGuestDisplayName, isHourlyBooking, extractStayHoursFromNotes } from '@/lib/bookingUtils';
 import {
   Calendar,
   CheckCircle2,
@@ -104,11 +104,17 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
 
       if (bSuits.length === 0) return;
 
-      const guestKey = `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`;
-      const existing = guestGroups.find((g) => {
-        const gKey = `${(g.primaryBooking.guest_name || '').trim().toLowerCase()}_${(g.primaryBooking.mobile_number || '').trim()}`;
-        return gKey === guestKey;
-      });
+      const isHourly = isHourlyBooking(b);
+      const guestKey = isHourly
+        ? `hourly_${b.id}`
+        : `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`;
+      const existing = isHourly
+        ? undefined
+        : guestGroups.find((g) => {
+            if (isHourlyBooking(g.primaryBooking)) return false;
+            const gKey = `${(g.primaryBooking.guest_name || '').trim().toLowerCase()}_${(g.primaryBooking.mobile_number || '').trim()}`;
+            return gKey === guestKey;
+          });
 
       if (existing) {
         bSuits.forEach((sid) => {
@@ -652,43 +658,45 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                             </div>
                           </div>
 
-                          {/* Quick booking button: ONLY FOR TODAY & FUTURE (Never in the past!) */}
-                          {!isPast ? (
-                            isAdmin && onQuickBook ? (
-                              <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-1.5 flex-wrap">
-                                {group.suitIds.length === 1 ? (
-                                  <button
-                                    onClick={() => onQuickBook(dateStr, group.suitIds[0])}
-                                    className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
-                                    title={language === 'hi' ? `${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें` : `Book ${group.suitNames} for ${formatToDisplayDate(dateStr)}`}
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                    <span>{language === 'hi' ? '+ बुक करें' : '+ Quick Book'}</span>
-                                  </button>
-                                ) : (
-                                  group.suitIds.map((sid) => {
-                                    const sObj = SUITS.find((s) => s.id === sid);
-                                    return (
-                                      <button
-                                        key={sid}
-                                        onClick={() => onQuickBook(dateStr, sid)}
-                                        className="flex-1 min-w-[75px] py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
-                                        title={language === 'hi' ? `${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें` : `Book ${sObj?.name || sid} for ${formatToDisplayDate(dateStr)}`}
-                                      >
-                                        <Plus className="w-2.5 h-2.5" />
-                                        <span>{sObj?.name || sid}</span>
-                                      </button>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            ) : null
-                          ) : (
+                          {/* Quick booking button: Enabled for Admins on today, future, and past dates */}
+                          {isAdmin && onQuickBook ? (
+                            <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-1.5 flex-wrap">
+                              {group.suitIds.length === 1 ? (
+                                <button
+                                  onClick={() => onQuickBook(dateStr, group.suitIds[0])}
+                                  className={`w-full py-1.5 px-2 rounded-lg text-white text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer ${
+                                    isPast ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                                  }`}
+                                  title={language === 'hi' ? `${formatToDisplayDate(dateStr)} के लिए ${group.suitNames} बुक करें` : `Book ${group.suitNames} for ${formatToDisplayDate(dateStr)}`}
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>{isPast ? (language === 'hi' ? '+ पुरानी बुकिंग' : '+ Past Book') : (language === 'hi' ? '+ बुक करें' : '+ Quick Book')}</span>
+                                </button>
+                              ) : (
+                                group.suitIds.map((sid) => {
+                                  const sObj = SUITS.find((s) => s.id === sid);
+                                  return (
+                                    <button
+                                      key={sid}
+                                      onClick={() => onQuickBook(dateStr, sid)}
+                                      className={`flex-1 min-w-[75px] py-1.5 px-2 rounded-lg text-white text-[10px] font-bold transition flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer ${
+                                        isPast ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                                      }`}
+                                      title={language === 'hi' ? `${formatToDisplayDate(dateStr)} के लिए ${sObj?.name || sid} बुक करें` : `Book ${sObj?.name || sid} for ${formatToDisplayDate(dateStr)}`}
+                                    >
+                                      <Plus className="w-2.5 h-2.5" />
+                                      <span>{sObj?.name || sid}</span>
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          ) : isPast ? (
                             <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400 font-medium">
                               <span>{language === 'hi' ? 'अनावंटित' : 'Unallocated'}</span>
                               <span>{language === 'hi' ? 'बीती तारीख' : 'Past Date'}</span>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       );
                     }
@@ -776,6 +784,15 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
                                 {group.booking?.reference}
                               </span>
                             </div>
+                            {group.booking && isHourlyBooking(group.booking) && (
+                              <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300">
+                                <Clock className="w-3 h-3 text-amber-700 shrink-0" />
+                                <span>
+                                  {group.booking.check_in_time || '10:00'} - {group.booking.check_out_time || '14:00'}
+                                  {` (${group.booking.stay_hours || extractStayHoursFromNotes(group.booking.notes) || 2}h)`}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
 

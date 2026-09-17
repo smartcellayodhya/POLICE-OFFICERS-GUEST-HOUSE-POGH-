@@ -22,6 +22,9 @@ export interface Booking {
   status: BookingStatus;
   check_in_time?: string;
   check_out_time?: string;
+  booking_type?: 'STANDARD' | 'HOURLY';
+  stay_hours?: number;
+  hourly_rate?: number;
   is_maintenance?: boolean;
   notes?: string;
   created_at?: string;
@@ -43,6 +46,9 @@ export interface ReceiptDetails {
   room_rent?: number;
   food_amount?: number;
   expenditure?: number;
+  booking_type?: 'STANDARD' | 'HOURLY';
+  stay_hours?: number;
+  hourly_rate?: number;
   total_amount: number;
   meal_type_status: string;
   payment_mode: string;
@@ -78,4 +84,7 @@ export interface LetterDetails {
   meal_type_status: string;
   contact_person?: string;
   dates: string[];
+  booking_type?: 'STANDARD' | 'HOURLY';
+  stay_hours?: number;
+  hourly_rate?: number;
 }
