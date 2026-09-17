@@ -860,115 +860,82 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
       {/* ========================================================================= */}
       {/* DYNAMIC PRINTABLE STATEMENT CONTAINER (Captured by printDocumentDirectly) */}
-      {/* Supports: Specific Selected Month OR All Months Comprehensive Statement   */}
+      {/* Redesigned: 100% Ink-Saver, Pure White, Official UP Police Register Format */}
       {/* ========================================================================= */}
       <div ref={printRef} className="hidden">
-        <div style={{ padding: '24px 30px', background: '#FFFFFF', color: '#0F172A', fontFamily: `'Noto Sans Devanagari', 'Inter', sans-serif`, fontSize: '12px', lineHeight: 1.5 }}>
+        <div style={{ padding: '16px 20px', background: '#FFFFFF', color: '#000000', fontFamily: `'Noto Sans Devanagari', 'Inter', sans-serif`, fontSize: '11px', lineHeight: 1.4 }}>
           
-          {/* 1. Official Letterhead Header */}
-          <div style={{ textAlign: 'center', borderBottom: '2px solid #0F172A', paddingBottom: '14px', marginBottom: '16px' }}>
-            {/* Top Centered Logo */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px', textAlign: 'center' }}>
+          {/* 1. Official Letterhead Header (Compact Layout: Logo + Office Text + Title) */}
+          <div style={{ borderBottom: '2px solid #000000', paddingBottom: '10px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '4px' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/up_police_logo.png"
                 alt="UP Police"
-                style={{ width: '56px', height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                style={{ width: '48px', height: '48px', objectFit: 'contain', display: 'block', flexShrink: 0 }}
               />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '17px', fontWeight: 900, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.2 }}>
+                  कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#000000', marginTop: '2px', lineHeight: 1.3 }}>
+                  पुलिस ऑफिसर्स गेस्ट हाउस (POGH), सिविल लाइंस, अयोध्या (उ0प्र0)
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#000000', marginTop: '2px', textDecoration: 'underline' }}>
+                  {singleMonthPrintData
+                    ? `मासिक किराया संग्रह, मेस एवं व्यय विवरण आख्या — माह: ${formatMonthKey(singleMonthPrintData.monthKey, 'hi')}`
+                    : 'माह-वार किराया संग्रह, मेस एवं व्यय विवरण आख्या (समस्त सत्र)'}
+                </div>
+              </div>
             </div>
 
-            {/* Office & Guest House Text Below Logo */}
-            <div>
-              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.3 }}>
-                कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
-              </h1>
-              <h2 style={{ margin: '3px 0 0', fontSize: '14px', fontWeight: 700, color: '#B45309', lineHeight: 1.4 }}>
-                पुलिस ऑफिसर्स गेस्ट हाउस (POGH), सिविल लाइंस, अयोध्या (उ0प्र0)
-              </h2>
-            </div>
-            
-            {/* Report Title Badge Box */}
-            <div style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 16px', borderRadius: '6px', display: 'inline-block', marginTop: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '0.5px' }}>
-                {singleMonthPrintData
-                  ? `★ माह ${formatMonthKey(singleMonthPrintData.monthKey, 'hi')} - किराया संग्रह एवं आवंटन विवरण आख्या ★`
-                  : '★ माह-वार किराया संग्रह एवं आवंटन विवरण आख्या ★'}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', fontSize: '11px', color: '#475569' }}>
+            {/* Sub-bar: Reference & Dates */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '10px', fontWeight: 600, color: '#000000' }}>
               <span>
-                {singleMonthPrintData
-                  ? `विवरण माह: ${formatMonthKey(singleMonthPrintData.monthKey, 'hi')} (${singleMonthPrintData.monthKey})`
-                  : 'सत्र / अवधि: समस्त सक्रिय आवंटन (अप्रैल 2026 से सितम्बर 2026)'}
+                विवरण माह: <strong>{singleMonthPrintData ? `${formatMonthKey(singleMonthPrintData.monthKey, 'hi')} (${singleMonthPrintData.monthKey})` : 'समस्त सक्रिय आवंटन'}</strong>
               </span>
+              <span>पत्रांक: POGH/लेखा-{singleMonthPrintData ? singleMonthPrintData.monthKey : 'समस्त'}</span>
               <span>आख्या मुद्रण दिनांक: {formatToHindiDate(new Date())}</span>
             </div>
           </div>
 
           {/* =================================================================== */}
-          {/* CASE A: SINGLE MONTH SPECIFIC PRINT (जब विशिष्ट माह चुना गया हो)    */}
+          {/* CASE A: SINGLE MONTH SPECIFIC PRINT (विशिष्ट माह आख्या)              */}
           {/* =================================================================== */}
           {singleMonthPrintData ? (
             <div>
-              {/* Month KPI Summary Tiles */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>माह</div>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{formatMonthKey(singleMonthPrintData.monthKey, 'hi')}</div>
-                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>कोड: {singleMonthPrintData.monthKey}</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कुल आवंटन / दिवस</div>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{singleMonthPrintData.bookings.length} पत्र</div>
-                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>{singleMonthPrintData.roomsCount} कक्ष दिवस</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#4338CA', textTransform: 'uppercase' }}>कमरा किराया संग्रह</div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#312E81', marginTop: '2px' }}>₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>कमरों का किराया</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 8px', background: '#EFF6FF' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#1D4ED8', textTransform: 'uppercase' }}>भोजन संग्रह</div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E3A8A', marginTop: '2px' }}>₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>मेस / खान-पान बिल</div>
-                </div>
-
-                <div style={{ border: '1px solid #FECDD3', borderRadius: '6px', padding: '6px 8px', background: '#FFF1F2' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#BE123C', textTransform: 'uppercase' }}>कुल व्यय / खर्च</div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#9F1239', marginTop: '2px' }}>₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#BE123C', marginTop: '1px' }}>खर्च कटौती</div>
-                </div>
-
-                <div style={{ border: '1px solid #FCD34D', borderRadius: '6px', padding: '6px 8px', background: '#FEF3C7' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल शुद्ध संग्रह</div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#78350F', marginTop: '2px' }}>₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#92400E', marginTop: '1px' }}>(किराया+भोजन)-खर्च</div>
-                </div>
+              {/* Ink-Saver Official Summary Strip (Zero background fill, crisp black border) */}
+              <div style={{ border: '1.5px solid #000000', padding: '6px 10px', marginBottom: '10px', background: '#FFFFFF', fontSize: '10.5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span><strong>कुल आवंटन:</strong> {singleMonthPrintData.bookings.length} पत्र ({singleMonthPrintData.roomsCount} कक्ष दिवस)</span>
+                <span>|</span>
+                <span><strong>कमरा किराया:</strong> ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}</span>
+                <span>|</span>
+                <span><strong>भोजन संग्रह:</strong> ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}</span>
+                <span>|</span>
+                <span><strong>कुल व्यय/खर्च:</strong> ₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}</span>
+                <span>|</span>
+                <span style={{ fontSize: '11px', fontWeight: 900 }}><strong>शुद्ध राजकीय संग्रह: ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}</strong></span>
               </div>
 
               {/* Single Month Allotment Table */}
-              <div style={{ marginBottom: '22px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  आवंटन, कमरा किराया, भोजन एवं व्यय विवरण तालिका (Revenue, Mess & Expenditure Log)
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#000000', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  दैनिक आवंटन, कमरा किराया, मेस भोजन एवं व्यय विवरण तालिका:
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', background: '#FFFFFF' }}>
                   <thead>
-                    <tr style={{ background: '#0F172A', color: '#FFFFFF' }}>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '26px', textAlign: 'center' }}>क्र०</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'center' }}>दिनांक</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '55px', textAlign: 'center' }}>पत्र सं०</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', textAlign: 'left' }}>अधिकारी का नाम एवं पदनाम</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '60px', textAlign: 'center' }}>आवंटित सूट</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'right' }}>कमरा किराया (₹)</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '60px', textAlign: 'right' }}>भोजन संग्रह (₹)</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'right' }}>व्यय / खर्च (₹)</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '70px', textAlign: 'right' }}>शुद्ध संग्रह (₹)</th>
-                      <th style={{ padding: '5px 6px', border: '1px solid #0F172A', width: '65px', textAlign: 'center' }}>स्थिति / माध्यम</th>
+                    <tr style={{ background: '#FFFFFF', color: '#000000' }}>
+                      <th style={{ padding: '4px 3px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', width: '26px', textAlign: 'center', fontWeight: 800 }}>क्र०</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'center', fontWeight: 800 }}>दिनांक</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '46px', textAlign: 'center', fontWeight: 800 }}>पत्र सं०</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', textAlign: 'left', fontWeight: 800 }}>अधिकारी का नाम एवं संदर्भ/पदनाम</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '65px', textAlign: 'center', fontWeight: 800 }}>आवंटित सूट</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया (₹)</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'right', fontWeight: 800 }}>भोजन (₹)</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'right', fontWeight: 800 }}>व्यय (₹)</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '68px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह (₹)</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '54px', textAlign: 'center', fontWeight: 800 }}>माध्यम</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -981,52 +948,56 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                       const suits = getBookingSuitsList(b).join(', ');
                       const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
-                      const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
+                      const rawPayMode = (b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH').toUpperCase();
+                      const payModeHindi = rawPayMode === 'ONLINE' || rawPayMode === 'UPI' ? 'ऑनलाइन' : rawPayMode === 'CHEQUE' ? 'चेक' : 'नकद';
+
+                      // Compact date format: DD/MM/YY
+                      const dateParts = (b.booking_date || '').split('-');
+                      const shortDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0].slice(2)}` : b.booking_date;
 
                       return (
-                        <tr key={`print-single-${b.id}`} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{b.booking_date}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1' }}>
-                            <div style={{ fontWeight: 700, color: '#0F172A' }}>{b.guest_name}</div>
-                            {b.reference && <div style={{ fontSize: '9px', color: '#64748B' }}>{b.reference}</div>}
+                        <tr key={`print-single-${b.id}`} style={{ background: '#FFFFFF' }}>
+                          <td style={{ padding: '3.5px 3px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '3.5px 4px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{shortDate}</td>
+                          <td style={{ padding: '3.5px 4px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
+                          <td style={{ padding: '3.5px 6px', border: '1px solid #000000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span style={{ fontWeight: 700, color: '#000000' }}>{b.guest_name}</span>
+                            {b.reference && <span style={{ color: '#334155', fontWeight: 500 }}> ({b.reference})</span>}
                           </td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{suits}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600 }}>₹{rent.toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#BE123C' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{net.toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '5px 6px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '9px' }}>
-                            <div>{b.status || 'CONFIRMED'}</div>
-                            <div style={{ color: '#64748B' }}>({payMode})</div>
+                          <td style={{ padding: '3.5px 4px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{suits}</td>
+                          <td style={{ padding: '3.5px 5px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>₹{rent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '3.5px 5px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '3.5px 5px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '3.5px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap' }}>₹{net.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '3.5px 4px', border: '1px solid #000000', textAlign: 'center', fontSize: '9px', whiteSpace: 'nowrap' }}>
+                            {payModeHindi}
                           </td>
                         </tr>
                       );
                     })}
 
-                    {/* Total Row */}
-                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '11px' }}>
-                      <td colSpan={4} style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
-                        कुल योग (TOTAL COLLECTION - {formatMonthKey(singleMonthPrintData.monthKey, 'hi')})
+                    {/* Official Total Row (Double bottom border, bold black text) */}
+                    <tr style={{ background: '#FFFFFF', fontWeight: 900, fontSize: '10.5px' }}>
+                      <td colSpan={4} style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
+                        कुल योग (TOTAL COLLECTION — {formatMonthKey(singleMonthPrintData.monthKey, 'hi')})
                       </td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
-                        {singleMonthPrintData.roomsCount} कक्ष दिवस
+                      <td style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
+                        {singleMonthPrintData.roomsCount} कक्ष
                       </td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
+                      <td style={{ padding: '5px 5px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
                         ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#1E40AF' }}>
+                      <td style={{ padding: '5px 5px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
                         ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#BE123C' }}>
+                      <td style={{ padding: '5px 5px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
                         -₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>
+                      <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
                         ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>
-                        {singleMonthPrintData.bookings.length} आवंटन
+                      <td style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
+                        {singleMonthPrintData.bookings.length} पत्र
                       </td>
                     </tr>
                   </tbody>
@@ -1035,126 +1006,104 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             </div>
           ) : (
             /* =================================================================== */
-            /* CASE B: ALL MONTHS STATEMENT (जब समस्त माह चुना गया हो)            */
+            /* CASE B: ALL MONTHS STATEMENT (समस्त माह आख्या)                     */
             /* =================================================================== */
             <div>
-              {/* Key Highlights / Summary Boxes */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '18px' }}>
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>कमरा किराया संग्रह</div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '2px' }}>{overallStats.totalRoomsCount} कक्ष दिवस • {overallStats.totalBookingsCount} पत्र</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#EFF6FF' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase' }}>कुल भोजन संग्रह</div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#1E3A8A', marginTop: '2px' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '2px' }}>मेस / खान-पान कुल आय</div>
-                </div>
-
-                <div style={{ border: '1px solid #FECDD3', borderRadius: '6px', padding: '8px 10px', background: '#FFF1F2' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#BE123C', textTransform: 'uppercase' }}>कुल व्यय / खर्च</div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#9F1239', marginTop: '2px' }}>₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#BE123C', marginTop: '2px' }}>खर्च कटौती</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#FEF3C7' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase' }}>सर्वकुल शुद्ध राजस्व</div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#78350F', marginTop: '2px' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#92400E', marginTop: '2px' }}>(किराया+भोजन)-खर्च</div>
-                </div>
-
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '8px 10px', background: '#F8FAFC' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>चालू माह शुद्ध संग्रह</div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#047857', marginTop: '2px' }}>₹{overallStats.currentMonthGrandTotal.toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: '9px', color: '#64748B', marginTop: '2px' }}>{overallStats.currentMonthCount} आवंटन पत्र</div>
-                </div>
+              {/* Ink-Saver Official Summary Strip */}
+              <div style={{ border: '1.5px solid #000000', padding: '6px 10px', marginBottom: '10px', background: '#FFFFFF', fontSize: '10.5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span><strong>कुल आवंटन:</strong> {overallStats.totalBookingsCount} पत्र ({overallStats.totalRoomsCount} कक्ष दिवस)</span>
+                <span>|</span>
+                <span><strong>कमरा किराया:</strong> ₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</span>
+                <span>|</span>
+                <span><strong>भोजन संग्रह:</strong> ₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</span>
+                <span>|</span>
+                <span><strong>कुल व्यय/खर्च:</strong> ₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}</span>
+                <span>|</span>
+                <span style={{ fontSize: '11px', fontWeight: 900 }}><strong>सर्वकुल शुद्ध संग्रह: ₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</strong></span>
               </div>
 
-              {/* भाग 1: माह-वार राजस्व संग्रह सारांश तालिका (Summary Table) */}
-              <div style={{ marginBottom: '22px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  भाग 1: माह-वार किराया, भोजन एवं व्यय सारांश तालिका (Monthly Revenue Summary)
+              {/* भाग 1: माह-वार राजस्व संग्रह सारांश तालिका */}
+              <div style={{ marginBottom: '18px' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#000000', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  भाग 1: माह-वार किराया, भोजन एवं व्यय सारांश तालिका:
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', background: '#FFFFFF' }}>
                   <thead>
-                    <tr style={{ background: '#0F172A', color: '#FFFFFF', textAlign: 'left' }}>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', width: '35px', textAlign: 'center' }}>क्र०</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A' }}>माह एवं वर्ष (Month & Year)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कोड</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>आवंटन संख्या</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'center' }}>कक्ष दिवस</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>कमरा किराया (₹)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>भोजन संग्रह (₹)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>व्यय / खर्च (₹)</th>
-                      <th style={{ padding: '6px 8px', border: '1px solid #0F172A', textAlign: 'right' }}>शुद्ध संग्रह (₹)</th>
+                    <tr style={{ background: '#FFFFFF', color: '#000000' }}>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', width: '30px', textAlign: 'center', fontWeight: 800 }}>क्र०</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', textAlign: 'left', fontWeight: 800 }}>माह एवं वर्ष (Month & Year)</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'center', fontWeight: 800 }}>कोड</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'center', fontWeight: 800 }}>आवंटन पत्र</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'center', fontWeight: 800 }}>कक्ष दिवस</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '75px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया (₹)</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'right', fontWeight: 800 }}>भोजन संग्रह (₹)</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'right', fontWeight: 800 }}>व्यय / खर्च (₹)</th>
+                      <th style={{ padding: '4px 8px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '85px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {monthlyData.map((m, idx) => {
                       const isCurrent = m.monthKey === currentMonthKey;
-                      const isLast = m.monthKey === lastMonthKey;
 
                       return (
-                        <tr key={m.monthKey} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                        <tr key={m.monthKey} style={{ background: '#FFFFFF' }}>
+                          <td style={{ padding: '4px 4px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #000000', fontWeight: 700 }}>
                             {formatMonthKey(m.monthKey, 'hi')}
-                            {isCurrent && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: '3px', border: '1px solid #FCD34D' }}>चालू माह</span>}
-                            {isLast && <span style={{ marginLeft: '6px', fontSize: '9px', background: '#F3E8FF', color: '#6B21A8', padding: '1px 5px', borderRadius: '3px', border: '1px solid #D8B4FE' }}>गत माह</span>}
+                            {isCurrent && <span style={{ marginLeft: '6px', fontSize: '8.5px', fontWeight: 600 }}>[चालू माह]</span>}
                           </td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', color: '#64748B' }}>{m.monthKey}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center', fontWeight: 700 }}>{m.bookings.length}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'center' }}>{m.roomsCount}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{m.totalFood > 0 ? `₹${m.totalFood.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 600, color: '#BE123C' }}>{m.totalExpenditure > 0 ? `-₹${m.totalExpenditure.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: 800 }}>₹{m.grandTotal.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '4px 4px', border: '1px solid #000000', textAlign: 'center' }}>{m.monthKey}</td>
+                          <td style={{ padding: '4px 4px', border: '1px solid #000000', textAlign: 'center', fontWeight: 700 }}>{m.bookings.length}</td>
+                          <td style={{ padding: '4px 4px', border: '1px solid #000000', textAlign: 'center' }}>{m.roomsCount}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600 }}>₹{m.totalRent.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600 }}>{m.totalFood > 0 ? `₹${m.totalFood.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600 }}>{m.totalExpenditure > 0 ? `-₹${m.totalExpenditure.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ padding: '4px 8px', border: '1px solid #000000', textAlign: 'right', fontWeight: 800 }}>₹{m.grandTotal.toLocaleString('en-IN')}</td>
                         </tr>
                       );
                     })}
 
                     {/* Grand Total Row */}
-                    <tr style={{ background: '#E2E8F0', fontWeight: 800, fontSize: '11px' }}>
-                      <td colSpan={3} style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>कुल महायोग (GRAND TOTAL)</td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalBookingsCount}</td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#1E40AF' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#BE123C' }}>-₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '7px 8px', border: '1px solid #94A3B8', textAlign: 'right', color: '#0F172A' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</td>
+                    <tr style={{ background: '#FFFFFF', fontWeight: 900, fontSize: '10.5px' }}>
+                      <td colSpan={3} style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>कुल महायोग (GRAND TOTAL)</td>
+                      <td style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>{overallStats.totalBookingsCount}</td>
+                      <td style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
+                      <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>-₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* भाग 2: विस्तृत आवंटन एवं किराया विवरण तालिका (Detailed Allotments Record) */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', borderLeft: '4px solid #B45309', paddingLeft: '8px', marginBottom: '8px' }}>
-                  भाग 2: विस्तृत आवंटन, कमरा किराया, भोजन एवं व्यय विवरण (Detailed Allotments & Collection Record)
+              {/* भाग 2: विस्तृत आवंटन एवं किराया विवरण तालिका */}
+              <div style={{ marginBottom: '18px' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#000000', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  भाग 2: विस्तृत आवंटन, कमरा किराया, भोजन एवं व्यय विवरण (माह-वार):
                 </div>
 
                 {monthlyData.map((m) => (
-                  <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '14px' }}>
-                    <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', padding: '4px 8px', fontWeight: 700, fontSize: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                  <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '12px' }}>
+                    <div style={{ border: '1px solid #000000', padding: '3px 6px', fontWeight: 800, fontSize: '9.5px', display: 'flex', justifyContent: 'space-between', background: '#FFFFFF' }}>
                       <span>माह: {formatMonthKey(m.monthKey, 'hi')} ({m.bookings.length} आवंटन)</span>
-                      <span>कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')} • खर्च: ₹{m.totalExpenditure.toLocaleString('en-IN')} • <strong>शुद्ध कुल: ₹{m.grandTotal.toLocaleString('en-IN')}</strong></span>
+                      <span>कमरा: ₹{m.totalRent.toLocaleString('en-IN')} • भोजन: ₹{m.totalFood.toLocaleString('en-IN')} • व्यय: ₹{m.totalExpenditure.toLocaleString('en-IN')} • <strong>शुद्ध कुल: ₹{m.grandTotal.toLocaleString('en-IN')}</strong></span>
                     </div>
 
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px', background: '#FFFFFF' }}>
                       <thead>
-                        <tr style={{ background: '#F8FAFC', color: '#334155', borderBottom: '1px solid #CBD5E1' }}>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '25px', textAlign: 'center' }}>क्र०</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px' }}>दिनांक</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '55px' }}>पत्र संख्या</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>अधिकारी का नाम एवं पदनाम</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px' }}>आवंटित सूट</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>कमरा किराया (₹)</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px', textAlign: 'right' }}>भोजन (₹)</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '60px', textAlign: 'right' }}>व्यय / खर्च (₹)</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'right' }}>शुद्ध कुल (₹)</th>
-                          <th style={{ padding: '4px 5px', border: '1px solid #E2E8F0', width: '65px', textAlign: 'center' }}>स्थिति / माध्यम</th>
+                        <tr style={{ background: '#FFFFFF', color: '#000000' }}>
+                          <th style={{ padding: '3px 3px', border: '1px solid #000000', width: '22px', textAlign: 'center' }}>क्र०</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '52px' }}>दिनांक</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '44px' }}>पत्र सं०</th>
+                          <th style={{ padding: '3px 5px', border: '1px solid #000000', textAlign: 'left' }}>अधिकारी का नाम एवं संदर्भ</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '58px' }}>सूट</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>किराया (₹)</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '50px', textAlign: 'right' }}>भोजन (₹)</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '50px', textAlign: 'right' }}>व्यय (₹)</th>
+                          <th style={{ padding: '3px 5px', border: '1px solid #000000', width: '60px', textAlign: 'right' }}>शुद्ध कुल (₹)</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '46px', textAlign: 'center' }}>माध्यम</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1167,25 +1116,28 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                           const suits = getBookingSuitsList(b).join(', ');
                           const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
-                          const payMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH';
+                          const rawPayMode = (b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH').toUpperCase();
+                          const payModeHindi = rawPayMode === 'ONLINE' || rawPayMode === 'UPI' ? 'ऑनलाइन' : rawPayMode === 'CHEQUE' ? 'चेक' : 'नकद';
+
+                          const dateParts = (b.booking_date || '').split('-');
+                          const shortDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0].slice(2)}` : b.booking_date;
 
                           return (
-                            <tr key={`print-b-${b.id}`} style={{ background: bIdx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'center' }}>{bIdx + 1}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{b.booking_date}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', fontWeight: 600 }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>
+                            <tr key={`print-b-${b.id}`} style={{ background: '#FFFFFF' }}>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'center' }}>{bIdx + 1}</td>
+                              <td style={{ padding: '3px 4px', border: '1px solid #000000', whiteSpace: 'nowrap' }}>{shortDate}</td>
+                              <td style={{ padding: '3px 4px', border: '1px solid #000000', fontWeight: 600, whiteSpace: 'nowrap' }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
+                              <td style={{ padding: '3px 5px', border: '1px solid #000000', whiteSpace: 'nowrap' }}>
                                 <span style={{ fontWeight: 700 }}>{b.guest_name}</span>
-                                {b.reference && <span style={{ color: '#64748B', display: 'block', fontSize: '8px' }}>{b.reference}</span>}
+                                {b.reference && <span style={{ color: '#334155' }}> ({b.reference})</span>}
                               </td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0' }}>{suits}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600 }}>₹{rent.toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600, color: '#1E40AF' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 600, color: '#BE123C' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: 700 }}>₹{net.toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '4px 5px', border: '1px solid #E2E8F0', textAlign: 'center', fontSize: '8px' }}>
-                                <span>{b.status || 'CONFIRMED'}</span>
-                                <span style={{ color: '#64748B', display: 'block' }}>({payMode})</span>
+                              <td style={{ padding: '3px 4px', border: '1px solid #000000', whiteSpace: 'nowrap' }}>{suits}</td>
+                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>₹{rent.toLocaleString('en-IN')}</td>
+                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
+                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
+                              <td style={{ padding: '3px 5px', border: '1px solid #000000', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>₹{net.toLocaleString('en-IN')}</td>
+                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'center', fontSize: '8.5px', whiteSpace: 'nowrap' }}>
+                                {payModeHindi}
                               </td>
                             </tr>
                           );
@@ -1198,26 +1150,26 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             </div>
           )}
 
-          {/* 5. प्रमाणीकरण एवं आधिकारिक हस्ताक्षर ब्लॉक */}
-          <div style={{ marginTop: '28px', paddingTop: '16px', borderTop: '1px dashed #94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '11px' }}>
+          {/* 5. आधिकारिक प्रमाणीकरण एवं प्रतिहस्ताक्षर ब्लॉक (For SSP Sir submission) */}
+          <div style={{ marginTop: '28px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '10.5px', pageBreakInside: 'avoid' }}>
             <div style={{ textAlign: 'center', width: '220px' }}>
-              <div style={{ height: '35px' }}></div>
-              <div style={{ fontWeight: 800, color: '#0F172A' }}>हस्ताक्षर प्रभारी</div>
-              <div style={{ color: '#475569' }}>पुलिस ऑफिसर्स गेस्ट हाउस (POGH)</div>
-              <div style={{ color: '#64748B', fontSize: '10px' }}>जनपद अयोध्या (उ0प्र0)</div>
+              <div style={{ height: '36px' }}></div>
+              <div style={{ fontWeight: 800, color: '#000000' }}>( हस्ताक्षर केयरटेकर / प्रभारी )</div>
+              <div style={{ color: '#000000', fontSize: '10px' }}>पुलिस ऑफिसर्स गेस्ट हाउस (POGH)</div>
+              <div style={{ color: '#000000', fontSize: '9px' }}>सिविल लाइंस, जनपद अयोध्या (उ0प्र0)</div>
             </div>
 
             <div style={{ textAlign: 'center', width: '240px' }}>
-              <div style={{ height: '35px' }}></div>
-              <div style={{ fontWeight: 800, color: '#0F172A' }}>प्रतिहस्ताक्षरित / अनुमोदित</div>
-              <div style={{ color: '#475569' }}>वरिष्ठ पुलिस अधीक्षक</div>
-              <div style={{ color: '#64748B', fontSize: '10px' }}>जनपद अयोध्या (उ0प्र0)</div>
+              <div style={{ height: '36px' }}></div>
+              <div style={{ fontWeight: 800, color: '#000000' }}>प्रतिहस्ताक्षरित / अनुमोदित</div>
+              <div style={{ fontWeight: 800, color: '#000000', marginTop: '1px' }}>वरिष्ठ पुलिस अधीक्षक</div>
+              <div style={{ color: '#000000', fontSize: '9.5px' }}>जनपद अयोध्या (उ0प्र0)</div>
             </div>
           </div>
 
           {/* Statement Verification Footer */}
-          <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', color: '#94A3B8', borderTop: '1px solid #E2E8F0', paddingTop: '6px' }}>
-            यह विवरण कंप्यूटर आधारित पुलिस ऑफिसर्स गेस्ट हाउस (POGH) अयोध्या पोर्टल द्वारा स्वतः उत्पन्न किया गया आधिकारिक विवरण है।
+          <div style={{ marginTop: '14px', textAlign: 'center', fontSize: '8.5px', color: '#475569', borderTop: '1px solid #94A3B8', paddingTop: '4px' }}>
+            यह विवरण कंप्यूटर आधारित पुलिस ऑफिसर्स गेस्ट हाउस (POGH) अयोध्या पोर्टल द्वारा मुद्रित आधिकारिक मासिक लेखा आख्या है।
           </div>
 
         </div>
