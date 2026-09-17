@@ -951,30 +951,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
 
           {/* Fixed Footer */}
-          <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
-            <div className="flex-1 min-w-0 pr-2">
+          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 shrink-0">
+            {/* Validation Status Message */}
+            <div className="mb-2">
               {conflicts.length > 0 ? (
-                <span className="text-xs font-bold text-rose-600 flex items-center gap-1 truncate">
+                <span className="text-xs font-bold text-rose-600 flex items-center gap-1">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">
                     {language === 'hi' ? 'कमरा पहले से आरक्षित है' : 'Room is already booked'}
                   </span>
                 </span>
               ) : !Object.values(selectedSuits).some(Boolean) ? (
-                <span className="text-xs font-semibold text-slate-500 truncate">
+                <span className="text-xs font-semibold text-slate-500">
                   {language === 'hi' ? 'कृपया कम से कम एक कमरा चुनें' : 'Please select at least one suit'}
                 </span>
               ) : (
-                <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1 truncate">
+                <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">
+                  <span>
                     {Object.values(selectedSuits).filter(Boolean).length} {language === 'hi' ? 'कमरा तैयार' : 'room(s) ready'}
                   </span>
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
