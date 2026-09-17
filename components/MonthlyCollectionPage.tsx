@@ -941,10 +941,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '62px', textAlign: 'center', fontWeight: 800 }}>दिनांक</th>
                       <th style={{ padding: '4px 8px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', textAlign: 'left', fontWeight: 800 }}>अधिकारी का नाम एवं संदर्भ/पदनाम</th>
                       <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'center', fontWeight: 800 }}>आवंटित सूट</th>
-                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '68px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया (₹)</th>
-                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'right', fontWeight: 800 }}>भोजन (₹)</th>
-                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'right', fontWeight: 800 }}>व्यय (₹)</th>
-                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '72px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह (₹)</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '68px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'right', fontWeight: 800 }}>भोजन</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'right', fontWeight: 800 }}>व्यय</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '72px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह</th>
                       <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'center', fontWeight: 800 }}>माध्यम</th>
                     </tr>
                   </thead>
@@ -1044,10 +1044,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'center', fontWeight: 800 }}>कोड</th>
                       <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'center', fontWeight: 800 }}>आवंटन पत्र</th>
                       <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'center', fontWeight: 800 }}>कक्ष दिवस</th>
-                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '75px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया (₹)</th>
-                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'right', fontWeight: 800 }}>भोजन संग्रह (₹)</th>
-                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'right', fontWeight: 800 }}>व्यय / खर्च (₹)</th>
-                      <th style={{ padding: '4px 8px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '85px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह (₹)</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '75px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'right', fontWeight: 800 }}>भोजन संग्रह</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'right', fontWeight: 800 }}>व्यय / खर्च</th>
+                      <th style={{ padding: '4px 8px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '85px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1079,7 +1079,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       <td style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>{overallStats.totalRoomsCount}</td>
                       <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>₹{overallStats.grandTotalRent.toLocaleString('en-IN')}</td>
                       <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>₹{overallStats.grandTotalFood.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>-₹{overallStats.grandTotalExpenditure.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>{overallStats.grandTotalExpenditure > 0 ? `-₹${overallStats.grandTotalExpenditure.toLocaleString('en-IN')}` : '-'}</td>
                       <td style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right' }}>₹{overallStats.grandTotalRevenue.toLocaleString('en-IN')}</td>
                     </tr>
                   </tbody>
@@ -1106,10 +1106,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '58px' }}>दिनांक</th>
                           <th style={{ padding: '3px 6px', border: '1px solid #000000', textAlign: 'left' }}>अधिकारी का नाम एवं संदर्भ</th>
                           <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '65px' }}>सूट</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '60px', textAlign: 'right' }}>किराया (₹)</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>भोजन (₹)</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>व्यय (₹)</th>
-                          <th style={{ padding: '3px 5px', border: '1px solid #000000', width: '65px', textAlign: 'right' }}>शुद्ध कुल (₹)</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '60px', textAlign: 'right' }}>कमरा किराया</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>भोजन</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>व्यय</th>
+                          <th style={{ padding: '3px 5px', border: '1px solid #000000', width: '65px', textAlign: 'right' }}>शुद्ध कुल</th>
                           <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '50px', textAlign: 'center' }}>माध्यम</th>
                         </tr>
                       </thead>
