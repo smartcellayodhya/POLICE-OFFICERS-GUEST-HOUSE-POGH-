@@ -355,99 +355,29 @@ function HomePageContent() {
     }
   }, [currentUser, fetchBookings]);
 
-  // Handle New Bookings Save (Admin Only)
+  // Handle New Bookings Save (Admin Only - Strictly via Server API using Private Key)
   const handleSaveBookings = async (newBookings: Booking[]) => {
     if (currentUser?.role !== 'admin') {
       alert('केवल एडमिन को नई बुकिंग करने की अनुमति है।');
       return;
     }
 
-    // 1. Try secure Server API first
-    try {
-      const apiRes = await apiCreateBookings(newBookings);
-      if (apiRes.success) {
-        await fetchBookings();
-        if (newBookings.length > 0 && !newBookings[0].is_maintenance) {
-          setSelectedLetterBooking(newBookings[0]);
-          setIsLetterModalOpen(true);
-        }
-        return;
+    // Secure Server API call with Private Service Role Key
+    const apiRes = await apiCreateBookings(newBookings);
+    if (apiRes.success) {
+      await fetchBookings();
+      if (newBookings.length > 0 && !newBookings[0].is_maintenance) {
+        setSelectedLetterBooking(newBookings[0]);
+        setIsLetterModalOpen(true);
       }
-    } catch (err: any) {
-      console.warn('Server API create failed, trying direct/local fallback:', err.message);
+      return;
     }
 
-    if (isSupabaseConfigured()) {
-      const client = getSupabaseClient();
-      if (client) {
-        const fullPayload = newBookings.map((b) => ({
-          group_id: b.group_id,
-          dispatch_no: b.dispatch_no,
-          booking_date: b.booking_date,
-          guest_name: b.guest_name,
-          mobile_number: b.mobile_number,
-          reference: b.reference,
-          suit_1: b.suit_1,
-          suit_2: b.suit_2,
-          suit_3: b.suit_3,
-          suit_4: b.suit_4,
-          total_amount: b.total_amount,
-          meal_type_status: b.meal_type_status,
-          status: b.status || 'CONFIRMED',
-          check_in_time: b.check_in_time,
-          check_out_time: b.check_out_time,
-          booking_type: b.booking_type,
-          stay_hours: b.stay_hours,
-          hourly_rate: b.hourly_rate,
-          notes: b.notes || '',
-        }));
-
-        let { error } = await client.from('pogh_bookings').insert(fullPayload);
-        if (error) {
-          console.warn('Full payload insert failed, falling back to core columns:', error.message);
-          const corePayload = newBookings.map((b) => ({
-            booking_date: b.booking_date,
-            guest_name: b.guest_name,
-            mobile_number: b.mobile_number,
-            reference: b.reference,
-            suit_1: b.suit_1,
-            suit_2: b.suit_2,
-            suit_3: b.suit_3,
-            suit_4: b.suit_4,
-            total_amount: b.total_amount,
-            meal_type_status: b.meal_type_status,
-            status: b.status || 'CONFIRMED',
-            notes: b.notes || '',
-          }));
-          const fallbackRes = await client.from('pogh_bookings').insert(corePayload);
-          if (fallbackRes.error) {
-            throw new Error(fallbackRes.error.message);
-          }
-        }
-        await fetchBookings();
-
-        // Redirect to Letter Modal with Print & PDF options
-        if (newBookings.length > 0 && !newBookings[0].is_maintenance) {
-          setSelectedLetterBooking(newBookings[0]);
-          setIsLetterModalOpen(true);
-        }
-        return;
-      }
-    }
-
-    // Local save
-    const updated = [...newBookings, ...bookings];
-    setBookings(updated);
-    saveLocalBookings(updated);
-
-    // Redirect to Letter Modal with Print & PDF options
-    if (newBookings.length > 0 && !newBookings[0].is_maintenance) {
-      setSelectedLetterBooking(newBookings[0]);
-      setIsLetterModalOpen(true);
-    }
+    // Do NOT fall back to client-side anon insert which violates RLS and is vulnerable to tampering!
+    throw new Error(apiRes.error || 'सर्वर पर बुकिंग सुरक्षित करने में विफल।');
   };
 
-  // Handle Delete Booking (Admin Only)
+  // Handle Delete Booking (Admin Only - Strictly via Server API using Private Key)
   const handleDeleteBooking = async (id: string, groupId?: string) => {
     if (currentUser?.role !== 'admin') {
       alert('केवल एडमिन को रिकॉर्ड हटाने की अनुमति है।');
@@ -458,90 +388,26 @@ function HomePageContent() {
       const confirmDelete = window.confirm(`क्या आप इस बुकिंग समूह (${groupId}) के सभी दिवस रिकॉर्ड हटाना चाहते हैं?`);
       if (!confirmDelete) return;
 
-      // 1. Try secure Server API first
-      try {
-        const apiRes = await apiDeleteBooking({ groupId });
-        if (apiRes.success) {
-          logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
-          await fetchBookings();
-          return;
-        }
-      } catch (err: any) {
-        console.warn('Server delete failed, trying fallback:', err.message);
+      const apiRes = await apiDeleteBooking({ groupId });
+      if (apiRes.success) {
+        logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
+        await fetchBookings();
+        return;
       }
-
-      if (isSupabaseConfigured()) {
-        const client = getSupabaseClient();
-        if (client) {
-          // Find all record IDs belonging to this group
-          const targetIds = bookings
-            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === groupId)
-            .map((b) => b.id);
-
-          let error = null;
-          if (targetIds.length > 0) {
-            const res = await client.from('pogh_bookings').delete().in('id', targetIds);
-            error = res.error;
-          } else {
-            const res = await client
-              .from('pogh_bookings')
-              .delete()
-              .or(`notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`);
-            error = res.error;
-          }
-          if (error) {
-            alert('त्रुटि: ' + error.message);
-            return;
-          }
-          logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
-          await fetchBookings();
-          return;
-        }
-      }
-
-      logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
-      const filtered = bookings.filter((b) => {
-        const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
-        return bRef !== groupId && b.id !== id;
-      });
-      setBookings(filtered);
-      saveLocalBookings(filtered);
+      alert('त्रुटि: ' + (apiRes.error || 'सर्वर पर रिकॉर्ड हटाने में विफल'));
       return;
     }
 
     const confirmSingle = window.confirm('क्या आप यह बुकिंग रिकॉर्ड स्थायी रूप से हटाना चाहते हैं?');
     if (!confirmSingle) return;
 
-    // 1. Try secure Server API first
-    try {
-      const apiRes = await apiDeleteBooking({ id });
-      if (apiRes.success) {
-        logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}`);
-        await fetchBookings();
-        return;
-      }
-    } catch (err: any) {
-      console.warn('Server delete failed, trying fallback:', err.message);
+    const apiRes = await apiDeleteBooking({ id });
+    if (apiRes.success) {
+      logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}`);
+      await fetchBookings();
+      return;
     }
-
-    if (isSupabaseConfigured()) {
-      const client = getSupabaseClient();
-      if (client) {
-        const { error } = await client.from('pogh_bookings').delete().eq('id', id);
-        if (error) {
-          alert('त्रुटि: ' + error.message);
-          return;
-        }
-        logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}`);
-        await fetchBookings();
-        return;
-      }
-    }
-
-    logActivity('DELETE', `बुकिंग हटाई गई`, `आईडी: ${id}`);
-    const filtered = bookings.filter((b) => b.id !== id);
-    setBookings(filtered);
-    saveLocalBookings(filtered);
+    alert('त्रुटि: ' + (apiRes.error || 'सर्वर पर रिकॉर्ड हटाने में विफल'));
   };
 
   // Handle Lifecycle Status Change (Admin & Operator)
@@ -557,78 +423,20 @@ function HomePageContent() {
 
     const refCode = booking.group_id || extractGroupIdFromNotes(booking.notes);
 
-    // 1. Try secure Server API first
-    try {
-      const apiRes = await apiUpdateBooking({
-        id: booking.id,
-        groupId: refCode,
-        updatedData: { status: newStatus },
-        applyToAll: updateAllDates && Boolean(refCode),
-      });
-      if (apiRes.success) {
-        logActivity('STATUS_CHANGE', `स्थिति बदली: ${newStatus}`, `अतिथि: ${booking.guest_name}, संदर्भ: ${refCode}`);
-        await fetchBookings();
-        return;
-      }
-    } catch (err: any) {
-      console.warn('Server status update failed, trying fallback:', err.message);
-    }
-
-    if (isSupabaseConfigured()) {
-      const client = getSupabaseClient();
-      if (client) {
-        if (updateAllDates && refCode) {
-          const targetIds = bookings
-            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === refCode)
-            .map((b) => b.id);
-
-          let error = null;
-          if (targetIds.length > 0) {
-            const res = await client
-              .from('pogh_bookings')
-              .update({ status: newStatus })
-              .in('id', targetIds);
-            error = res.error;
-          } else {
-            const res = await client
-              .from('pogh_bookings')
-              .update({ status: newStatus })
-              .or(`notes.ilike.%"group_id":"${refCode}"%,notes.ilike.%"groupId":"${refCode}"%`);
-            error = res.error;
-          }
-          if (error) {
-            alert('त्रुटि: ' + error.message);
-            return;
-          }
-        } else {
-          const { error } = await client
-            .from('pogh_bookings')
-            .update({ status: newStatus })
-            .eq('id', booking.id);
-          if (error) {
-            alert('त्रुटि: ' + error.message);
-            return;
-          }
-        }
-        logActivity('STATUS_CHANGE', `स्थिति बदली: ${newStatus}`, `अतिथि: ${booking.guest_name}, संदर्भ: ${refCode}`);
-        await fetchBookings();
-        return;
-      }
-    }
-
-    const updated = bookings.map((b) => {
-      if (updateAllDates && refCode) {
-        const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
-        if (bRef === refCode) {
-          return { ...b, status: newStatus };
-        }
-      }
-      return b.id === booking.id ? { ...b, status: newStatus } : b;
+    const apiRes = await apiUpdateBooking({
+      id: booking.id,
+      groupId: refCode,
+      updatedData: { status: newStatus },
+      applyToAll: updateAllDates && Boolean(refCode),
     });
 
-    logActivity('STATUS_CHANGE', `स्थिति बदली: ${newStatus}`, `अतिथि: ${booking.guest_name}, संदर्भ: ${refCode}`);
-    setBookings(updated);
-    saveLocalBookings(updated);
+    if (apiRes.success) {
+      logActivity('STATUS_CHANGE', `स्थिति बदली: ${newStatus}`, `अतिथि: ${booking.guest_name}, संदर्भ: ${refCode}`);
+      await fetchBookings();
+      return;
+    }
+
+    alert('त्रुटि: ' + (apiRes.error || 'सर्वर पर स्थिति बदलने में विफल'));
   };
 
   // Open Letter Modal
@@ -661,126 +469,24 @@ function HomePageContent() {
     setIsEditModalOpen(true);
   };
 
-  // Save Modified Booking Details
+  // Save Modified Booking Details (Admin Only - Strictly via Server API using Private Key)
   const handleSaveEdit = async (updatedData: Partial<Booking>, applyToAll: boolean) => {
     if (!selectedEditBooking) return;
     const refCode = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
 
-    // 1. Try secure Server API first
-    try {
-      const apiRes = await apiUpdateBooking({
-        id: selectedEditBooking.id,
-        groupId: refCode,
-        updatedData,
-        applyToAll: applyToAll && Boolean(refCode),
-      });
-      if (apiRes.success) {
-        await fetchBookings();
-        return;
-      }
-    } catch (err: any) {
-      console.warn('Server update failed, trying fallback:', err.message);
-    }
-
-    if (isSupabaseConfigured()) {
-      const client = getSupabaseClient();
-      if (client) {
-        if (applyToAll && refCode) {
-          const targetIds = bookings
-            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === refCode)
-            .map((b) => b.id);
-
-          let error = null;
-          if (targetIds.length > 0) {
-            let res = await client
-              .from('pogh_bookings')
-              .update(updatedData)
-              .in('id', targetIds);
-            if (res.error) {
-              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
-              const corePayload: Record<string, any> = {
-                guest_name: updatedData.guest_name,
-                mobile_number: updatedData.mobile_number,
-                reference: updatedData.reference,
-                total_amount: updatedData.total_amount,
-                meal_type_status: updatedData.meal_type_status,
-                status: updatedData.status,
-                suit_1: updatedData.suit_1,
-                suit_2: updatedData.suit_2,
-                suit_3: updatedData.suit_3,
-                suit_4: updatedData.suit_4,
-                notes: updatedData.notes,
-              };
-              res = await client.from('pogh_bookings').update(corePayload).in('id', targetIds);
-            }
-            error = res.error;
-          } else {
-            let res = await client
-              .from('pogh_bookings')
-              .update(updatedData)
-              .or(`notes.ilike.%"group_id":"${refCode}"%,notes.ilike.%"groupId":"${refCode}"%`);
-            if (res.error) {
-              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
-              const corePayload: Record<string, any> = {
-                guest_name: updatedData.guest_name,
-                mobile_number: updatedData.mobile_number,
-                reference: updatedData.reference,
-                total_amount: updatedData.total_amount,
-                meal_type_status: updatedData.meal_type_status,
-                status: updatedData.status,
-                suit_1: updatedData.suit_1,
-                suit_2: updatedData.suit_2,
-                suit_3: updatedData.suit_3,
-                suit_4: updatedData.suit_4,
-                notes: updatedData.notes,
-              };
-              res = await client.from('pogh_bookings').update(corePayload).or(`notes.ilike.%"group_id":"${refCode}"%,notes.ilike.%"groupId":"${refCode}"%`);
-            }
-            error = res.error;
-          }
-          if (error) throw new Error(error.message);
-        } else {
-          let { error } = await client
-            .from('pogh_bookings')
-            .update(updatedData)
-            .eq('id', selectedEditBooking.id);
-          if (error) {
-            console.warn('Full payload update failed, falling back to core columns:', error.message);
-            const corePayload: Record<string, any> = {
-              guest_name: updatedData.guest_name,
-              mobile_number: updatedData.mobile_number,
-              reference: updatedData.reference,
-              total_amount: updatedData.total_amount,
-              meal_type_status: updatedData.meal_type_status,
-              status: updatedData.status,
-              suit_1: updatedData.suit_1,
-              suit_2: updatedData.suit_2,
-              suit_3: updatedData.suit_3,
-              suit_4: updatedData.suit_4,
-              notes: updatedData.notes,
-            };
-            const fallbackRes = await client.from('pogh_bookings').update(corePayload).eq('id', selectedEditBooking.id);
-            if (fallbackRes.error) throw new Error(fallbackRes.error.message);
-          }
-        }
-        await fetchBookings();
-        return;
-      }
-    }
-
-    // Local storage fallback
-    const updated = bookings.map((b) => {
-      if (applyToAll && refCode) {
-        const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
-        if (bRef === refCode) {
-          return { ...b, ...updatedData };
-        }
-      }
-      return b.id === selectedEditBooking.id ? { ...b, ...updatedData } : b;
+    const apiRes = await apiUpdateBooking({
+      id: selectedEditBooking.id,
+      groupId: refCode,
+      updatedData,
+      applyToAll: applyToAll && Boolean(refCode),
     });
 
-    setBookings(updated);
-    saveLocalBookings(updated);
+    if (apiRes.success) {
+      await fetchBookings();
+      return;
+    }
+
+    throw new Error(apiRes.error || 'सर्वर पर बुकिंग अद्यतन करने में विफल');
   };
 
   // Open Collection Modal (Admin & Operator)
@@ -865,136 +571,41 @@ function HomePageContent() {
       collected_by: collectorName,
     };
 
-    // 1. Try secure Server API first
-    try {
-      const apiRes = await apiUpdateBooking({
-        id: targetBooking.id,
-        groupId: targetRef,
-        updatedData: dbPayload,
-        applyToAll: Boolean(targetRef),
+    // Secure Server API update with Private Key
+    const apiRes = await apiUpdateBooking({
+      id: targetBooking.id,
+      groupId: targetRef,
+      updatedData: dbPayload,
+      applyToAll: Boolean(targetRef),
+    });
+
+    if (apiRes.success) {
+      await fetchBookings();
+
+      const gross = dayRentAmount + data.foodAmount;
+      const net = gross <= 0 ? 0 : Math.max(0, gross - data.expenditure);
+
+      logActivity(
+        'UPDATE',
+        `कलेक्शन दर्ज: शुद्ध ₹${net} (सकल: ₹${gross}, व्यय: ₹${data.expenditure})`,
+        `अतिथि: ${targetBooking.guest_name}, कमरा: ₹${dayRentAmount}, भोजन: ₹${data.foodAmount}, व्यय: ₹${data.expenditure}, माध्यम: ${data.paymentMode}`
+      );
+
+      // Open receipt modal immediately so the operator can print or download
+      setSelectedReceiptBooking({
+        ...targetBooking,
+        ...dbPayload,
+        food_amount: data.foodAmount,
+        expenditure: data.expenditure,
+        payment_mode: data.paymentMode,
+        collected_by: collectorName,
+        collection_date: formatToISODate(new Date()),
       });
-      if (apiRes.success) {
-        await fetchBookings();
-        return;
-      }
-    } catch (err: any) {
-      console.warn('Server collection update failed, trying fallback:', err.message);
+      setIsReceiptModalOpen(true);
+      return;
     }
 
-    if (isSupabaseConfigured()) {
-      const client = getSupabaseClient();
-      if (client) {
-        if (targetRef) {
-          const targetIds = bookings
-            .filter((b) => (b.group_id || extractGroupIdFromNotes(b.notes)) === targetRef)
-            .map((b) => b.id);
-
-          let error = null;
-          if (targetIds.length > 0) {
-            let res = await client
-              .from('pogh_bookings')
-              .update(dbPayload)
-              .in('id', targetIds);
-            if (res.error) {
-              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
-              const corePayload: Record<string, any> = {
-                total_amount: dbPayload.total_amount,
-                status: dbPayload.status,
-                notes: dbPayload.notes,
-                suit_1: dbPayload.suit_1,
-                suit_2: dbPayload.suit_2,
-                suit_3: dbPayload.suit_3,
-                suit_4: dbPayload.suit_4,
-              };
-              res = await client.from('pogh_bookings').update(corePayload).in('id', targetIds);
-            }
-            error = res.error;
-          } else {
-            let res = await client
-              .from('pogh_bookings')
-              .update(dbPayload)
-              .or(`notes.ilike.%"group_id":"${targetRef}"%,notes.ilike.%"groupId":"${targetRef}"%`);
-            if (res.error) {
-              console.warn('Full payload update failed, falling back to core columns:', res.error.message);
-              const corePayload: Record<string, any> = {
-                total_amount: dbPayload.total_amount,
-                status: dbPayload.status,
-                notes: dbPayload.notes,
-                suit_1: dbPayload.suit_1,
-                suit_2: dbPayload.suit_2,
-                suit_3: dbPayload.suit_3,
-                suit_4: dbPayload.suit_4,
-              };
-              res = await client.from('pogh_bookings').update(corePayload).or(`notes.ilike.%"group_id":"${targetRef}"%,notes.ilike.%"groupId":"${targetRef}"%`);
-            }
-            error = res.error;
-          }
-          if (error) throw new Error(error.message);
-        } else {
-          let { error } = await client
-            .from('pogh_bookings')
-            .update(dbPayload)
-            .eq('id', targetBooking.id);
-          if (error) {
-            console.warn('Full payload update failed, falling back to core columns:', error.message);
-            const corePayload: Record<string, any> = {
-              total_amount: dbPayload.total_amount,
-              status: dbPayload.status,
-              notes: dbPayload.notes,
-              suit_1: dbPayload.suit_1,
-              suit_2: dbPayload.suit_2,
-              suit_3: dbPayload.suit_3,
-              suit_4: dbPayload.suit_4,
-            };
-            const fallbackRes = await client.from('pogh_bookings').update(corePayload).eq('id', targetBooking.id);
-            if (fallbackRes.error) throw new Error(fallbackRes.error.message);
-          }
-        }
-        await fetchBookings();
-      }
-    }
-
-    // Local / in-memory state update
-    const updated = bookings.map((b) => {
-      const bRef = b.group_id || extractGroupIdFromNotes(b.notes);
-      const isTarget = (targetRef && bRef === targetRef) || b.id === targetBooking.id;
-      if (isTarget) {
-        return {
-          ...b,
-          ...dbPayload,
-          food_amount: data.foodAmount,
-          expenditure: data.expenditure,
-          payment_mode: data.paymentMode,
-          collected_by: collectorName,
-          collection_date: formatToISODate(new Date()),
-        };
-      }
-      return b;
-    });
-
-    setBookings(updated);
-    saveLocalBookings(updated);
-
-    const gross = dayRentAmount + data.foodAmount;
-    const net = gross <= 0 ? 0 : Math.max(0, gross - data.expenditure);
-
-    logActivity(
-      'UPDATE',
-      `कलेक्शन दर्ज: शुद्ध ₹${net} (सकल: ₹${gross}, व्यय: ₹${data.expenditure})`,
-      `अतिथि: ${targetBooking.guest_name}, कमरा: ₹${dayRentAmount}, भोजन: ₹${data.foodAmount}, व्यय: ₹${data.expenditure}, माध्यम: ${data.paymentMode}`
-    );
-
-    // Open receipt modal immediately so the operator can print or download
-    setSelectedReceiptBooking({
-      ...targetBooking,
-      ...dbPayload,
-      food_amount: data.foodAmount,
-      expenditure: data.expenditure,
-      payment_mode: data.paymentMode,
-      collected_by: collectorName,
-      collection_date: formatToISODate(new Date()),
-    });
-    setIsReceiptModalOpen(true);
+    alert('त्रुटि: ' + (apiRes.error || 'सर्वर पर भुगतान रिकॉर्ड करने में विफल'));
   };
 
   // Related bookings for letter

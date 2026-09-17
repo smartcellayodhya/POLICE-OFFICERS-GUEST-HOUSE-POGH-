@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/serverAuth';
-import { getServerSupabaseClient } from '@/lib/supabaseServer';
+import { getServerSupabaseClient, isServiceRoleConfigured } from '@/lib/supabaseServer';
 import { Booking } from '@/lib/types';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
 
@@ -85,6 +85,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!isServiceRoleConfigured()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'सुरक्षा त्रुटि: सर्वर पर SUPABASE_SERVICE_ROLE_KEY (Private Key) सेट नहीं है। कृपया Vercel Environment Variables में SUPABASE_SERVICE_ROLE_KEY जोड़ें।',
+        },
+        { status: 500 }
+      );
+    }
+
     const client = getServerSupabaseClient();
     if (!client) {
       return NextResponse.json(
@@ -113,6 +123,11 @@ export async function POST(req: NextRequest) {
       booking_type: b.booking_type,
       stay_hours: b.stay_hours,
       hourly_rate: b.hourly_rate,
+      is_maintenance: b.is_maintenance || false,
+      food_amount: b.food_amount || 0,
+      expenditure: b.expenditure || 0,
+      payment_mode: b.payment_mode || 'CASH',
+      collected_by: b.collected_by || null,
       notes: b.notes || '',
     }));
 
@@ -187,6 +202,16 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Booking id or groupId is required' },
         { status: 400 }
+      );
+    }
+
+    if (!isServiceRoleConfigured()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'सुरक्षा त्रुटि: सर्वर पर SUPABASE_SERVICE_ROLE_KEY (Private Key) सेट नहीं है। कृपया Vercel Environment Variables में SUPABASE_SERVICE_ROLE_KEY जोड़ें।',
+        },
+        { status: 500 }
       );
     }
 
@@ -308,6 +333,16 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'id or groupId is required to delete' },
         { status: 400 }
+      );
+    }
+
+    if (!isServiceRoleConfigured()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'सुरक्षा त्रुटि: सर्वर पर SUPABASE_SERVICE_ROLE_KEY (Private Key) सेट नहीं है। कृपया Vercel Environment Variables में SUPABASE_SERVICE_ROLE_KEY जोड़ें।',
+        },
+        { status: 500 }
       );
     }
 
