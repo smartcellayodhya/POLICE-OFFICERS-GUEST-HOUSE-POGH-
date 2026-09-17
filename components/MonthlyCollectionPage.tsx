@@ -865,16 +865,19 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       <div ref={printRef} className="hidden">
         <div style={{ padding: '16px 20px', background: '#FFFFFF', color: '#000000', fontFamily: `'Noto Sans Devanagari', 'Inter', sans-serif`, fontSize: '11px', lineHeight: 1.4 }}>
           
-          {/* 1. Official Letterhead Header (Compact Layout: Logo + Office Text + Title) */}
+          {/* 1. Official Letterhead Header (Symmetrical: Logos at Extreme Sides, Heading in Dead Center) */}
           <div style={{ borderBottom: '2px solid #000000', paddingBottom: '10px', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '4px' }}>
+              {/* Left Logo (Extreme Left) */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/up_police_logo.png"
                 alt="UP Police"
-                style={{ width: '48px', height: '48px', objectFit: 'contain', display: 'block', flexShrink: 0 }}
+                style={{ width: '50px', height: '50px', objectFit: 'contain', display: 'block', flexShrink: 0 }}
               />
-              <div style={{ textAlign: 'center' }}>
+
+              {/* Center Heading (Exactly Centered) */}
+              <div style={{ textAlign: 'center', flex: 1, padding: '0 16px' }}>
                 <div style={{ fontSize: '17px', fontWeight: 900, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.2 }}>
                   कार्यालय वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या
                 </div>
@@ -887,6 +890,14 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                     : 'माह-वार किराया संग्रह, मेस एवं व्यय विवरण आख्या (समस्त सत्र)'}
                 </div>
               </div>
+
+              {/* Right Logo (Extreme Right) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/up_police_logo.png"
+                alt="UP Police"
+                style={{ width: '50px', height: '50px', objectFit: 'contain', display: 'block', flexShrink: 0 }}
+              />
             </div>
 
             {/* Sub-bar: Reference & Dates */}
@@ -926,16 +937,15 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', background: '#FFFFFF' }}>
                   <thead>
                     <tr style={{ background: '#FFFFFF', color: '#000000' }}>
-                      <th style={{ padding: '4px 3px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', width: '26px', textAlign: 'center', fontWeight: 800 }}>क्र०</th>
-                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'center', fontWeight: 800 }}>दिनांक</th>
-                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '46px', textAlign: 'center', fontWeight: 800 }}>पत्र सं०</th>
-                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', textAlign: 'left', fontWeight: 800 }}>अधिकारी का नाम एवं संदर्भ/पदनाम</th>
-                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '65px', textAlign: 'center', fontWeight: 800 }}>आवंटित सूट</th>
-                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया (₹)</th>
-                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'right', fontWeight: 800 }}>भोजन (₹)</th>
-                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'right', fontWeight: 800 }}>व्यय (₹)</th>
-                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '68px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह (₹)</th>
-                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '54px', textAlign: 'center', fontWeight: 800 }}>माध्यम</th>
+                      <th style={{ padding: '4px 3px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', width: '28px', textAlign: 'center', fontWeight: 800 }}>क्र०</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '62px', textAlign: 'center', fontWeight: 800 }}>दिनांक</th>
+                      <th style={{ padding: '4px 8px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', textAlign: 'left', fontWeight: 800 }}>अधिकारी का नाम एवं संदर्भ/पदनाम</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '70px', textAlign: 'center', fontWeight: 800 }}>आवंटित सूट</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '68px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया (₹)</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'right', fontWeight: 800 }}>भोजन (₹)</th>
+                      <th style={{ padding: '4px 5px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'right', fontWeight: 800 }}>व्यय (₹)</th>
+                      <th style={{ padding: '4px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '72px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह (₹)</th>
+                      <th style={{ padding: '4px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '56px', textAlign: 'center', fontWeight: 800 }}>माध्यम</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -947,7 +957,6 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       const gross = rent + food;
                       const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                       const suits = getBookingSuitsList(b).join(', ');
-                      const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
                       const rawPayMode = (b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH').toUpperCase();
                       const payModeHindi = rawPayMode === 'ONLINE' || rawPayMode === 'UPI' ? 'ऑनलाइन' : rawPayMode === 'CHEQUE' ? 'चेक' : 'नकद';
 
@@ -959,8 +968,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                         <tr key={`print-single-${b.id}`} style={{ background: '#FFFFFF' }}>
                           <td style={{ padding: '3.5px 3px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
                           <td style={{ padding: '3.5px 4px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{shortDate}</td>
-                          <td style={{ padding: '3.5px 4px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
-                          <td style={{ padding: '3.5px 6px', border: '1px solid #000000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <td style={{ padding: '3.5px 8px', border: '1px solid #000000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             <span style={{ fontWeight: 700, color: '#000000' }}>{b.guest_name}</span>
                             {b.reference && <span style={{ color: '#334155', fontWeight: 500 }}> ({b.reference})</span>}
                           </td>
@@ -978,7 +986,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
                     {/* Official Total Row (Double bottom border, bold black text) */}
                     <tr style={{ background: '#FFFFFF', fontWeight: 900, fontSize: '10.5px' }}>
-                      <td colSpan={4} style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
+                      <td colSpan={3} style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
                         कुल योग (TOTAL COLLECTION — {formatMonthKey(singleMonthPrintData.monthKey, 'hi')})
                       </td>
                       <td style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
@@ -1094,16 +1102,15 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px', background: '#FFFFFF' }}>
                       <thead>
                         <tr style={{ background: '#FFFFFF', color: '#000000' }}>
-                          <th style={{ padding: '3px 3px', border: '1px solid #000000', width: '22px', textAlign: 'center' }}>क्र०</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '52px' }}>दिनांक</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '44px' }}>पत्र सं०</th>
-                          <th style={{ padding: '3px 5px', border: '1px solid #000000', textAlign: 'left' }}>अधिकारी का नाम एवं संदर्भ</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '58px' }}>सूट</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>किराया (₹)</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '50px', textAlign: 'right' }}>भोजन (₹)</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '50px', textAlign: 'right' }}>व्यय (₹)</th>
-                          <th style={{ padding: '3px 5px', border: '1px solid #000000', width: '60px', textAlign: 'right' }}>शुद्ध कुल (₹)</th>
-                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '46px', textAlign: 'center' }}>माध्यम</th>
+                          <th style={{ padding: '3px 3px', border: '1px solid #000000', width: '24px', textAlign: 'center' }}>क्र०</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '58px' }}>दिनांक</th>
+                          <th style={{ padding: '3px 6px', border: '1px solid #000000', textAlign: 'left' }}>अधिकारी का नाम एवं संदर्भ</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '65px' }}>सूट</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '60px', textAlign: 'right' }}>किराया (₹)</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>भोजन (₹)</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '55px', textAlign: 'right' }}>व्यय (₹)</th>
+                          <th style={{ padding: '3px 5px', border: '1px solid #000000', width: '65px', textAlign: 'right' }}>शुद्ध कुल (₹)</th>
+                          <th style={{ padding: '3px 4px', border: '1px solid #000000', width: '50px', textAlign: 'center' }}>माध्यम</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1115,7 +1122,6 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           const gross = rent + food;
                           const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                           const suits = getBookingSuitsList(b).join(', ');
-                          const dispatchNo = b.dispatch_no || extractDispatchNoFromNotes(b.notes) || '-';
                           const rawPayMode = (b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH').toUpperCase();
                           const payModeHindi = rawPayMode === 'ONLINE' || rawPayMode === 'UPI' ? 'ऑनलाइन' : rawPayMode === 'CHEQUE' ? 'चेक' : 'नकद';
 
@@ -1126,8 +1132,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                             <tr key={`print-b-${b.id}`} style={{ background: '#FFFFFF' }}>
                               <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'center' }}>{bIdx + 1}</td>
                               <td style={{ padding: '3px 4px', border: '1px solid #000000', whiteSpace: 'nowrap' }}>{shortDate}</td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', fontWeight: 600, whiteSpace: 'nowrap' }}>{dispatchNo !== '-' ? `#${dispatchNo}` : '-'}</td>
-                              <td style={{ padding: '3px 5px', border: '1px solid #000000', whiteSpace: 'nowrap' }}>
+                              <td style={{ padding: '3px 6px', border: '1px solid #000000', whiteSpace: 'nowrap' }}>
                                 <span style={{ fontWeight: 700 }}>{b.guest_name}</span>
                                 {b.reference && <span style={{ color: '#334155' }}> ({b.reference})</span>}
                               </td>
