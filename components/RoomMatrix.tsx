@@ -211,7 +211,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
 
       {/* Direct 4 Rooms Compact Status Display (with Multi-slot Hourly Support) */}
       <div className="p-3 sm:p-5">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-3.5">
           {SUITS.map((suit) => {
             const suitBookings = getBookingsForSuit(suit.id);
 
@@ -220,7 +220,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
               return (
                 <div
                   key={suit.id}
-                  className="p-3 sm:p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 flex flex-col justify-between shadow-2xs hover:shadow-xs transition"
+                  className="p-3 sm:p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 flex flex-col justify-between shadow-2xs hover:shadow-xs transition overflow-hidden"
                 >
                   <div>
                     <div className="pb-1.5 sm:pb-2 border-b border-emerald-200/70 flex items-center justify-between">
@@ -237,10 +237,10 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                     <button
                       type="button"
                       onClick={() => onQuickBook(selectedDate, suit.id)}
-                      className="w-full mt-2 h-7 sm:h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer"
+                      className="w-full mt-2 h-7 sm:h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer overflow-hidden min-w-0"
                     >
-                      <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span>{language === 'hi' ? 'क्विक बुक' : 'Quick Book'}</span>
+                      <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                      <span className="truncate">{language === 'hi' ? 'क्विक बुक' : 'Quick Book'}</span>
                     </button>
                   )}
                 </div>
@@ -292,7 +292,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                 <div
                   key={suit.id}
                   onClick={() => onSelectBooking(booking)}
-                  className={`p-3 sm:p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs ${
+                  className={`p-3 sm:p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs overflow-hidden ${
                     isHourly
                       ? 'bg-amber-50/80 border-amber-300 text-amber-950'
                       : isInHouse
@@ -362,15 +362,15 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   </div>
 
                   {/* Clean Footer Action Bar */}
-                  <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex flex-col gap-1 sm:gap-1.5">
-                    <div className="flex items-center justify-between gap-1 sm:gap-1.5">
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex flex-col gap-1 sm:gap-1.5 w-full">
+                    <div className={`grid ${(isAdmin || isOperator) && onOpenRecordCollection ? 'grid-cols-2' : 'grid-cols-1'} gap-1 sm:gap-1.5 w-full`}>
                       <button
                         type="button"
                         onClick={() => onSelectBooking(booking)}
-                        className="flex-1 h-7 sm:h-8 px-1.5 sm:px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-0.5 sm:gap-1 transition cursor-pointer"
+                        className="min-w-0 h-7 sm:h-8 px-1.5 sm:px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs overflow-hidden"
                       >
-                        <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
-                        <span>{language === 'hi' ? 'पत्र' : 'Letter'}</span>
+                        <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
+                        <span className="truncate">{language === 'hi' ? 'पत्र' : 'Letter'}</span>
                       </button>
 
                       {(isAdmin || isOperator) && onOpenRecordCollection && (
@@ -380,11 +380,11 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                             e.stopPropagation();
                             onOpenRecordCollection(booking);
                           }}
-                          className="flex-1 h-7 sm:h-8 px-1.5 sm:px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-0.5 sm:gap-1 transition cursor-pointer active:scale-95"
+                          className="min-w-0 h-7 sm:h-8 px-1.5 sm:px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer active:scale-95 shadow-2xs overflow-hidden"
                           title={language === 'hi' ? 'कलेक्शन व भोजन बिल दर्ज करें' : 'Record Collection & Food Bill'}
                         >
-                          <IndianRupee className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
-                          <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
+                          <IndianRupee className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700 shrink-0" />
+                          <span className="truncate">{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
                         </button>
                       )}
                     </div>
@@ -397,10 +397,10 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                           e.stopPropagation();
                           onQuickBook(selectedDate, suit.id);
                         }}
-                        className="w-full h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
+                        className="w-full h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer overflow-hidden min-w-0"
                       >
-                        <Plus className="w-3 h-3" />
-                        <span>{language === 'hi' ? '+ अन्य स्लॉट बुक करें' : '+ Book Another Slot'}</span>
+                        <Plus className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{language === 'hi' ? '+ अन्य स्लॉट बुक करें' : '+ Book Another Slot'}</span>
                       </button>
                     )}
                   </div>
@@ -412,7 +412,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
             return (
               <div
                 key={suit.id}
-                className="p-3.5 sm:p-4 rounded-2xl border-2 border-amber-400 bg-amber-50/70 text-slate-900 flex flex-col justify-between shadow-xs hover:shadow-md"
+                className="p-3.5 sm:p-4 rounded-2xl border-2 border-amber-400 bg-amber-50/70 text-slate-900 flex flex-col justify-between shadow-xs hover:shadow-md overflow-hidden"
               >
                 <div>
                   <div className="pb-2 border-b border-amber-300/70 flex items-center justify-between">
@@ -428,7 +428,7 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                       <div
                         key={b.id}
                         onClick={() => onSelectBooking(b)}
-                        className="p-2 rounded-xl bg-white border border-amber-200 hover:border-amber-400 transition cursor-pointer shadow-2xs"
+                        className="p-2 rounded-xl bg-white border border-amber-200 hover:border-amber-400 transition cursor-pointer shadow-2xs overflow-hidden"
                       >
                         <div className="flex items-center justify-between text-xs font-bold text-slate-900">
                           <span className="truncate">{formatGuestDisplayName(b.guest_name)}</span>
@@ -448,10 +448,10 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
                   <button
                     type="button"
                     onClick={() => onQuickBook(selectedDate, suit.id)}
-                    className="w-full mt-2 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
+                    className="w-full mt-2 h-7 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer overflow-hidden min-w-0"
                   >
-                    <Plus className="w-3 h-3" />
-                    <span>{language === 'hi' ? '+ अन्य स्लॉट जोड़ें' : '+ Add Slot'}</span>
+                    <Plus className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{language === 'hi' ? '+ अन्य स्लॉट जोड़ें' : '+ Add Slot'}</span>
                   </button>
                 )}
               </div>
