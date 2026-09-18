@@ -43,16 +43,44 @@ const SERVER_PRESET_ACCOUNTS = [
   },
 ];
 
+import { getServerSupabaseClient } from './supabaseServer';
+
 // In-memory store for custom password updates on running server instance
 const customPasswordStore = new Map<string, string>();
 
-export function verifyServerCredentials(username: string, plainPassword: string): AuthUser | null {
+export async function verifyServerCredentials(username: string, plainPassword: string): Promise<AuthUser | null> {
   const cleanUser = (username || '').trim().toLowerCase();
   const account = SERVER_PRESET_ACCOUNTS.find((a) => a.username.toLowerCase() === cleanUser);
   if (!account) return null;
 
+  let activeHash = customPasswordStore.get(account.username);
+
+  // If not cached in memory, check Supabase persistent config table
+  if (!activeHash) {
+    try {
+      const client = getServerSupabaseClient();
+      if (client) {
+        const { data } = await client
+          .from('pogh_auth_config')
+          .select('value')
+          .eq('key', `pwd_${account.username}`)
+          .maybeSingle();
+
+        if (data && data.value) {
+          activeHash = data.value;
+          customPasswordStore.set(account.username, activeHash);
+        }
+      }
+    } catch {
+      // Gracefully fall back to account preset if table doesn't exist yet
+    }
+  }
+
+  if (!activeHash) {
+    activeHash = account.passwordHash;
+  }
+
   const inputHash = serverHashPassword(plainPassword);
-  const activeHash = customPasswordStore.get(account.username) || account.passwordHash;
 
   // Constant-time comparison to prevent timing attacks
   const aBuf = Buffer.from(inputHash);
@@ -70,13 +98,28 @@ export function verifyServerCredentials(username: string, plainPassword: string)
   };
 }
 
-export function updateServerPassword(username: string, newPasswordPlain: string): boolean {
+export async function updateServerPassword(username: string, newPasswordPlain: string): Promise<boolean> {
   const cleanUser = (username || '').trim().toLowerCase();
   const account = SERVER_PRESET_ACCOUNTS.find((a) => a.username.toLowerCase() === cleanUser);
   if (!account) return false;
 
   const newHash = serverHashPassword(newPasswordPlain);
   customPasswordStore.set(account.username, newHash);
+
+  // Persist to Supabase so serverless lambdas don't reset it
+  try {
+    const client = getServerSupabaseClient();
+    if (client) {
+      await client.from('pogh_auth_config').upsert({
+        key: `pwd_${account.username}`,
+        value: newHash,
+        updated_at: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    console.warn('Could not persist updated password to Supabase pogh_auth_config:', err);
+  }
+
   return true;
 }
 

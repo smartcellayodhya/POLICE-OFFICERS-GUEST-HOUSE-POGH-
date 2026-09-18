@@ -476,7 +476,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       </div>
 
       {/* 4 KPI Summary Tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         
         {/* 1. Room Rent Total Tile */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition">

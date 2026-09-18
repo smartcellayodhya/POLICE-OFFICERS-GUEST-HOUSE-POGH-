@@ -292,7 +292,7 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
       {/* ─────────────────────────────────────────────────────────────
           2. DESKTOP & TABLET VIEW: Full 6 Executive Cards (hidden md:grid)
          ───────────────────────────────────────────────────────────── */}
-      <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-6">
+      <div className="hidden md:grid md:grid-cols-3 xl:grid-cols-6 gap-3.5 mb-6">
         
         {/* Card 1: Total Bookings */}
         <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">

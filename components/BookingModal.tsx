@@ -272,7 +272,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       return;
     }
 
-    const cleanedMobile = mobileNumber.replace(/\D/g, '');
+    let cleanedMobile = mobileNumber.replace(/\D/g, '');
+    if (cleanedMobile.length === 12 && cleanedMobile.startsWith('91')) {
+      cleanedMobile = cleanedMobile.slice(2);
+    } else if (cleanedMobile.length === 11 && cleanedMobile.startsWith('0')) {
+      cleanedMobile = cleanedMobile.slice(1);
+    }
+
     if (cleanedMobile.length !== 10) {
       alert(language === 'hi' ? 'कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
       return;

@@ -220,20 +220,31 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
       >
         
         {/* Modal Action Bar */}
-        <div className="px-5 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-amber-500 no-print">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold">{language === 'hi' ? 'आधिकारिक कक्ष आवंटन पत्र' : 'Official Room Allotment Letter'}</h3>
-              <span className="text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold font-mono">
-                {bookingRef}
-              </span>
+        <div className="px-3.5 py-2.5 sm:px-5 sm:py-3.5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 border-b border-amber-500 no-print">
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-bold">{language === 'hi' ? 'आधिकारिक कक्ष आवंटन पत्र' : 'Official Room Allotment Letter'}</h3>
+                <span className="text-[11px] sm:text-xs px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold font-mono">
+                  {bookingRef}
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-300 font-hindi truncate max-w-[280px] sm:max-w-md">
+                {language === 'hi' ? `वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या - आधिकारिक आवंटन पत्र (पत्रांक: ${dispatchNo})` : `Senior Superintendent of Police, Ayodhya - Official Allotment Letter (Dispatch: ${dispatchNo})`}
+              </p>
             </div>
-            <p className="text-xs text-slate-300 font-hindi">
-              {language === 'hi' ? `वरिष्ठ पुलिस अधीक्षक, जनपद अयोध्या - आधिकारिक आवंटन पत्र (पत्रांक: ${dispatchNo})` : `Senior Superintendent of Police, Ayodhya - Official Allotment Letter (Dispatch: ${dispatchNo})`}
-            </p>
+
+            {/* Mobile close button right in header */}
+            <button
+              onClick={onClose}
+              className="sm:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              title={language === 'hi' ? 'बंद करें' : 'Close'}
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             {/* In-Charge / Contact Person Editor (No-Print) */}
             <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700 w-full sm:w-auto">
               <span className="text-[11px] text-amber-400 font-bold whitespace-nowrap">{language === 'hi' ? 'प्रभारी:' : 'In-Charge:'}</span>
@@ -247,14 +258,15 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                   }
                 }}
                 placeholder={language === 'hi' ? 'प्रभारी का नाम व संपर्क' : 'In-Charge Name & Contact'}
-                className="bg-slate-950 text-amber-300 text-xs px-2 py-1 rounded-lg border border-slate-700 focus:border-amber-400 outline-none flex-1 sm:w-56 font-sans font-semibold"
+                className="bg-slate-950 text-amber-300 text-xs px-2 py-1 rounded-lg border border-slate-700 focus:border-amber-400 outline-none flex-1 sm:w-52 font-sans font-semibold"
                 title={language === 'hi' ? 'प्रभारी का नाम व मोबाइल नंबर' : 'In-Charge Name & Mobile'}
               />
             </div>
 
+            {/* Desktop close button */}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="hidden sm:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               title={language === 'hi' ? 'बंद करें' : 'Close'}
             >
               <X className="w-5 h-5" />
@@ -263,9 +275,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
         </div>
 
         {/* Action / Guidance Banner */}
-        <div className="bg-emerald-50 border-b border-emerald-200 px-5 py-2.5 flex items-center justify-between text-xs text-emerald-900 no-print">
+        <div className="bg-emerald-50 border-b border-emerald-200 px-3.5 py-1.5 sm:px-5 sm:py-2 flex items-center justify-between text-[11px] sm:text-xs text-emerald-900 no-print">
           <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
             <span className="font-bold">
               ✓ {language === 'hi' ? 'बुकिंग सुरक्षित हो चुकी है! यहाँ से पत्र का PDF डाउनलोड करें अथवा प्रिंट निकालें।' : 'Booking saved! Download PDF or print official letter below.'}
             </span>

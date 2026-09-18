@@ -100,4 +100,24 @@ CREATE POLICY "Allow service role full access" ON public.pogh_bookings
     USING (true)
     WITH CHECK (true);
 
+-- ====================================================================
+-- 9. SECURE AUTH CONFIG TABLE (Server-side hash persistence across Vercel serverless)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.pogh_auth_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.pogh_auth_config ENABLE ROW LEVEL SECURITY;
+
+-- Deny public access, allow only service_role (Next.js server API)
+DROP POLICY IF EXISTS "Service role full access to auth config" ON public.pogh_auth_config;
+CREATE POLICY "Service role full access to auth config" ON public.pogh_auth_config
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+
 

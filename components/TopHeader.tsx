@@ -80,7 +80,8 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-xs transition active:scale-95 whitespace-nowrap"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span className="hidden xs:inline sm:inline">{t('newBooking')}</span>
+              <span className="sm:hidden">{language === 'hi' ? 'बुक' : 'Book'}</span>
+              <span className="hidden sm:inline">{t('newBooking')}</span>
             </button>
           )}
 

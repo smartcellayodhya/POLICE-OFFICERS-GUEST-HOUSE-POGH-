@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify existing password
-    const verified = verifyServerCredentials(user.username, currentPassword);
+    const verified = await verifyServerCredentials(user.username, currentPassword);
     if (!verified) {
       return NextResponse.json(
         { success: false, error: 'वर्तमान पासवर्ड गलत है (Incorrect current password)' },
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update password
-    updateServerPassword(user.username, newPassword);
+    await updateServerPassword(user.username, newPassword);
 
     return NextResponse.json({
       success: true,

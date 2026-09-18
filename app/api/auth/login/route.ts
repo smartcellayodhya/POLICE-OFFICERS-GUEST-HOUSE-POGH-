@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = verifyServerCredentials(username, password);
+    const user = await verifyServerCredentials(username, password);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'अमान्य क्रेडेंशियल (Invalid username or password)' },

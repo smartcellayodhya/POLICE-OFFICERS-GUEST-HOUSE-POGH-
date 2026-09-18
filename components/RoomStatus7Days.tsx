@@ -307,7 +307,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
         </div>
 
         {/* Quick Week Overview Bar (7 Mini Day Badges) */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mt-4 pt-3 border-t border-slate-800">
+        <div className="flex sm:grid sm:grid-cols-7 gap-1.5 sm:gap-2 mt-4 pt-3 border-t border-slate-800 overflow-x-auto pb-1">
           {sevenDays.map((dStr) => {
             let occupied = 0;
             SUITS.forEach((s) => {
@@ -321,7 +321,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
             return (
               <div
                 key={`mini-${dStr}`}
-                className={`rounded-xl p-1.5 sm:p-2 text-center transition border ${
+                className={`min-w-[50px] sm:min-w-0 flex-1 rounded-xl p-1.5 sm:p-2 text-center transition border ${
                   isToday
                     ? 'bg-amber-500/20 border-amber-400/80 ring-1 ring-amber-400/40'
                     : 'bg-slate-800/60 border-slate-700/80'
