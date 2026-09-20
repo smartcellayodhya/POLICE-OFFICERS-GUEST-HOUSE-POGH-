@@ -322,45 +322,80 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
         if (language === 'hi') {
           detailRows.push({
-            'माह': monthLabel,
+            'क्र०': detailRows.length + 1,
             'दिनांक': b.booking_date,
             'पत्र क्रमांक': dispatchNo,
-            'अतिथि/अधिकारी का नाम': b.guest_name,
-            'पदनाम/संदर्भ': b.reference || '-',
+            'अधिकारी / अतिथि का नाम': b.guest_name,
+            'पदनाम / संदर्भ': b.reference || '-',
             'आवंटित सूट': suits,
-            'कमरे': getBookingRoomsCount(b),
             'कमरा किराया (₹)': rent,
             'भोजन संग्रह (₹)': food,
             'व्यय / खर्च (₹)': exp,
             'कुल शुद्ध संग्रह (₹)': net,
-            'भुगतान माध्यम': payMode === 'CASH' ? 'नकद' : payMode,
+            'भुगतान माध्यम': payMode === 'CASH' ? 'नकद' : (payMode === 'ONLINE' || payMode === 'UPI' ? 'ऑनलाइन/यूपीआई' : payMode),
             'स्थिति': b.status === 'CHECKED_IN' ? 'उपस्थित' : (b.status === 'CHECKED_OUT' ? 'चेक-आउट' : (b.status === 'CANCELLED' ? 'निरस्त' : 'आरक्षित')),
+            'माह': monthLabel,
           });
         } else {
           detailRows.push({
-            'Month': monthLabel,
+            'S.No.': detailRows.length + 1,
             'Stay Date': b.booking_date,
             'Dispatch No': dispatchNo,
             'Officer / Guest Name': b.guest_name,
             'Reference / Designation': b.reference || '-',
             'Allocated Suits': suits,
-            'Room Count': getBookingRoomsCount(b),
             'Room Rent (₹)': rent,
-            'Food Amount (₹)': food,
+            'Food Bill (₹)': food,
             'Expenditure (₹)': exp,
             'Net Collection (₹)': net,
             'Payment Mode': payMode,
             'Status': b.status || 'CONFIRMED',
+            'Month': monthLabel,
           });
         }
       });
     });
 
+    // Add Grand Total row to details sheet (matching PDF Total Row)
+    if (language === 'hi') {
+      detailRows.push({
+        'क्र०': 'कुल योग',
+        'दिनांक': '-',
+        'पत्र क्रमांक': '-',
+        'अधिकारी / अतिथि का नाम': `समस्त आवंटन (${overallStats.totalBookingsCount} पत्र)`,
+        'पदनाम / संदर्भ': '-',
+        'आवंटित सूट': `${overallStats.totalRoomsCount} कक्ष दिवस`,
+        'कमरा किराया (₹)': overallStats.grandTotalRent,
+        'भोजन संग्रह (₹)': overallStats.grandTotalFood,
+        'व्यय / खर्च (₹)': overallStats.grandTotalExpenditure,
+        'कुल शुद्ध संग्रह (₹)': overallStats.grandTotalRevenue,
+        'भुगतान माध्यम': '-',
+        'स्थिति': '-',
+        'माह': 'सर्वकुल',
+      });
+    } else {
+      detailRows.push({
+        'S.No.': 'TOTAL',
+        'Stay Date': '-',
+        'Dispatch No': '-',
+        'Officer / Guest Name': `Total (${overallStats.totalBookingsCount} Bookings)`,
+        'Reference / Designation': '-',
+        'Allocated Suits': `${overallStats.totalRoomsCount} Room Days`,
+        'Room Rent (₹)': overallStats.grandTotalRent,
+        'Food Bill (₹)': overallStats.grandTotalFood,
+        'Expenditure (₹)': overallStats.grandTotalExpenditure,
+        'Net Collection (₹)': overallStats.grandTotalRevenue,
+        'Payment Mode': '-',
+        'Status': '-',
+        'Month': 'All Months',
+      });
+    }
+
     const sanitizedDetailRows = detailRows.map((row) =>
       Object.fromEntries(Object.entries(row).map(([k, v]) => [k, sanitizeExcelCell(v)]))
     );
     const detailWs = XLSX.utils.json_to_sheet(sanitizedDetailRows);
-    XLSX.utils.book_append_sheet(wb, detailWs, language === 'hi' ? 'विस्तृत आवंटन विवरण' : 'Allotment Details');
+    XLSX.utils.book_append_sheet(wb, detailWs, language === 'hi' ? 'दैनिक व विस्तृत विवरण' : 'Daily Allotment Details');
 
     // Write file
     XLSX.writeFile(

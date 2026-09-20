@@ -359,15 +359,11 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     }
   };
 
-  // Export filtered stays to genuine formatted Excel file
+  // Export filtered stays to genuine formatted Excel file (matching official PDF register format)
   const handleExportExcel = async () => {
-    const recordsToExport: Booking[] = [];
-    filteredStays.forEach((stay) => {
-      stay.allBookings.forEach((b) => recordsToExport.push(b));
-    });
     await exportBookingsToExcel(
-      recordsToExport,
-      `POGH_Ayodhya_Bookings_${formatToISODate(new Date())}.xlsx`,
+      filteredStays,
+      `POGH_Ayodhya_Bookings_Register_${formatToISODate(new Date())}.xlsx`,
       language
     );
   };

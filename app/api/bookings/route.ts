@@ -237,13 +237,19 @@ export async function PUT(req: NextRequest) {
     let error = null;
 
     if (applyToAll && groupId) {
+      // 1. Try full payload with both group_id and notes filters
       let res = await client
         .from('pogh_bookings')
         .update(payload)
         .or(`group_id.eq.${groupId},notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`);
       
       if (res.error) {
-        console.warn('Full update failed, falling back to core columns:', res.error.message);
+        console.warn('Full update failed, attempting resilient fallback:', res.error.message);
+        const isGroupIdMissing = res.error.message.includes('group_id');
+        const filterStr = isGroupIdMissing
+          ? `notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`
+          : `group_id.eq.${groupId},notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`;
+
         const corePayload: Record<string, any> = {
           total_amount: payload.total_amount,
           status: payload.status,
@@ -253,10 +259,25 @@ export async function PUT(req: NextRequest) {
           suit_3: payload.suit_3,
           suit_4: payload.suit_4,
         };
-        res = await client
-          .from('pogh_bookings')
-          .update(corePayload)
-          .or(`group_id.eq.${groupId},notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`);
+
+        // Try full payload with safe filter first (if only group_id was missing)
+        if (isGroupIdMissing) {
+          res = await client.from('pogh_bookings').update(payload).or(filterStr);
+        }
+
+        // If still failing (e.g. payload columns like food_amount are missing), fall back to corePayload
+        if (res.error) {
+          res = await client
+            .from('pogh_bookings')
+            .update(corePayload)
+            .or(filterStr);
+        }
+
+        // As a final safety net, update by primary ID
+        if (res.error && id) {
+          console.warn('Group update failed completely, falling back to updating single ID:', id);
+          res = await client.from('pogh_bookings').update(corePayload).eq('id', id);
+        }
       }
       error = res.error;
     } else {
@@ -357,10 +378,24 @@ export async function DELETE(req: NextRequest) {
     let error = null;
 
     if (groupId) {
-      const res = await client
+      let res = await client
         .from('pogh_bookings')
         .delete()
         .or(`group_id.eq.${groupId},notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`);
+
+      if (res.error && res.error.message.includes('group_id')) {
+        console.warn('DELETE by group_id failed, falling back to notes filter:', res.error.message);
+        res = await client
+          .from('pogh_bookings')
+          .delete()
+          .or(`notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`);
+      }
+
+      if (res.error && id) {
+        console.warn('DELETE by notes failed, falling back to id:', id);
+        res = await client.from('pogh_bookings').delete().eq('id', id);
+      }
+
       error = res.error;
     } else if (id) {
       const res = await client.from('pogh_bookings').delete().eq('id', id);

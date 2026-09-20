@@ -110,11 +110,14 @@ export async function updateServerPassword(username: string, newPasswordPlain: s
   try {
     const client = getServerSupabaseClient();
     if (client) {
-      await client.from('pogh_auth_config').upsert({
+      const { error } = await client.from('pogh_auth_config').upsert({
         key: `pwd_${account.username}`,
         value: newHash,
         updated_at: new Date().toISOString(),
       });
+      if (error) {
+        console.warn('Could not persist updated password to Supabase pogh_auth_config:', error.message);
+      }
     }
   } catch (err) {
     console.warn('Could not persist updated password to Supabase pogh_auth_config:', err);
