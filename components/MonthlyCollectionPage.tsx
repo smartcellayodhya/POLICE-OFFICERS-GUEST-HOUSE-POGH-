@@ -465,10 +465,18 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
   const [isExportingPDF, setIsExportingPDF] = useState(false);
 
+  // Label of currently selected print/PDF month for intuitive UI display
+  const selectedMonthLabel = useMemo(() => {
+    if (selectedPrintMonth === 'ALL') {
+      return language === 'hi' ? 'समस्त माह' : 'All Months';
+    }
+    return formatMonthKey(selectedPrintMonth, language === 'hi' ? 'hi' : 'en');
+  }, [selectedPrintMonth, language]);
+
   // Dedicated Print Handler: prints either a specific month or all months
   const handlePrint = (targetMonth: string = selectedPrintMonth) => {
     setActivePrintingMonth(targetMonth);
-    // Allow state to render into printRef before capturing iframe
+    // Allow state to render into printRef before capturing iframe or converting to PDF
     setTimeout(() => {
       if (printRef.current) {
         const title =
@@ -479,7 +487,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       } else {
         window.print();
       }
-    }, 60);
+    }, 250);
   };
 
   // Direct PDF Download Handler for Mobile & Desktop
@@ -508,7 +516,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         setIsExportingPDF(false);
         window.print();
       }
-    }, 80);
+    }, 250);
   };
 
   // Filtered list if search query entered (memoized with deferredSearch for 60fps typing)
@@ -571,52 +579,64 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: Responsive Grid on Mobile, Flex on Desktop */}
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
-          {/* Excel Export */}
-          <button
-            onClick={handleExportExcel}
-            className="h-9 flex items-center justify-center gap-1.5 px-3 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer"
-            title={language === 'hi' ? 'सम्पूर्ण एक्सेल आख्या डाउनलोड करें' : 'Download Full Excel Statement'}
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>{language === 'hi' ? 'एक्सेल' : 'Excel'}</span>
-          </button>
-
-          {/* Direct PDF Download */}
-          <button
-            onClick={() => handleDownloadPDF(selectedPrintMonth)}
-            disabled={isExportingPDF}
-            className="h-9 flex items-center justify-center gap-1.5 px-3 bg-rose-700 hover:bg-rose-600 disabled:bg-rose-400 text-white rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer"
-            title={language === 'hi' ? 'चयनित माह की PDF फाइल डाउनलोड करें' : 'Download PDF Statement'}
-          >
-            <FileText className="w-3.5 h-3.5 text-rose-200" />
-            <span>{isExportingPDF ? (language === 'hi' ? 'डाउनलोड...' : 'Saving...') : (language === 'hi' ? 'PDF डाउनलोड' : 'Download PDF')}</span>
-          </button>
-
-          {/* Month Print Selector Dropdown & Button */}
-          <div className="col-span-2 sm:col-span-1 h-9 flex items-center gap-1 bg-slate-100 px-1 rounded-xl border border-slate-200">
+        {/* Unified Month Action & Download Hub */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          {/* Month Selector Pill */}
+          <div className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/70 transition px-2.5 py-1.5 rounded-xl border border-slate-300/80 shadow-2xs">
+            <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
+            <span className="text-[11px] font-bold text-slate-700 shrink-0">
+              {language === 'hi' ? 'माह:' : 'Month:'}
+            </span>
             <select
               value={selectedPrintMonth}
               onChange={(e) => setSelectedPrintMonth(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-slate-800 py-1 px-2 focus:outline-hidden cursor-pointer flex-1 min-w-0"
-              title={language === 'hi' ? 'प्रिंट हेतु माह चुनें' : 'Select Month to Print'}
+              className="bg-transparent text-xs font-bold text-slate-900 focus:outline-hidden cursor-pointer flex-1 min-w-[125px]"
+              title={language === 'hi' ? 'आख्या डाउनलोड / प्रिंट हेतु माह चुनें' : 'Select Month for Report'}
             >
-              <option value="ALL">{language === 'hi' ? 'समस्त माह' : 'All Months'}</option>
+              <option value="ALL">{language === 'hi' ? 'समस्त माह (All Months)' : 'All Months'}</option>
               {monthlyData.map((m) => (
                 <option key={m.monthKey} value={m.monthKey}>
                   {formatMonthKey(m.monthKey, language === 'hi' ? 'hi' : 'en')}
                 </option>
               ))}
             </select>
+          </div>
 
+          {/* Action Buttons Group */}
+          <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5">
+            {/* Direct PDF Download with Dynamic Month Name */}
+            <button
+              onClick={() => handleDownloadPDF(selectedPrintMonth)}
+              disabled={isExportingPDF}
+              className="h-9 flex items-center justify-center gap-1 px-3 bg-rose-700 hover:bg-rose-600 disabled:bg-rose-400 text-white rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer"
+              title={language === 'hi' ? `${selectedMonthLabel} की PDF फाइल डाउनलोड करें` : `Download PDF for ${selectedMonthLabel}`}
+            >
+              <FileText className="w-3.5 h-3.5 text-rose-200 shrink-0" />
+              <span className="truncate max-w-[140px] sm:max-w-none">
+                {isExportingPDF
+                  ? (language === 'hi' ? 'तैयार...' : 'Saving...')
+                  : `PDF (${selectedMonthLabel})`}
+              </span>
+            </button>
+
+            {/* Print Button */}
             <button
               onClick={() => handlePrint(selectedPrintMonth)}
-              className="h-7 flex items-center justify-center gap-1 px-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer shrink-0"
-              title={language === 'hi' ? 'चयनित माह की स्टेटमेंट प्रिंट करें' : 'Print Statement for Selected Month'}
+              className="h-9 flex items-center justify-center gap-1 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer"
+              title={language === 'hi' ? `${selectedMonthLabel} की स्टेटमेंट प्रिंट करें` : `Print Statement for ${selectedMonthLabel}`}
             >
-              <Printer className="w-3 h-3 text-amber-400" />
+              <Printer className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>{language === 'hi' ? 'प्रिंट' : 'Print'}</span>
+            </button>
+
+            {/* Excel Export */}
+            <button
+              onClick={handleExportExcel}
+              className="h-9 flex items-center justify-center gap-1 px-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 whitespace-nowrap cursor-pointer"
+              title={language === 'hi' ? 'सम्पूर्ण वित्तीय एक्सेल आख्या डाउनलोड करें' : 'Download Full Excel Statement'}
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
+              <span>{language === 'hi' ? 'एक्सेल' : 'Excel'}</span>
             </button>
           </div>
         </div>
@@ -1055,7 +1075,23 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       {/* DYNAMIC PRINTABLE STATEMENT CONTAINER (Captured by printDocumentDirectly) */}
       {/* Redesigned: 100% Ink-Saver, Pure White, Official UP Police Register Format */}
       {/* ========================================================================= */}
-      <div ref={printRef} className="hidden">
+      <div
+        ref={printRef}
+        style={{
+          position: 'fixed',
+          left: '-99999px',
+          top: 0,
+          width: '1123px',
+          minWidth: '1123px',
+          maxWidth: '1123px',
+          background: '#FFFFFF',
+          zIndex: -100,
+          opacity: 1,
+          visibility: 'visible',
+          pointerEvents: 'none',
+        }}
+        aria-hidden="true"
+      >
         <div style={{ padding: '16px 20px', background: '#FFFFFF', color: '#000000', fontFamily: `'Noto Sans Devanagari', 'Inter', sans-serif`, fontSize: '11px', lineHeight: 1.4 }}>
           
           {/* 1. Official Letterhead Header (Symmetrical: Logos at Extreme Sides, Heading in Dead Center) */}

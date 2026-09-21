@@ -86,7 +86,7 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
               <Menu className="w-5 h-5" />
             </button>
 
-            <div className="min-w-0">
+            <div className="min-w-0 hidden sm:block">
               <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 leading-tight truncate">
                 {getTitle()}
               </h1>
@@ -114,7 +114,7 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
                 <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700" />
               </div>
               <div className="text-left">
-                <div className="text-[9px] sm:text-[10px] font-bold text-emerald-800 leading-none hidden xs:block">
+                <div className="text-[9px] sm:text-[10px] font-bold text-emerald-800 leading-none hidden sm:block">
                   {language === 'hi' ? 'बैंक बैलेंस' : 'Bank Balance'}
                 </div>
                 <div className="text-xs sm:text-[13px] font-extrabold text-slate-900 leading-tight tabular-nums flex items-center gap-1">

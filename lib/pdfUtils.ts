@@ -42,8 +42,12 @@ export async function downloadElementAsPDF({
   container.style.boxSizing = 'border-box';
   container.style.pointerEvents = 'none';
 
-  // 2. Clone the element
+  // 2. Clone the element and guarantee it is 100% visible and measurable
   const clone = element.cloneNode(true) as HTMLElement;
+  clone.classList.remove('hidden');
+  clone.style.display = 'block';
+  clone.style.visibility = 'visible';
+  clone.style.opacity = '1';
   clone.style.width = `${standardA4WidthPx}px`;
   clone.style.minWidth = `${standardA4WidthPx}px`;
   clone.style.maxWidth = `${standardA4WidthPx}px`;
@@ -55,6 +59,13 @@ export async function downloadElementAsPDF({
   clone.style.height = 'auto';
   clone.style.overflow = 'visible';
   clone.style.transform = 'none';
+
+  // Also unhide any nested children having 'hidden' class
+  clone.querySelectorAll('.hidden').forEach((el) => {
+    el.classList.remove('hidden');
+    (el as HTMLElement).style.display = 'block';
+    (el as HTMLElement).style.visibility = 'visible';
+  });
 
   container.appendChild(clone);
   document.body.appendChild(container);
@@ -90,6 +101,7 @@ export async function downloadElementAsPDF({
       })
     );
 
+    const renderHeight = Math.max(clone.scrollHeight, clone.offsetHeight, 600);
     // 3. Render full canvas
     const canvas = await html2canvas(clone, {
       scale: 2, // 2x Retina scale
@@ -97,9 +109,9 @@ export async function downloadElementAsPDF({
       logging: false,
       backgroundColor: '#FFFFFF',
       width: standardA4WidthPx,
-      height: clone.scrollHeight,
+      height: renderHeight,
       windowWidth: standardA4WidthPx + 100,
-      windowHeight: Math.max(1200, clone.scrollHeight + 100),
+      windowHeight: Math.max(1200, renderHeight + 100),
       scrollX: 0,
       scrollY: 0,
       x: 0,
@@ -225,7 +237,16 @@ export function printDocumentDirectly(
     stylesHtml += style.outerHTML;
   });
 
-  const sanitizedContent = sanitizeHtmlForPrint(element);
+  const cleanElement = element.cloneNode(true) as HTMLElement;
+  cleanElement.classList.remove('hidden');
+  cleanElement.style.display = 'block';
+  cleanElement.style.visibility = 'visible';
+  cleanElement.querySelectorAll('.hidden').forEach((el) => {
+    el.classList.remove('hidden');
+    (el as HTMLElement).style.display = 'block';
+  });
+
+  const sanitizedContent = sanitizeHtmlForPrint(cleanElement);
 
   doc.open();
   doc.write(`
