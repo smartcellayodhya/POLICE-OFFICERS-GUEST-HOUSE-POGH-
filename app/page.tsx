@@ -123,12 +123,7 @@ function HomePageContent() {
       const tabParam = params.get('tab');
 
       if (path === 'monthly' || path === 'monthly-collection' || tabParam === 'monthly') {
-        if (user?.role === 'officer') {
-          setActiveTab('dashboard');
-          window.history.replaceState({}, '', '/');
-        } else {
-          setActiveTab('monthly');
-        }
+        setActiveTab('monthly');
       } else if (path === 'matrix' || tabParam === 'matrix') {
         setActiveTab('matrix');
       } else if (path === 'bookings' || tabParam === 'bookings') {
@@ -218,25 +213,7 @@ function HomePageContent() {
     };
   }, [currentUser]);
 
-  // Role Guard: Prevent Officer role from accessing Monthly Collection
-  useEffect(() => {
-    if (currentUser?.role === 'officer' && activeTab === 'monthly') {
-      setActiveTab('dashboard');
-      if (typeof window !== 'undefined') {
-        window.history.replaceState({}, '', '/');
-      }
-    }
-  }, [currentUser, activeTab]);
-
   const handleSelectTab = (tab: NavTab) => {
-    if (currentUser?.role === 'officer' && tab === 'monthly') {
-      alert(
-        language === 'hi'
-          ? 'माह-वार कलेक्शन केवल प्रशासनिक (Admin) एवं ऑपरेटर हेतु अधिकृत है।'
-          : 'Monthly Collection is restricted to Admin & Operator roles only.'
-      );
-      return;
-    }
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       const url = tab === 'dashboard' ? '/' : `/${tab}`;

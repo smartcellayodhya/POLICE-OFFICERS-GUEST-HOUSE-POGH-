@@ -31,7 +31,6 @@ const SidebarComponent: React.FC<SidebarProps> = ({
   onClose,
 }) => {
   const { language, t } = useLanguage();
-  const isOfficer = currentUser?.role === 'officer';
 
   const navItems = [
     {
@@ -49,15 +48,11 @@ const SidebarComponent: React.FC<SidebarProps> = ({
       label: t('bookings'),
       icon: BookOpenCheck,
     },
-    ...(!isOfficer
-      ? [
-          {
-            id: 'monthly' as NavTab,
-            label: language === 'hi' ? 'माह-वार कलेक्शन' : 'Monthly Collection',
-            icon: BarChart3,
-          },
-        ]
-      : []),
+    {
+      id: 'monthly' as NavTab,
+      label: language === 'hi' ? 'माह-वार कलेक्शन' : 'Monthly Collection',
+      icon: BarChart3,
+    },
   ];
 
   const handleNavClick = (tab: NavTab) => {
