@@ -20,8 +20,9 @@ import {
   calculateStayHours,
   findConflictingBooking,
   parseBookingMeta,
+  getCurrentFormattedTime,
 } from '@/lib/bookingUtils';
-import { formatToDisplayDate, calculateStayNights, getStayDates } from '@/lib/dateUtils';
+import { formatToDisplayDate, calculateStayNights, getStayDates, formatToISODate } from '@/lib/dateUtils';
 import {
   X,
   User,
@@ -693,12 +694,22 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               />
             </div>
 
-            {/* Check-In & Check-Out Time */}
+            {/* Check-In & Check-Out Time with Quick Buttons */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                {language === 'hi' ? 'चेक-इन समय' : 'Check-In Time'}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  {language === 'hi' ? 'चेक-इन समय' : 'Check-In Time'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleCheckInTimeChange(getCurrentFormattedTime())}
+                  className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-1.5 py-0.5 rounded cursor-pointer transition"
+                  title={language === 'hi' ? 'वर्तमान समय सेट करें' : 'Set to current time'}
+                >
+                  ⚡ {language === 'hi' ? 'अभी (Now)' : 'Now'}
+                </button>
+              </div>
               <input
                 type="text"
                 value={checkInTime}
@@ -706,13 +717,39 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 placeholder="10:00 AM"
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
               />
+              <div className="flex items-center gap-1 mt-1">
+                {['10:00 AM', '12:00 PM', '02:00 PM', '06:00 PM'].map((tVal) => (
+                  <button
+                    key={tVal}
+                    type="button"
+                    onClick={() => handleCheckInTimeChange(tVal)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border transition cursor-pointer ${
+                      checkInTime === tVal
+                        ? 'bg-amber-500 text-white border-amber-600 font-bold'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {tVal}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                {language === 'hi' ? 'चेक-आउट समय' : 'Check-Out Time'}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  {language === 'hi' ? 'चेक-आउट समय' : 'Check-Out Time'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleCheckOutTimeChange(getCurrentFormattedTime())}
+                  className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-1.5 py-0.5 rounded cursor-pointer transition"
+                  title={language === 'hi' ? 'वर्तमान समय सेट करें' : 'Set to current time'}
+                >
+                  ⚡ {language === 'hi' ? 'अभी (Now)' : 'Now'}
+                </button>
+              </div>
               <input
                 type="text"
                 value={checkOutTime}
@@ -720,6 +757,22 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 placeholder="02:00 PM"
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
               />
+              <div className="flex items-center gap-1 mt-1">
+                {['10:00 AM', '12:00 PM', '02:00 PM', '06:00 PM'].map((tVal) => (
+                  <button
+                    key={tVal}
+                    type="button"
+                    onClick={() => handleCheckOutTimeChange(tVal)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border transition cursor-pointer ${
+                      checkOutTime === tVal
+                        ? 'bg-amber-500 text-white border-amber-600 font-bold'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {tVal}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="col-span-full text-xs font-semibold text-slate-600 flex items-center justify-between pt-1 border-t border-slate-200">
@@ -952,15 +1005,75 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             )}
           </div>
 
-          {/* Booking Status Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              {language === 'hi' ? 'बुकिंग स्थिति' : 'Booking Status'}
-            </label>
+          {/* Booking Status Selector with Quick Action Buttons */}
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700">
+                {language === 'hi' ? 'त्वरित स्थिति चयन (Quick Status Update):' : 'Quick Status Update:'}
+              </label>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-800">
+                {status === 'CHECKED_IN'
+                  ? (language === 'hi' ? '🟢 उपस्थित (In-House)' : '🟢 In-House')
+                  : status === 'CHECKED_OUT'
+                  ? (language === 'hi' ? '🏁 चेक-आउट पूर्ण' : '🏁 Checked-Out')
+                  : status === 'CANCELLED'
+                  ? (language === 'hi' ? '❌ निरस्त' : '❌ Cancelled')
+                  : (language === 'hi' ? '🟡 आरक्षित (Confirmed)' : '🟡 Confirmed')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mb-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus('CHECKED_IN');
+                  setCheckInTime(getCurrentFormattedTime());
+                  const todayStr = formatToISODate(new Date());
+                  if (!checkInDate) setCheckInDate(todayStr);
+                }}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer border ${
+                  status === 'CHECKED_IN'
+                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                    : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
+                }`}
+              >
+                <span>✓ {language === 'hi' ? 'चेक-इन करें' : 'Check-In'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus('CHECKED_OUT');
+                  setCheckOutTime(getCurrentFormattedTime());
+                  const todayStr = formatToISODate(new Date());
+                  setCheckOutDate(todayStr);
+                }}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer border ${
+                  status === 'CHECKED_OUT'
+                    ? 'bg-slate-700 text-white border-slate-800 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <span>🏁 {language === 'hi' ? 'चेक-आउट करें' : 'Check-Out'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatus('CONFIRMED')}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer border ${
+                  status === 'CONFIRMED'
+                    ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                    : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
+                }`}
+              >
+                <span>↩ {language === 'hi' ? 'आरक्षित' : 'Confirmed'}</span>
+              </button>
+            </div>
+
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as BookingStatus)}
-              className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white font-semibold"
+              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition bg-white font-semibold text-slate-700"
             >
               <option value="CONFIRMED">{t('confirmed')}</option>
               <option value="CHECKED_IN">{t('checkedIn')}</option>

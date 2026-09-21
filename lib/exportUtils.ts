@@ -6,13 +6,15 @@ import {
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
   extractRatePerRoomFromNotes,
-  extractFoodAmountFromNotes,
-  extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
   isHourlyBooking,
   extractStayHoursFromNotes,
   extractHourlyRateFromNotes,
+  calculateBookingRent,
+  calculateBookingFoodAmount,
+  calculateBookingExpenditure,
+  calculateBookingNetCollection,
 } from './bookingUtils';
 import { sanitizeExcelCell } from './excel';
 
@@ -77,18 +79,14 @@ export function exportBookingsToCSV(bookings: Booking[], filename = 'POGH_Ayodhy
     const metaRate = extractRatePerRoomFromNotes(b.notes);
     const suitRate = Math.max(Number(b.suit_1) || 0, Number(b.suit_2) || 0, Number(b.suit_3) || 0, Number(b.suit_4) || 0);
     const perRoomRent = metaRate > 0 ? metaRate : (suitRate > 1 ? suitRate : Number(b.total_amount) || 0);
-    const totalRent = isHourly
-      ? (hourlyRate && hourlyRate > 0 ? hourlyRate * stayHours * numRooms : Number(b.total_amount) || 0)
-      : (perRoomRent > 0 ? perRoomRent * numRooms * stayNights : Number(b.total_amount) || 0);
-
-    const foodAmount = extractFoodAmountFromNotes(b.notes) || Number(b.food_amount) || 0;
-    const expenditure = extractExpenditureFromNotes(b.notes) || Number(b.expenditure) || 0;
-    const grossCollection = totalRent + foodAmount;
-    // Free rooms with no room rent and no food charge must never go negative
-    const netCollection = grossCollection <= 0 ? 0 : Math.max(0, grossCollection - expenditure);
+    
+    // Authoritative consistent financial calculation
+    const totalRent = calculateBookingRent(b);
+    const foodAmount = calculateBookingFoodAmount(b);
+    const expenditure = calculateBookingExpenditure(b);
+    const netCollection = calculateBookingNetCollection(b);
     const paymentMode = extractPaymentModeFromNotes(b.notes) || b.payment_mode || (netCollection > 0 ? 'CASH' : '-');
     const collectedBy = extractCollectedByFromNotes(b.notes) || b.collected_by || '-';
-
     const cleanedNotes = cleanNotesText(b.notes);
 
     return [

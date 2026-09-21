@@ -29,8 +29,8 @@ module.exports = {
         }
       },
       fontFamily: {
-        hindi: ['Noto Sans Devanagari', 'sans-serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        hindi: ['var(--font-hindi)', 'Noto Sans Devanagari', 'sans-serif'],
+        sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       }
     },
   },

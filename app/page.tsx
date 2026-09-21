@@ -414,7 +414,8 @@ function HomePageContent() {
   const handleUpdateStatus = async (
     booking: Booking,
     newStatus: BookingStatus,
-    updateAllDates: boolean = false
+    updateAllDates: boolean = false,
+    extraUpdates?: Partial<Booking>
   ) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'operator') {
       alert('केवल एडमिन व ऑपरेटर को स्थिति अद्यतन करने की अनुमति है।');
@@ -426,7 +427,7 @@ function HomePageContent() {
     const apiRes = await apiUpdateBooking({
       id: booking.id,
       groupId: refCode,
-      updatedData: { status: newStatus },
+      updatedData: { status: newStatus, ...(extraUpdates || {}) },
       applyToAll: updateAllDates && Boolean(refCode),
     });
 

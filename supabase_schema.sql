@@ -119,5 +119,25 @@ CREATE POLICY "Service role full access to auth config" ON public.pogh_auth_conf
     USING (true)
     WITH CHECK (true);
 
+-- ====================================================================
+-- 10. GUEST HOUSE BANK ACCOUNT BALANCE TABLE (Operational Fund Tracker)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.pogh_bank_balance (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_name TEXT NOT NULL DEFAULT 'SBI - पुलिस ऑफिसर्स गेस्ट हाउस संचालन खाता',
+    account_number TEXT DEFAULT 'XXXX4589',
+    current_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    as_of_date DATE DEFAULT CURRENT_DATE,
+    notes TEXT DEFAULT 'पासबुक प्रविष्टि के अनुसार',
+    updated_by TEXT DEFAULT 'SSP Office Administrator',
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('Asia/Kolkata', now()),
+    updated_at TIMESTAMPTZ DEFAULT TIMEZONE('Asia/Kolkata', now())
+);
 
+ALTER TABLE public.pogh_bank_balance ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY "Allow read bank balance" ON public.pogh_bank_balance
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow service role bank balance mutations" ON public.pogh_bank_balance
+    FOR ALL TO service_role USING (true) WITH CHECK (true);

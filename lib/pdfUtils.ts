@@ -1,6 +1,7 @@
 interface ExportPDFOptions {
   element: HTMLElement;
   filename: string;
+  orientation?: 'portrait' | 'landscape';
 }
 
 /**
@@ -10,7 +11,11 @@ interface ExportPDFOptions {
  * Libraries (jsPDF, html2canvas) are dynamically loaded on-demand
  * to keep the initial page bundle lightweight and fast.
  */
-export async function downloadElementAsPDF({ element, filename }: ExportPDFOptions): Promise<void> {
+export async function downloadElementAsPDF({
+  element,
+  filename,
+  orientation = 'portrait',
+}: ExportPDFOptions): Promise<void> {
   // Dynamically load heavy libraries only when export is requested
   const [html2canvasModule, jsPDFModule] = await Promise.all([
     import('html2canvas'),
@@ -19,12 +24,11 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
   const html2canvas = html2canvasModule.default;
   const jsPDF = jsPDFModule.default;
 
-  // Standard A4 width at 96 DPI is 794px
-  const standardA4WidthPx = 794;
+  const isLandscape = orientation === 'landscape';
+  // Standard A4 width at 96 DPI: 794px portrait, 1123px landscape
+  const standardA4WidthPx = isLandscape ? 1123 : 794;
 
   // 1. Create a detached off-screen container with fixed desktop A4 dimensions.
-  // This guarantees that regardless of mobile screen width (e.g. 360px),
-  // the letter/receipt is rendered at full desktop A4 proportions without squishing or line wrapping.
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.left = '-99999px';
@@ -43,7 +47,7 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
   clone.style.width = `${standardA4WidthPx}px`;
   clone.style.minWidth = `${standardA4WidthPx}px`;
   clone.style.maxWidth = `${standardA4WidthPx}px`;
-  clone.style.padding = '28px 36px';
+  clone.style.padding = isLandscape ? '20px 24px' : '28px 36px';
   clone.style.margin = '0';
   clone.style.boxShadow = 'none';
   clone.style.border = 'none';
@@ -56,18 +60,17 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
   document.body.appendChild(container);
 
   try {
-    // Wait for fonts to be completely ready before taking canvas snapshot
+    // Wait for fonts to be ready
     if (typeof document !== 'undefined' && (document as any).fonts && (document as any).fonts.ready) {
       try {
         await (document as any).fonts.ready;
       } catch (e) {
-        // Fallback if fonts.ready rejects
+        // Fallback
       }
     }
-    // Allow paint cycle for fonts and layout
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Strip any borders or filters from images inside clone before capturing
+    // Strip borders or filters from images
     clone.querySelectorAll('img').forEach((img) => {
       img.style.border = 'none';
       img.style.outline = 'none';
@@ -75,7 +78,7 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
       img.style.filter = 'none';
     });
 
-    // Wait for any embedded images (e.g. emblem/crest) inside the clone to finish loading
+    // Wait for embedded images to finish loading
     const images = Array.from(clone.querySelectorAll('img'));
     await Promise.all(
       images.map((img) => {
@@ -87,51 +90,54 @@ export async function downloadElementAsPDF({ element, filename }: ExportPDFOptio
       })
     );
 
-    // 3. Render full canvas starting from (0,0) with no scroll offset
+    // 3. Render full canvas
     const canvas = await html2canvas(clone, {
-      scale: 2, // 2x Retina scale for crystal clear Hindi typography
+      scale: 2, // 2x Retina scale
       useCORS: true,
       logging: false,
       backgroundColor: '#FFFFFF',
       width: standardA4WidthPx,
       height: clone.scrollHeight,
-      windowWidth: 1200,
-      windowHeight: 1600,
+      windowWidth: standardA4WidthPx + 100,
+      windowHeight: Math.max(1200, clone.scrollHeight + 100),
       scrollX: 0,
       scrollY: 0,
       x: 0,
       y: 0,
     });
 
-    // 4. Fit cleanly onto a single A4 page
+    // 4. Multi-page capable A4 PDF generation
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
-      orientation: 'portrait',
+      orientation: isLandscape ? 'landscape' : 'portrait',
       unit: 'mm',
       format: 'a4',
     });
 
-    const pdfPageWidth = 210;
-    const pdfPageHeight = 297;
-    const margin = 6; // 6mm margin around document
-    const maxUsableWidth = pdfPageWidth - margin * 2; // 198mm
-    const maxUsableHeight = pdfPageHeight - margin * 2; // 285mm
+    const pdfPageWidth = isLandscape ? 297 : 210;
+    const pdfPageHeight = isLandscape ? 210 : 297;
+    const margin = 6;
+    const maxUsableWidth = pdfPageWidth - margin * 2;
+    const maxUsableHeight = pdfPageHeight - margin * 2;
 
-    const imgAspect = canvas.width / canvas.height;
-    let renderWidth = maxUsableWidth;
-    let renderHeight = renderWidth / imgAspect;
+    const imgWidth = maxUsableWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Proportionally scale to fit on single page if height exceeds printable height
-    if (renderHeight > maxUsableHeight) {
-      renderHeight = maxUsableHeight;
-      renderWidth = renderHeight * imgAspect;
+    let heightLeft = imgHeight;
+    let position = margin;
+
+    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+    heightLeft -= maxUsableHeight;
+
+    while (heightLeft > 0) {
+      position = position - maxUsableHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= maxUsableHeight;
     }
 
-    const xOffset = margin + (maxUsableWidth - renderWidth) / 2;
-    const yOffset = margin;
-
-    pdf.addImage(imgData, 'PNG', xOffset, yOffset, renderWidth, renderHeight, undefined, 'FAST');
-    pdf.save(filename);
+    const safeFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+    pdf.save(safeFilename);
   } finally {
     if (document.body.contains(container)) {
       document.body.removeChild(container);
@@ -174,14 +180,33 @@ function sanitizeHtmlForPrint(source: HTMLElement): string {
 export function printDocumentDirectly(
   element: HTMLElement,
   title = 'POGH Document',
-  isMultiPage = false
+  isMultiPage = false,
+  orientation: 'portrait' | 'landscape' = 'portrait'
 ): void {
+  // Mobile browsers block hidden iframe print. Automatically download high-quality PDF on mobile.
+  const isMobile =
+    typeof window !== 'undefined' &&
+    (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768);
+
+  if (isMobile) {
+    const safeTitle = title.replace(/[^a-zA-Z0-9_\u0900-\u097F]/g, '_');
+    downloadElementAsPDF({
+      element,
+      filename: `${safeTitle}.pdf`,
+      orientation,
+    }).catch((err) => {
+      console.warn('Mobile direct PDF download failed, falling back to window.print', err);
+      window.print();
+    });
+    return;
+  }
+
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.left = '-9999px';
   iframe.style.top = '-9999px';
-  iframe.style.width = '1024px';
-  iframe.style.height = '1024px';
+  iframe.style.width = orientation === 'landscape' ? '1400px' : '1024px';
+  iframe.style.height = orientation === 'landscape' ? '900px' : '1024px';
   iframe.style.border = '0';
   iframe.style.opacity = '0';
   iframe.style.pointerEvents = 'none';
@@ -215,8 +240,8 @@ export function printDocumentDirectly(
         ${stylesHtml}
         <style>
           @page {
-            size: A4 portrait;
-            margin: 8mm 10mm 8mm 10mm;
+            size: A4 ${orientation};
+            margin: ${orientation === 'landscape' ? '6mm 8mm 6mm 8mm' : '8mm 10mm 8mm 10mm'};
           }
           *, *::before, *::after {
             -webkit-print-color-adjust: exact !important;

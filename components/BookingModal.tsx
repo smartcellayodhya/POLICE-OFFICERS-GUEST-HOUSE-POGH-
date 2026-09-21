@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Booking } from '@/lib/types';
+import { Booking, BookingStatus } from '@/lib/types';
 import { SUITS, REFERENCES, MEAL_STATUSES } from '@/lib/constants';
 import { formatToISODate, getDatesInRange, getStayDates, calculateStayNights, formatToDisplayDate } from '@/lib/dateUtils';
 import {
@@ -12,6 +12,7 @@ import {
   parseTimeToMinutes,
   formatMinutesToTime,
   calculateStayHours,
+  getCurrentFormattedTime,
 } from '@/lib/bookingUtils';
 import { X, Calendar, User, Phone, Tag, Utensils, AlertTriangle, CheckCircle2, Hash, Clock, Wrench, Lock, Timer, IndianRupee, History } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
@@ -66,6 +67,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const [checkInTime, setCheckInTime] = useState('12:00 PM');
   const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
+  const [bookingStatus, setBookingStatus] = useState<BookingStatus>('CONFIRMED');
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [manualAmount, setManualAmount] = useState<string>('');
   const [mealStatus, setMealStatus] = useState<string>('PAID');
@@ -133,6 +135,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     });
     setCheckInTime('12:00 PM');
     setCheckOutTime('12:00 PM');
+    setBookingStatus('CONFIRMED');
     setIsMaintenance(false);
     setManualAmount('');
     setMealStatus('PAID');
@@ -370,7 +373,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         suit_4: selectedSuits.suit_4 ? (perRoomRent > 0 ? perRoomRent : 1) : 0,
         total_amount: dayTotalAmount > 0 ? dayTotalAmount : perRoomRent,
         meal_type_status: mealStatus,
-        status: isMaintenance ? 'MAINTENANCE' : 'CONFIRMED',
+        status: isMaintenance ? 'MAINTENANCE' : bookingStatus,
         check_in_time: checkInTime.trim(),
         check_out_time: checkOutTime.trim(),
         booking_type: stayType,
@@ -671,12 +674,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               />
             </div>
 
-            {/* Check-in & Check-out time */}
+            {/* Check-in & Check-out time with Quick Buttons */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                {language === 'hi' ? 'चेक-इन समय' : 'Check-in Time'}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  {language === 'hi' ? 'चेक-इन समय' : 'Check-in Time'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleCheckInTimeChange(getCurrentFormattedTime())}
+                  className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-1.5 py-0.5 rounded cursor-pointer transition"
+                  title={language === 'hi' ? 'वर्तमान समय सेट करें' : 'Set to current time'}
+                >
+                  ⚡ {language === 'hi' ? 'अभी (Now)' : 'Now'}
+                </button>
+              </div>
               <input
                 type="text"
                 value={checkInTime}
@@ -684,13 +697,39 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 placeholder="10:00 AM"
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
               />
+              <div className="flex items-center gap-1 mt-1">
+                {['10:00 AM', '12:00 PM', '02:00 PM', '06:00 PM'].map((tVal) => (
+                  <button
+                    key={tVal}
+                    type="button"
+                    onClick={() => handleCheckInTimeChange(tVal)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border transition cursor-pointer ${
+                      checkInTime === tVal
+                        ? 'bg-amber-500 text-white border-amber-600 font-bold'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {tVal}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                {language === 'hi' ? 'चेक-आउट समय' : 'Check-out Time'}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  {language === 'hi' ? 'चेक-आउट समय' : 'Check-out Time'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleCheckOutTimeChange(getCurrentFormattedTime())}
+                  className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-1.5 py-0.5 rounded cursor-pointer transition"
+                  title={language === 'hi' ? 'वर्तमान समय सेट करें' : 'Set to current time'}
+                >
+                  ⚡ {language === 'hi' ? 'अभी (Now)' : 'Now'}
+                </button>
+              </div>
               <input
                 type="text"
                 value={checkOutTime}
@@ -698,13 +737,75 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 placeholder="02:00 PM"
                 className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white font-mono"
               />
+              <div className="flex items-center gap-1 mt-1">
+                {['10:00 AM', '12:00 PM', '02:00 PM', '06:00 PM'].map((tVal) => (
+                  <button
+                    key={tVal}
+                    type="button"
+                    onClick={() => handleCheckOutTimeChange(tVal)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border transition cursor-pointer ${
+                      checkOutTime === tVal
+                        ? 'bg-amber-500 text-white border-amber-600 font-bold'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {tVal}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Booking Status Option for Regular / Standard Booking */}
+            {!isMaintenance && (
+              <div className="col-span-full pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    {language === 'hi' ? 'बुकिंग स्थिति चुनें (Booking Status):' : 'Select Booking Status:'}
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    {bookingStatus === 'CHECKED_IN'
+                      ? (language === 'hi' ? 'अतिथि अभी उपस्थित / चेक-इन' : 'Guest In-House / Checked In')
+                      : (language === 'hi' ? 'सामान्य अग्रिम आरक्षण' : 'Standard Advance Reservation')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookingStatus('CONFIRMED')}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      bookingStatus === 'CONFIRMED'
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>✓ {language === 'hi' ? 'आरक्षित (Confirmed)' : 'Confirmed'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBookingStatus('CHECKED_IN');
+                      if (checkInTime === '12:00 PM') {
+                        setCheckInTime(getCurrentFormattedTime());
+                      }
+                    }}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      bookingStatus === 'CHECKED_IN'
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800'
+                    }`}
+                  >
+                    <span>🏨 {language === 'hi' ? 'सीधा चेक-इन (Checked-In)' : 'Direct Check-In'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="col-span-full text-xs font-semibold text-slate-600 flex items-center justify-between pt-1 border-t border-slate-200">
               <span className="text-[11px] text-slate-500">
                 {stayType === 'HOURLY'
                   ? (language === 'hi' ? 'घंटे अनुसार बुकिंग: उसी दिन का समय स्लॉट' : 'Hourly Stay: Same-day time slot')
-                  : (language === 'hi' ? 'सामान्य ठहराव: दोपहर 12:00 से अगले दिन 12:00' : 'Standard Stay: 12:00 PM to Next Day 12:00 PM')}
+                  : (language === 'hi' ? 'सामान्य ठहराव: चेक-इन से चेक-आउट' : 'Standard Stay: Check-in to Check-out')}
               </span>
               <span className="font-bold text-slate-800">
                 {stayType === 'HOURLY'

@@ -65,7 +65,9 @@ export function encodeNotesWithMeta(
   stayHours?: number,
   hourlyRate?: number,
   checkInTime?: string,
-  checkOutTime?: string
+  checkOutTime?: string,
+  bankAmount?: number,
+  cashAmount?: number
 ): string {
   const cleanNotes = (notes || '').replace(/\[META:.*?\]/g, '').trim();
   const metaObj: Record<string, any> = {
@@ -85,6 +87,8 @@ export function encodeNotesWithMeta(
   if (hourlyRate !== undefined && hourlyRate > 0) metaObj.hourly_rate = hourlyRate;
   if (checkInTime) metaObj.check_in_time = checkInTime;
   if (checkOutTime) metaObj.check_out_time = checkOutTime;
+  if (bankAmount !== undefined && bankAmount >= 0) metaObj.bank_amount = bankAmount;
+  if (cashAmount !== undefined && cashAmount >= 0) metaObj.cash_amount = cashAmount;
 
   const metaTag = `[META:${JSON.stringify(metaObj)}]`;
   return cleanNotes ? `${cleanNotes} ${metaTag}` : metaTag;
@@ -100,6 +104,8 @@ export interface BookingMeta {
   foodAmount?: number;
   expenditure?: number;
   paymentMode?: string;
+  bankAmount?: number;
+  cashAmount?: number;
   collectedBy?: string;
   collectionNote?: string;
   bookingType?: 'STANDARD' | 'HOURLY';
@@ -124,6 +130,8 @@ export function parseBookingMeta(notes?: string): BookingMeta {
         foodAmount: parsed.food_amount !== undefined ? Number(parsed.food_amount) : undefined,
         expenditure: parsed.expenditure !== undefined ? Number(parsed.expenditure) : undefined,
         paymentMode: parsed.payment_mode || undefined,
+        bankAmount: parsed.bank_amount !== undefined ? Number(parsed.bank_amount) : undefined,
+        cashAmount: parsed.cash_amount !== undefined ? Number(parsed.cash_amount) : undefined,
         collectedBy: parsed.collected_by || undefined,
         collectionNote: parsed.collection_note || undefined,
         bookingType: parsed.booking_type === 'HOURLY' ? 'HOURLY' : 'STANDARD',
@@ -646,3 +654,156 @@ export function findConflictingBooking(
 
   return { isBooked: false };
 }
+
+export function extractBankAmountFromNotes(notes?: string): number | undefined {
+  const meta = parseBookingMeta(notes);
+  return meta.bankAmount;
+}
+
+export function extractCashAmountFromNotes(notes?: string): number | undefined {
+  const meta = parseBookingMeta(notes);
+  return meta.cashAmount;
+}
+
+export function isBankPaymentMode(mode?: string): boolean {
+  if (!mode) return false;
+  const m = mode.trim().toUpperCase();
+  return (
+    m === 'UPI' ||
+    m === 'ONLINE' ||
+    m === 'BANK' ||
+    m === 'NETBANKING' ||
+    m === 'CARD' ||
+    m === 'CHEQUE' ||
+    m.includes('ONLINE') ||
+    m.includes('ऑनलाइन') ||
+    m.includes('UPI') ||
+    m.includes('BANK')
+  );
+}
+
+export function isCashPaymentMode(mode?: string): boolean {
+  if (!mode) return true;
+  const m = mode.trim().toUpperCase();
+  return m === 'CASH' || m.includes('नकद') || m.includes('CASH');
+}
+
+/**
+ * Computes split of rent and net collection between Bank/Online and Cash for a booking.
+ */
+export function getBookingPaymentSplit(b: Booking): {
+  bankRent: number;
+  cashRent: number;
+  bankAmount: number;
+  cashAmount: number;
+} {
+  const rent = calculateBookingRent(b);
+  const food = calculateBookingFoodAmount(b);
+  const exp = calculateBookingExpenditure(b);
+  const gross = rent + food;
+  const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
+
+  const rawMode = (b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH').toUpperCase();
+
+  // If explicit split is recorded in notes or booking properties
+  const bankExplicit = extractBankAmountFromNotes(b.notes) ?? b.bank_amount;
+  const cashExplicit = extractCashAmountFromNotes(b.notes) ?? b.cash_amount;
+
+  if (bankExplicit !== undefined || cashExplicit !== undefined) {
+    const bAmt = Number(bankExplicit) || 0;
+    const cAmt = Number(cashExplicit) || 0;
+    const totalExplicit = bAmt + cAmt;
+    let bRent = 0;
+    let cRent = 0;
+    if (totalExplicit > 0) {
+      bRent = Math.min(rent, Math.round((bAmt / totalExplicit) * rent));
+      cRent = Math.max(0, rent - bRent);
+    } else {
+      bRent = Math.min(rent, bAmt);
+      cRent = Math.max(0, rent - bRent);
+    }
+    return {
+      bankRent: bRent,
+      cashRent: cRent,
+      bankAmount: bAmt,
+      cashAmount: cAmt,
+    };
+  }
+
+  // Exempt / VIP / Govt
+  if (['GOVT', 'VIP', 'FREE', 'COMPLIMENTARY', 'AS_PER_APPLICABLE'].includes(rawMode)) {
+    return {
+      bankRent: 0,
+      cashRent: 0,
+      bankAmount: 0,
+      cashAmount: 0,
+    };
+  }
+
+  if (isBankPaymentMode(rawMode)) {
+    return {
+      bankRent: rent,
+      cashRent: 0,
+      bankAmount: net,
+      cashAmount: 0,
+    };
+  }
+
+  // Default to Cash
+  return {
+    bankRent: 0,
+    cashRent: rent,
+    bankAmount: 0,
+    cashAmount: net,
+  };
+}
+
+export function getCurrentFormattedTime(): string {
+  const d = new Date();
+  let hours = d.getHours();
+  const minutes = d.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strMinutes = minutes < 10 ? '0' + minutes : minutes;
+  const strHours = hours < 10 ? '0' + hours : hours;
+  return `${strHours}:${strMinutes} ${ampm}`;
+}
+
+export function updateNotesWithDatesAndTimes(
+  notes: string | undefined,
+  updates: {
+    checkInDate?: string;
+    checkOutDate?: string;
+    checkInTime?: string;
+    checkOutTime?: string;
+  }
+): string {
+  const meta = parseBookingMeta(notes);
+  const cleanNotes = (notes || '').replace(/\[META:.*?\]/g, '').trim();
+  const updatedMeta: Record<string, any> = {
+    ...meta,
+    group_id: meta.groupId,
+    dispatch_no: meta.dispatchNo,
+    rate_per_room: meta.ratePerRoom,
+    food_amount: meta.foodAmount,
+    expenditure: meta.expenditure,
+    payment_mode: meta.paymentMode,
+    bank_amount: meta.bankAmount,
+    cash_amount: meta.cashAmount,
+    collected_by: meta.collectedBy,
+    collection_note: meta.collectionNote,
+    booking_type: meta.bookingType,
+    stay_hours: meta.stayHours,
+    hourly_rate: meta.hourlyRate,
+  };
+  if (updates.checkInDate !== undefined) updatedMeta.check_in_date = updates.checkInDate;
+  if (updates.checkOutDate !== undefined) updatedMeta.check_out_date = updates.checkOutDate;
+  if (updates.checkInTime !== undefined) updatedMeta.check_in_time = updates.checkInTime;
+  if (updates.checkOutTime !== undefined) updatedMeta.check_out_time = updates.checkOutTime;
+
+  const metaTag = `[META:${JSON.stringify(updatedMeta)}]`;
+  return cleanNotes ? `${cleanNotes} ${metaTag}` : metaTag;
+}
+
+

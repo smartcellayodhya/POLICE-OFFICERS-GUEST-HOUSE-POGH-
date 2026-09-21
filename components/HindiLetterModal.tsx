@@ -136,9 +136,9 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
     ? metaRoomRate
     : (suitRateFound > 1
       ? suitRateFound
-      : (numRooms > 1 && Number(booking.total_amount) > 1500
+      : (numRooms > 1 && Number(booking.total_amount) > 0
         ? Math.round(Number(booking.total_amount) / numRooms)
-        : Number(booking.total_amount)));
+        : Number(booking.total_amount) || 0));
 
   const hasRentAmount = !isNaN(bookingRent) && bookingRent > 0;
   const rentDisplay = hasRentAmount ? `₹${bookingRent.toLocaleString('en-IN')}/-` : 'As per applicable';

@@ -8,8 +8,16 @@ import {
   formatToHindiDate,
   formatToISODate,
   getDayOfWeekName,
+  getStayDates,
 } from '@/lib/dateUtils';
-import { formatGuestDisplayName, isHourlyBooking, extractStayHoursFromNotes } from '@/lib/bookingUtils';
+import {
+  formatGuestDisplayName,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  extractCheckInDateFromNotes,
+  extractCheckOutDateFromNotes,
+  isSuitAllocatedInBooking,
+} from '@/lib/bookingUtils';
 import {
   Calendar,
   CheckCircle2,
@@ -57,17 +65,27 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
 
   const datePickerRef = useRef<HTMLInputElement>(null);
 
-  // Pre-index active bookings by date for O(1) instantaneous lookup
+  // Pre-index active bookings by date for O(1) instantaneous lookup (maps multi-day stays to every occupied night)
   const bookingsByDate = useMemo(() => {
     const map = new Map<string, Booking[]>();
     bookings.forEach((b) => {
-      if ((b.status || '').toUpperCase() === 'CANCELLED' || !b.booking_date) return;
-      const list = map.get(b.booking_date);
-      if (list) {
-        list.push(b);
-      } else {
-        map.set(b.booking_date, [b]);
-      }
+      if ((b.status || '').toUpperCase() === 'CANCELLED') return;
+      const bDate = b.booking_date;
+      const cin = extractCheckInDateFromNotes(b.notes) || bDate;
+      const cout = extractCheckOutDateFromNotes(b.notes) || bDate;
+      const stayDates = cin && cout ? getStayDates(cin, cout) : (bDate ? [bDate] : []);
+
+      const targetDates = stayDates.length > 0 ? stayDates : (bDate ? [bDate] : []);
+      targetDates.forEach((d) => {
+        const list = map.get(d);
+        if (list) {
+          if (!list.some((existing) => existing.id === b.id)) {
+            list.push(b);
+          }
+        } else {
+          map.set(d, [b]);
+        }
+      });
     });
     return map;
   }, [bookings]);
@@ -76,7 +94,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
   const getBookingForSuitOnDate = (suitKey: string, dateStr: string): Booking | undefined => {
     const dayBookings = bookingsByDate.get(dateStr);
     if (!dayBookings) return undefined;
-    return dayBookings.find((b) => Number(b[suitKey as keyof Booking]) > 0);
+    return dayBookings.find((b) => isSuitAllocatedInBooking(b, suitKey) || Number(b[suitKey as keyof Booking]) > 0);
   };
 
   // Group suites for a date with comma separation (e.g. "Suit 2, Suit 3") to eliminate duplicacy
@@ -97,7 +115,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
     dayBookings.forEach((b) => {
       const bSuits: string[] = [];
       SUITS.forEach((s) => {
-        if (Number(b[s.id as keyof Booking]) > 0) {
+        if (isSuitAllocatedInBooking(b, s.id) || Number(b[s.id as keyof Booking]) > 0) {
           bSuits.push(s.id);
         }
       });

@@ -82,5 +82,8 @@ export function getWhatsAppUrl(details: LetterDetails): string {
     cleanMobile = '91' + cleanMobile;
   }
   const msg = generateWhatsAppMessage(details);
+  if (cleanMobile.length < 10) {
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+  }
   return `https://wa.me/${cleanMobile}?text=${encodeURIComponent(msg)}`;
 }

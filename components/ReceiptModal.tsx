@@ -16,6 +16,7 @@ import {
   isHourlyBooking,
   extractStayHoursFromNotes,
   extractHourlyRateFromNotes,
+  isBankPaymentMode,
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Receipt, CheckCircle2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
@@ -149,6 +150,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const grandTotal = grossTotal <= 0 ? 0 : Math.max(0, grossTotal - expenditure);
   const collectedBy = booking.collected_by || extractCollectedByFromNotes(booking.notes);
 
+  const isBank = isBankPaymentMode(paymentMode);
+  const bankRent = isBank ? totalRentAmount : 0;
+  const cashRent = isBank ? 0 : totalRentAmount;
+
+  const getPaymentModeLabel = (mode?: string) => {
+    const m = (mode || '').toUpperCase();
+    if (m === 'CASH') return 'नकद (Cash)';
+    if (['GOVT', 'VIP', 'FREE', 'COMPLIMENTARY'].includes(m)) return 'शासकीय / वीआईपी';
+    if (isBankPaymentMode(m)) return m === 'UPI' ? 'ऑनलाइन (UPI)' : 'ऑनलाइन / बैंक अंतरण (Bank Transfer)';
+    return m || 'नकद (Cash)';
+  };
+
   const todayHindi = formatToHindiDate(new Date());
   const cinHindi = formatToHindiDate(checkInDate);
   const coutHindi = formatToHindiDate(checkOutDate);
@@ -263,7 +276,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
               <div className="text-right">
                 <p>दिनांक: <span className="font-bold text-slate-900">{todayHindi}</span></p>
-                <p className="mt-0.5">भुगतान माध्यम: <span className="font-bold text-emerald-800">{paymentMode === 'CASH' ? 'नकद (Cash)' : paymentMode === 'UPI' ? 'ऑनलाइन (UPI)' : 'शासकीय'}</span></p>
+                <p className="mt-0.5">भुगतान माध्यम: <span className="font-bold text-emerald-800">{getPaymentModeLabel(paymentMode)}</span></p>
               </div>
             </div>
 
@@ -307,14 +320,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="p-2 border border-slate-300 text-center font-bold">1</td>
-                    <td className="p-2 border border-slate-300">
+                    <td className="p-2 border border-slate-300 text-center font-bold" rowSpan={3}>1</td>
+                    <td className="p-2 border border-slate-300 font-semibold">
                       कमरा किराया {isHourly ? '(अल्पकालिक)' : ''}: {suitsDisplay} ({numRooms} कमरा)
                     </td>
-                    <td className="p-2 border border-slate-300 text-center font-bold">
+                    <td className="p-2 border border-slate-300 text-center font-bold" rowSpan={3}>
                       {isHourly ? `${stayHours} घंटे` : totalDays}
                     </td>
-                    <td className="p-2 border border-slate-300 text-right font-mono">
+                    <td className="p-2 border border-slate-300 text-right font-mono" rowSpan={3}>
                       {isHourly ? (
                         hourlyRate && hourlyRate > 0 ? (
                           numRooms > 1
@@ -329,6 +342,22 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     </td>
                     <td className="p-2 border border-slate-300 text-right font-bold font-mono">
                       {totalRentAmount > 0 ? `₹${totalRentAmount}` : 'As per applicable'}
+                    </td>
+                  </tr>
+                  <tr className="bg-blue-50/40 text-[11px]">
+                    <td className="p-1.5 pl-4 border border-slate-300 text-blue-900 font-medium">
+                      ↳ (क) बैंक / ऑनलाइन (Bank / Online)
+                    </td>
+                    <td className="p-1.5 border border-slate-300 text-right font-mono font-bold text-blue-900">
+                      ₹{bankRent.toLocaleString('en-IN')}
+                    </td>
+                  </tr>
+                  <tr className="bg-emerald-50/40 text-[11px]">
+                    <td className="p-1.5 pl-4 border border-slate-300 text-emerald-900 font-medium">
+                      ↳ (ख) नकद (Cash)
+                    </td>
+                    <td className="p-1.5 border border-slate-300 text-right font-mono font-bold text-emerald-900">
+                      ₹{cashRent.toLocaleString('en-IN')}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">

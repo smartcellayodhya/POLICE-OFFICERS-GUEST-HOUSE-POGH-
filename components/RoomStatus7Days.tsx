@@ -9,7 +9,13 @@ import {
   formatToISODate,
   getDayOfWeekName,
 } from '@/lib/dateUtils';
-import { formatGuestDisplayName, isHourlyBooking, extractStayHoursFromNotes } from '@/lib/bookingUtils';
+import {
+  formatGuestDisplayName,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
+  isBookingOccupyingDate,
+  isSuitAllocatedInBooking,
+} from '@/lib/bookingUtils';
 import {
   Calendar,
   ChevronLeft,
@@ -96,20 +102,20 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
     }
   };
 
-  // Helper to find a booking for a specific suite on a specific date
+  // Helper to find a booking for a specific suite on a specific date (handles multi-day spans & allocations)
   const getBookingForSuitOnDate = (suitKey: string, dateStr: string): Booking | undefined => {
     return bookings.find(
       (b) =>
-        b.booking_date === dateStr &&
         b.status !== 'CANCELLED' &&
-        Number(b[suitKey as keyof Booking]) > 0
+        (isSuitAllocatedInBooking(b, suitKey) || Number(b[suitKey as keyof Booking]) > 0) &&
+        (b.booking_date === dateStr || isBookingOccupyingDate(b, dateStr))
     );
   };
 
   // Group suites for a date with comma separation (e.g. "Suit 2, Suit 3")
   const getDateOccupancyGroups = (dateStr: string) => {
     const dayBookings = bookings.filter(
-      (b) => b.booking_date === dateStr && b.status !== 'CANCELLED'
+      (b) => b.status !== 'CANCELLED' && (b.booking_date === dateStr || isBookingOccupyingDate(b, dateStr))
     );
 
     const occupiedSuitIds = new Set<string>();
@@ -126,7 +132,7 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
     dayBookings.forEach((b) => {
       const bSuits: string[] = [];
       SUITS.forEach((s) => {
-        if (Number(b[s.id as keyof Booking]) > 0) {
+        if (isSuitAllocatedInBooking(b, s.id) || Number(b[s.id as keyof Booking]) > 0) {
           bSuits.push(s.id);
         }
       });

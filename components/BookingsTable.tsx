@@ -18,6 +18,8 @@ import {
   isHourlyBooking,
   extractStayHoursFromNotes,
   extractHourlyRateFromNotes,
+  getCurrentFormattedTime,
+  updateNotesWithDatesAndTimes,
 } from '@/lib/bookingUtils';
 import { exportBookingsToExcel } from '@/lib/excel';
 import { REFERENCES, SUITS } from '@/lib/constants';
@@ -41,6 +43,9 @@ import {
   Receipt,
   MoreVertical,
   IndianRupee,
+  X,
+  CheckCircle2,
+  Calendar,
 } from 'lucide-react';
 
 import { useLanguage } from '@/lib/languageContext';
@@ -54,7 +59,7 @@ interface BookingsTableProps {
   onOpenRecordCollection?: (booking: Booking) => void;
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (id: string, groupId?: string) => Promise<void>;
-  onUpdateStatus: (booking: Booking, newStatus: BookingStatus, updateAllDates?: boolean) => Promise<void>;
+  onUpdateStatus: (booking: Booking, newStatus: BookingStatus, updateAllDates?: boolean, extraUpdates?: Partial<Booking>) => Promise<void>;
 }
 
 type StatusFilter = 'ALL' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
@@ -108,6 +113,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   const [toDate, setToDate] = useState('');
   const [visibleLimit, setVisibleLimit] = useState<number>(30);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [lifecycleModal, setLifecycleModal] = useState<{
+    stay: GroupedStay;
+    action: 'CHECK_IN' | 'CHECK_OUT';
+    date: string;
+    time: string;
+    applyAll: boolean;
+  } | null>(null);
   const deferredSearch = useDeferredValue(searchTerm);
 
   // Close card action menu when clicking outside - attached only when a menu is open
@@ -318,20 +330,63 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     setSuitFilter('ALL');
   };
 
-  // Synchronized Check-in / Check-out for the entire stay group
+  // Synchronized Check-in / Check-out with Date & Time selection modal
   const handleLifecycleClick = (stay: GroupedStay) => {
     if (!isAdmin && !isOperator) return;
     const current = stay.status;
-    let nextStatus: BookingStatus = 'CONFIRMED';
+    const todayStr = formatToISODate(new Date());
+
     if (current === 'CONFIRMED' || !current) {
-      nextStatus = 'CHECKED_IN';
+      setLifecycleModal({
+        stay,
+        action: 'CHECK_IN',
+        date: stay.checkInDate || todayStr,
+        time: stay.primaryBooking.check_in_time && stay.primaryBooking.check_in_time !== '12:00 PM'
+          ? stay.primaryBooking.check_in_time
+          : getCurrentFormattedTime(),
+        applyAll: true,
+      });
     } else if (current === 'CHECKED_IN') {
-      nextStatus = 'CHECKED_OUT';
+      setLifecycleModal({
+        stay,
+        action: 'CHECK_OUT',
+        date: todayStr,
+        time: getCurrentFormattedTime(),
+        applyAll: true,
+      });
     } else if (current === 'CHECKED_OUT') {
-      nextStatus = 'CONFIRMED';
+      const confirmReset = window.confirm(
+        language === 'hi'
+          ? `क्या आप ${stay.guestName} की स्थिति को पुनः आरक्षित (Confirmed) पर सेट करना चाहते हैं?`
+          : `Do you want to reset status for ${stay.guestName} back to Confirmed?`
+      );
+      if (confirmReset) {
+        onUpdateStatus(stay.primaryBooking, 'CONFIRMED', true);
+      }
     }
-    // Update all days of this stay simultaneously
-    onUpdateStatus(stay.primaryBooking, nextStatus, true);
+  };
+
+  const handleConfirmLifecycleModal = async () => {
+    if (!lifecycleModal) return;
+    const { stay, action, date, time, applyAll } = lifecycleModal;
+    const isCheckIn = action === 'CHECK_IN';
+    const newStatus: BookingStatus = isCheckIn ? 'CHECKED_IN' : 'CHECKED_OUT';
+
+    const updatedNotes = updateNotesWithDatesAndTimes(stay.primaryBooking.notes, {
+      ...(isCheckIn ? { checkInDate: date, checkInTime: time } : { checkOutDate: date, checkOutTime: time }),
+    });
+
+    await onUpdateStatus(
+      stay.primaryBooking,
+      newStatus,
+      applyAll,
+      {
+        ...(isCheckIn ? { check_in_time: time } : { check_out_time: time }),
+        notes: updatedNotes,
+      }
+    );
+
+    setLifecycleModal(null);
   };
 
   const handleCancelClick = (stay: GroupedStay) => {
@@ -564,7 +619,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
 
                       {/* Stay Duration Display */}
                       {stay.isHourly ? (
-                        <span className="text-[11px] sm:text-xs font-bold text-violet-900 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200 flex items-center gap-1 shrink-0">
+                        <span className="text-[10.5px] sm:text-xs font-bold text-violet-900 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200 flex items-center gap-1 max-w-full break-words">
                           <Clock className="w-3 h-3 text-violet-600 shrink-0" />
                           <span>
                             {language === 'hi' ? formatToHindiDate(stay.checkInDate) : formatToDisplayDate(stay.checkInDate)}
@@ -573,7 +628,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                           </span>
                         </span>
                       ) : (
-                        <span className="text-[11px] sm:text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
+                        <span className="text-[10.5px] sm:text-xs font-bold text-slate-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80 max-w-full break-words">
                           {stay.checkInDate === stay.checkOutDate
                             ? (language === 'hi'
                                 ? `${formatToHindiDate(stay.checkInDate)} (1 दिन)`
@@ -750,23 +805,23 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
                     <div className="text-xs">
                       {stay.foodAmount > 0 || stay.expenditure > 0 ? (
                         <div>
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <span className="font-mono text-emerald-700 font-extrabold text-sm">
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-emerald-700 text-sm tabular-nums">
                               ₹{stay.totalCollection.toLocaleString('en-IN')}/-
                             </span>
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
                               {stay.expenditure > 0 ? (language === 'hi' ? 'शुद्ध' : 'Net') : (language === 'hi' ? 'कुल' : 'Total')}
                             </span>
                           </div>
-                          <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1.5">
+                          <div className="text-[10.5px] sm:text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap leading-tight tabular-nums">
                             <span>{language === 'hi' ? 'किराया:' : 'Rent:'} ₹{stay.totalRent}</span>
-                            {stay.foodAmount > 0 && <span className="text-blue-600 font-semibold">+ {language === 'hi' ? 'भोजन:' : 'Food:'} ₹{stay.foodAmount}</span>}
-                            {stay.expenditure > 0 && <span className="text-rose-600 font-semibold">- {language === 'hi' ? 'खर्च:' : 'Exp:'} ₹{stay.expenditure}</span>}
+                            {stay.foodAmount > 0 && <span className="text-blue-600 font-medium">+ {language === 'hi' ? 'भोजन:' : 'Food:'} ₹{stay.foodAmount}</span>}
+                            {stay.expenditure > 0 && <span className="text-rose-600 font-medium">- {language === 'hi' ? 'खर्च:' : 'Exp:'} ₹{stay.expenditure}</span>}
                           </div>
                         </div>
                       ) : (
                         <div>
-                          <div className="font-bold text-slate-900 font-mono text-sm">
+                          <div className="font-bold text-slate-900 text-sm tabular-nums">
                             {stay.totalRent > 0 ? (
                               `₹${stay.totalRent.toLocaleString('en-IN')}/-`
                             ) : (
@@ -892,6 +947,168 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         </>
         )}
       </div>
+
+      {/* Interactive Lifecycle Modal: Check-In / Check-Out with Date & Time Selection */}
+      {lifecycleModal && (
+        <div 
+          onClick={() => setLifecycleModal(null)}
+          className="fixed inset-0 z-50 p-3 sm:p-4 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center animate-in fade-in duration-150"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+          >
+            {/* Header */}
+            <div className={`px-5 py-3.5 text-white flex items-center justify-between border-b ${
+              lifecycleModal.action === 'CHECK_IN' ? 'bg-emerald-700 border-emerald-800' : 'bg-slate-900 border-slate-800'
+            }`}>
+              <div className="flex items-center gap-2">
+                {lifecycleModal.action === 'CHECK_IN' ? (
+                  <LogIn className="w-5 h-5 text-emerald-300" />
+                ) : (
+                  <LogOut className="w-5 h-5 text-amber-400" />
+                )}
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold">
+                    {lifecycleModal.action === 'CHECK_IN'
+                      ? (language === 'hi' ? 'अतिथि चेक-इन दर्ज करें' : 'Record Guest Check-In')
+                      : (language === 'hi' ? 'अतिथि चेक-आउट दर्ज करें' : 'Record Guest Check-Out')}
+                  </h3>
+                  <div className="text-[11px] text-slate-200">
+                    {lifecycleModal.stay.groupId} {lifecycleModal.stay.dispatchNo ? `(#${lifecycleModal.stay.dispatchNo})` : ''}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLifecycleModal(null)}
+                className="w-8 h-8 rounded-lg hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Guest Summary Info */}
+            <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs">
+              <div className="font-bold text-slate-900 text-sm">
+                {lifecycleModal.stay.guestName}
+              </div>
+              <div className="text-slate-600 mt-0.5 flex flex-wrap items-center gap-2">
+                <span>{lifecycleModal.stay.reference}</span>
+                <span>•</span>
+                <span className="font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  {lifecycleModal.stay.suits.join(', ')}
+                </span>
+                <span>•</span>
+                <span>{lifecycleModal.stay.stayNights} {language === 'hi' ? 'दिन का ठहराव' : 'Day Stay'}</span>
+              </div>
+            </div>
+
+            {/* Form Fields: Date & Time */}
+            <div className="p-5 space-y-4">
+              {/* Date Input */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                  {lifecycleModal.action === 'CHECK_IN'
+                    ? (language === 'hi' ? 'चेक-इन तारीख (Check-In Date)' : 'Check-In Date')
+                    : (language === 'hi' ? 'चेक-आउट तारीख (Check-Out Date)' : 'Check-Out Date')}
+                </label>
+                <input
+                  type="date"
+                  value={lifecycleModal.date}
+                  onChange={(e) => setLifecycleModal({ ...lifecycleModal, date: e.target.value })}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white font-medium"
+                />
+              </div>
+
+              {/* Time Input with Quick Buttons */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    {lifecycleModal.action === 'CHECK_IN'
+                      ? (language === 'hi' ? 'चेक-इन समय (Check-In Time)' : 'Check-In Time')
+                      : (language === 'hi' ? 'चेक-आउट समय (Check-Out Time)' : 'Check-Out Time')}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setLifecycleModal({ ...lifecycleModal, time: getCurrentFormattedTime() })}
+                    className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-1.5 py-0.5 rounded cursor-pointer transition"
+                  >
+                    ⚡ {language === 'hi' ? 'अभी का समय (Now)' : 'Now'}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={lifecycleModal.time}
+                  onChange={(e) => setLifecycleModal({ ...lifecycleModal, time: e.target.value })}
+                  placeholder="12:00 PM"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white font-mono font-medium"
+                />
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  {['10:00 AM', '12:00 PM', '02:00 PM', '06:00 PM'].map((tVal) => (
+                    <button
+                      key={tVal}
+                      type="button"
+                      onClick={() => setLifecycleModal({ ...lifecycleModal, time: tVal })}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition cursor-pointer ${
+                        lifecycleModal.time === tVal
+                          ? 'bg-amber-500 text-white border-amber-600 font-bold'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {tVal}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Apply to All Dates Checkbox */}
+              {lifecycleModal.stay.stayNights > 1 && (
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={lifecycleModal.applyAll}
+                      onChange={(e) => setLifecycleModal({ ...lifecycleModal, applyAll: e.target.checked })}
+                      className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4"
+                    />
+                    <span>{language === 'hi' ? 'इस प्रवास के सभी दिनों पर लागू करें' : 'Apply to all dates of this stay'}</span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setLifecycleModal(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-lg transition cursor-pointer"
+              >
+                {language === 'hi' ? 'रद्द करें' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLifecycleModal}
+                className={`px-5 py-2 text-xs font-bold rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1.5 ${
+                  lifecycleModal.action === 'CHECK_IN'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-slate-900 hover:bg-slate-800 text-white'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>
+                  {lifecycleModal.action === 'CHECK_IN'
+                    ? (language === 'hi' ? 'चेक-इन दर्ज करें (Confirm)' : 'Confirm Check-In')
+                    : (language === 'hi' ? 'चेक-आउट दर्ज करें (Confirm)' : 'Confirm Check-Out')}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

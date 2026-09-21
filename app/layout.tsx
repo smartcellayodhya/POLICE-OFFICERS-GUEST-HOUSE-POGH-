@@ -5,7 +5,8 @@ import { Inter, Noto_Sans_Devanagari } from 'next/font/google';
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-sans',
+  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
 });
 
 const notoDevanagari = Noto_Sans_Devanagari({
@@ -13,6 +14,7 @@ const notoDevanagari = Noto_Sans_Devanagari({
   weight: ['400', '500', '600', '700'],
   display: 'swap',
   variable: '--font-hindi',
+  fallback: ['sans-serif'],
 });
 
 export const viewport: Viewport = {

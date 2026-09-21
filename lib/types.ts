@@ -16,6 +16,8 @@ export interface Booking {
   food_amount?: number;
   expenditure?: number;
   payment_mode?: 'CASH' | 'UPI' | 'GOVT' | string;
+  bank_amount?: number;
+  cash_amount?: number;
   collected_by?: string;
   collection_date?: string;
   meal_type_status: 'PAID' | 'FREE' | 'PENDING' | string;
