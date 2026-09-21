@@ -48,10 +48,10 @@ export async function downloadElementAsPDF({
   clone.style.display = 'block';
   clone.style.visibility = 'visible';
   clone.style.opacity = '1';
+  clone.style.boxSizing = 'border-box';
   clone.style.width = `${standardA4WidthPx}px`;
   clone.style.minWidth = `${standardA4WidthPx}px`;
   clone.style.maxWidth = `${standardA4WidthPx}px`;
-  clone.style.padding = isLandscape ? '20px 24px' : '28px 36px';
   clone.style.margin = '0';
   clone.style.boxShadow = 'none';
   clone.style.border = 'none';
@@ -59,6 +59,11 @@ export async function downloadElementAsPDF({
   clone.style.height = 'auto';
   clone.style.overflow = 'visible';
   clone.style.transform = 'none';
+
+  // Ensure box-sizing border-box across all descendants
+  clone.querySelectorAll('*').forEach((el) => {
+    (el as HTMLElement).style.boxSizing = 'border-box';
+  });
 
   // Also unhide any nested children having 'hidden' class
   clone.querySelectorAll('.hidden').forEach((el) => {
@@ -102,9 +107,9 @@ export async function downloadElementAsPDF({
     );
 
     const renderHeight = Math.max(clone.scrollHeight, clone.offsetHeight, 600);
-    // 3. Render full canvas
+    // 3. Render full canvas at 2x Retina resolution
     const canvas = await html2canvas(clone, {
-      scale: 2, // 2x Retina scale
+      scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: '#FFFFFF',
@@ -118,8 +123,7 @@ export async function downloadElementAsPDF({
       y: 0,
     });
 
-    // 4. Multi-page capable A4 PDF generation
-    const imgData = canvas.toDataURL('image/png');
+    // 4. Multi-page capable A4 PDF generation with smart row-safe page breaking
     const pdf = new jsPDF({
       orientation: isLandscape ? 'landscape' : 'portrait',
       unit: 'mm',
@@ -128,24 +132,94 @@ export async function downloadElementAsPDF({
 
     const pdfPageWidth = isLandscape ? 297 : 210;
     const pdfPageHeight = isLandscape ? 210 : 297;
-    const margin = 6;
+    const margin = 8; // 8mm margin
     const maxUsableWidth = pdfPageWidth - margin * 2;
     const maxUsableHeight = pdfPageHeight - margin * 2;
 
-    const imgWidth = maxUsableWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const pageRatio = maxUsableHeight / maxUsableWidth;
+    const nominalPageHeightPx = standardA4WidthPx * pageRatio;
+    const scale = canvas.width / standardA4WidthPx;
 
-    let heightLeft = imgHeight;
-    let position = margin;
+    // Collect safe DOM split points (e.g. table rows or blocks) relative to clone
+    const cloneRect = clone.getBoundingClientRect();
+    const candidateElements = Array.from(
+      clone.querySelectorAll('tr, .page-break, [data-pdf-block]')
+    );
+    const safeDomBreakPoints: number[] = [];
+    candidateElements.forEach((el) => {
+      const r = el.getBoundingClientRect();
+      const relTop = r.top - cloneRect.top;
+      if (relTop > 20) {
+        safeDomBreakPoints.push(Math.round(relTop));
+      }
+    });
+    safeDomBreakPoints.sort((a, b) => a - b);
 
-    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
-    heightLeft -= maxUsableHeight;
+    const totalDomHeight = Math.max(clone.scrollHeight, clone.offsetHeight);
 
-    while (heightLeft > 0) {
-      position = position - maxUsableHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= maxUsableHeight;
+    // If total content fits on a single page, render directly
+    if (totalDomHeight <= nominalPageHeightPx + 40) {
+      const imgWidth = maxUsableWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, imgWidth, imgHeight, undefined, 'FAST');
+    } else {
+      // Multi-page document: slice page-by-page at safe row boundaries (never cut through a row)
+      let currentDomY = 0;
+      let pageIndex = 0;
+
+      while (currentDomY < totalDomHeight) {
+        const targetDomY = currentDomY + nominalPageHeightPx;
+        let breakDomY = totalDomHeight;
+
+        if (targetDomY < totalDomHeight) {
+          // Look for the largest safe break point before targetDomY
+          let chosenBreak = -1;
+          for (let i = safeDomBreakPoints.length - 1; i >= 0; i--) {
+            const pt = safeDomBreakPoints[i];
+            if (pt <= targetDomY && pt > currentDomY + nominalPageHeightPx * 0.55) {
+              chosenBreak = pt;
+              break;
+            }
+          }
+          breakDomY = chosenBreak !== -1 ? chosenBreak : targetDomY;
+        }
+
+        const sliceStartCanvasY = Math.round(currentDomY * scale);
+        const sliceEndCanvasY = Math.min(canvas.height, Math.round(breakDomY * scale));
+        const sliceHeightCanvas = Math.max(1, sliceEndCanvasY - sliceStartCanvasY);
+
+        // Render this slice onto an isolated page canvas
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeightCanvas;
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0,
+            sliceStartCanvasY,
+            canvas.width,
+            sliceHeightCanvas,
+            0,
+            0,
+            canvas.width,
+            sliceHeightCanvas
+          );
+        }
+
+        const sliceHeightMm = (sliceHeightCanvas / canvas.width) * maxUsableWidth;
+        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+        pdf.addImage(pageImgData, 'JPEG', margin, margin, maxUsableWidth, sliceHeightMm, undefined, 'FAST');
+
+        pageIndex++;
+        currentDomY = breakDomY;
+      }
     }
 
     const safeFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;

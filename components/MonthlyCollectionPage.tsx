@@ -1164,22 +1164,19 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                   दैनिक आवंटन, कमरा किराया, मेस भोजन एवं व्यय विवरण तालिका:
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px', background: '#FFFFFF' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', background: '#FFFFFF' }}>
                   <thead>
-                    <tr style={{ background: '#FFFFFF', color: '#000000' }}>
-                      <th rowSpan={2} style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', width: '32px', textAlign: 'center', fontWeight: 800 }}>क्र०</th>
-                      <th rowSpan={2} style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', textAlign: 'left', fontWeight: 800 }}>अधिकारी का नाम एवं संदर्भ/पदनाम</th>
-                      <th rowSpan={2} style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '90px', textAlign: 'center', fontWeight: 800 }}>आवंटित सूट</th>
-                      <th rowSpan={2} style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '105px', textAlign: 'center', fontWeight: 800 }}>चेक-इन (दिनांक/समय)</th>
-                      <th rowSpan={2} style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '105px', textAlign: 'center', fontWeight: 800 }}>चेक-आउट (दिनांक/समय)</th>
-                      <th colSpan={2} style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center', fontWeight: 800 }}>कमरा किराया</th>
-                      <th rowSpan={2} style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '68px', textAlign: 'right', fontWeight: 800 }}>भोजन</th>
-                      <th rowSpan={2} style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '68px', textAlign: 'right', fontWeight: 800 }}>व्यय</th>
-                      <th rowSpan={2} style={{ padding: '5px 8px', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '85px', textAlign: 'right', fontWeight: 800 }}>शुद्ध संग्रह</th>
-                    </tr>
-                    <tr style={{ background: '#FFFFFF', color: '#000000' }}>
-                      <th style={{ padding: '4px 6px', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800 }}>बैंक</th>
-                      <th style={{ padding: '4px 6px', borderBottom: '2px solid #000000', borderRight: '1px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800 }}>नकद</th>
+                    <tr style={{ background: '#f8fafc', color: '#000000' }}>
+                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '32px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>क्र०</th>
+                      <th style={{ padding: '6px 8px', border: '1.5px solid #000000', textAlign: 'left', fontWeight: 800, verticalAlign: 'middle' }}>अधिकारी का नाम एवं संदर्भ/पदनाम</th>
+                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '85px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>आवंटित सूट</th>
+                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '105px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>चेक-इन (दिनांक/समय)</th>
+                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '105px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>चेक-आउट (दिनांक/समय)</th>
+                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '75px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>कमरा किराया (बैंक)</th>
+                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '75px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>कमरा किराया (नकद)</th>
+                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>भोजन</th>
+                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>व्यय</th>
+                      <th style={{ padding: '6px 8px', border: '1.5px solid #000000', width: '85px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>शुद्ध संग्रह</th>
                     </tr>
                   </thead>
                   <tbody>
