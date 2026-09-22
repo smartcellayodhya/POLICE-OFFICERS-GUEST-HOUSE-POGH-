@@ -365,7 +365,7 @@ function HomePageContent() {
       const confirmDelete = window.confirm(`क्या आप इस बुकिंग समूह (${groupId}) के सभी दिवस रिकॉर्ड हटाना चाहते हैं?`);
       if (!confirmDelete) return;
 
-      const apiRes = await apiDeleteBooking({ groupId });
+      const apiRes = await apiDeleteBooking({ id, groupId });
       if (apiRes.success) {
         logActivity('DELETE', `बुकिंग समूह हटाया गया`, `ग्रुप: ${groupId}`);
         await fetchBookings();

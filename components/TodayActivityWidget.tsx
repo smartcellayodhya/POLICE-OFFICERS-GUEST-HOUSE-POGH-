@@ -130,7 +130,7 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
             {todayBookings.map((b) => {
               const suitsBooked: string[] = [];
               SUITS.forEach((s) => {
-                if (Number(b[s.id as keyof Booking]) > 0) suitsBooked.push(s.name);
+                if (isSuitAllocatedInBooking(b, s.id)) suitsBooked.push(s.name);
               });
               const isInHouse = b.status === 'CHECKED_IN';
               const cleanName = formatGuestDisplayName(b.guest_name);

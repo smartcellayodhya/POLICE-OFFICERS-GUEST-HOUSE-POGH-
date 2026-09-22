@@ -15,6 +15,7 @@ import {
   extractStayHoursFromNotes,
   isBookingOccupyingDate,
   isSuitAllocatedInBooking,
+  extractGroupIdFromNotes,
 } from '@/lib/bookingUtils';
 import {
   Calendar,
@@ -140,13 +141,16 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
       if (bSuits.length === 0) return;
 
       const isHourly = isHourlyBooking(b);
+      const gId = b.group_id || extractGroupIdFromNotes(b.notes);
       const guestKey = isHourly
         ? `hourly_${b.id}`
-        : `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`;
+        : (gId ? `ref_${gId}` : `${(b.guest_name || '').trim().toLowerCase()}_${(b.mobile_number || '').trim()}`);
       const existing = isHourly
         ? undefined
         : guestGroups.find((g) => {
             if (isHourlyBooking(g.primaryBooking)) return false;
+            const primaryGId = g.primaryBooking.group_id || extractGroupIdFromNotes(g.primaryBooking.notes);
+            if (gId && primaryGId) return gId === primaryGId;
             const gKey = `${(g.primaryBooking.guest_name || '').trim().toLowerCase()}_${(g.primaryBooking.mobile_number || '').trim()}`;
             return gKey === guestKey;
           });

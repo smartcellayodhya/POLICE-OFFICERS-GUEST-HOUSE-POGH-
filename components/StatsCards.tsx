@@ -115,7 +115,7 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
       totalFood += food;
       totalExpenditure += exp;
 
-      const paySplit = getBookingPaymentSplit(b);
+      const paySplit = getBookingPaymentSplit(b, isPrimary);
       totalBankRent += paySplit.bankRent;
       totalCashRent += paySplit.cashRent;
       totalBankRevenue += paySplit.bankAmount;

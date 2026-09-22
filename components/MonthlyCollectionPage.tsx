@@ -19,6 +19,7 @@ import {
   parseBookingMeta,
   extractCheckInDateFromNotes,
   extractCheckOutDateFromNotes,
+  formatGuestDisplayName,
 } from '@/lib/bookingUtils';
 import { useLanguage } from '@/lib/languageContext';
 import { printDocumentDirectly, downloadElementAsPDF } from '@/lib/pdfUtils';
@@ -146,7 +147,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       // Free rooms with 0 rent and 0 food must never go negative
       const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
 
-      const paySplit = getBookingPaymentSplit(b);
+      const paySplit = getBookingPaymentSplit(b, isPrimary);
 
       monthMap[monthKey].bookings.push(b);
       monthMap[monthKey].totalRent += rent;
@@ -376,7 +377,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             'क्र०': detailRows.length + 1,
             'दिनांक': b.booking_date,
             'पत्र क्रमांक': dispatchNo,
-            'अधिकारी / अतिथि का नाम': b.guest_name,
+            'अधिकारी / अतिथि का नाम': formatGuestDisplayName(b.guest_name || ''),
             'पदनाम / संदर्भ': b.reference || '-',
             'आवंटित सूट': suits,
             'चेक-इन दिनांक': cinDate,
@@ -396,7 +397,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             'S.No.': detailRows.length + 1,
             'Stay Date': b.booking_date,
             'Dispatch No': dispatchNo,
-            'Officer / Guest Name': b.guest_name,
+            'Officer / Guest Name': formatGuestDisplayName(b.guest_name || ''),
             'Reference / Designation': b.reference || '-',
             'Allocated Suits': suits,
             'Check-in Date': cinDate,
@@ -1014,7 +1015,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                               </td>
                               <td className="py-3 px-3.5">
                                 <div className="font-bold text-slate-900 group-hover:text-amber-900 transition">
-                                  {b.guest_name}
+                                  {formatGuestDisplayName(b.guest_name || '')}
                                 </div>
                                 {b.reference && (
                                   <div className="text-[11px] text-slate-500 truncate max-w-md">
@@ -1188,7 +1189,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                       const gross = rent + food;
                       const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                       const suits = getBookingSuitsList(b).join(', ');
-                      const paySplit = getBookingPaymentSplit(b);
+                      const paySplit = getBookingPaymentSplit(b, isPrimary);
 
                       // Check-in & Check-out date and time
                       const meta = parseBookingMeta(b.notes);
@@ -1206,7 +1207,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                         <tr key={`print-single-${b.id}`} style={{ background: '#FFFFFF' }}>
                           <td style={{ padding: '4px 4px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
                           <td style={{ padding: '4px 8px', border: '1px solid #000000' }}>
-                            <span style={{ fontWeight: 700, color: '#000000' }}>{b.guest_name}</span>
+                            <span style={{ fontWeight: 700, color: '#000000' }}>{formatGuestDisplayName(b.guest_name || '')}</span>
                             {b.reference && <span style={{ color: '#334155', fontWeight: 500 }}> ({b.reference})</span>}
                           </td>
                           <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{suits}</td>
@@ -1516,7 +1517,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                           const gross = rent + food;
                           const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
                           const suits = getBookingSuitsList(b).join(', ');
-                          const paySplit = getBookingPaymentSplit(b);
+                          const paySplit = getBookingPaymentSplit(b, isPrimary);
 
                           const meta = parseBookingMeta(b.notes);
                           const cinDate = meta.checkInDate || extractCheckInDateFromNotes(b.notes) || b.booking_date || '';
@@ -1533,7 +1534,7 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                             <tr key={`print-row-${m.monthKey}-${b.id}`} style={{ background: '#FFFFFF' }}>
                               <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'center' }}>{bIdx + 1}</td>
                               <td style={{ padding: '3px 6px', border: '1px solid #000000' }}>
-                                <span style={{ fontWeight: 700 }}>{b.guest_name}</span>
+                                <span style={{ fontWeight: 700 }}>{formatGuestDisplayName(b.guest_name || '')}</span>
                                 {b.reference && <span style={{ color: '#334155' }}> ({b.reference})</span>}
                               </td>
                               <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{suits}</td>

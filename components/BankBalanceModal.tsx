@@ -8,9 +8,11 @@ import {
   getLocalBankBalance,
   saveLocalBankBalance,
   getLocalBankBalanceHistory,
+  fetchServerBankBalance,
 } from '@/lib/bankBalance';
 import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import { useLanguage } from '@/lib/languageContext';
+import { getAuthToken } from '@/lib/auth';
 
 interface BankBalanceModalProps {
   isOpen: boolean;
@@ -51,6 +53,18 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
       setHistoryList(getLocalBankBalanceHistory());
       setSaveSuccess(false);
       setActiveTab('update');
+
+      // Fetch remote bank balance from Supabase database via API
+      fetchServerBankBalance().then((serverRec) => {
+        if (serverRec) {
+          setBalanceRecord(serverRec);
+          setAmountInput(String(serverRec.current_balance || 0));
+          setAccountName(serverRec.account_name || '');
+          setAccountNumber(serverRec.account_number || '');
+          setAsOfDate(serverRec.as_of_date || new Date().toISOString().slice(0, 10));
+          setNotes(serverRec.notes || 'पासबुक प्रविष्टि के अनुसार');
+        }
+      }).catch(() => {});
     }
   }, [isOpen]);
 
@@ -80,9 +94,13 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
 
       // Attempt remote sync in background
       try {
+        const token = getAuthToken();
         fetch('/api/bank-balance', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify(updated),
         }).catch(() => {});
       } catch {}

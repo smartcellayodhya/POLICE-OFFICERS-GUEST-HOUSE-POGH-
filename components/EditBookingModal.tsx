@@ -385,12 +385,18 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         total_amount: dayTotalAmount > 0 ? dayTotalAmount : perRoomRent,
         meal_type_status: mealStatus,
         status: status,
+        is_maintenance: status === 'MAINTENANCE',
         notes: finalNotes,
         food_amount: safeFoodAmount,
         expenditure: safeExpenditure,
         payment_mode: safePaymentMode,
         collected_by: safeCollectedBy,
       };
+
+      // Include booking_date for single-day/hourly bookings or single record edits
+      if (!applyToAll || relatedBookings.length <= 1) {
+        updatedData.booking_date = checkInDate;
+      }
 
       await onSave(updatedData, applyToAll && relatedBookings.length > 1);
       

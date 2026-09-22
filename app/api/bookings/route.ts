@@ -237,6 +237,9 @@ export async function PUT(req: NextRequest) {
     let error = null;
 
     if (applyToAll && groupId) {
+      // For multi-record group updates, do not overwrite booking_date across all days
+      delete payload.booking_date;
+
       // 1. Try full payload with both group_id and notes filters
       let res = await client
         .from('pogh_bookings')
@@ -297,6 +300,9 @@ export async function PUT(req: NextRequest) {
           suit_3: payload.suit_3,
           suit_4: payload.suit_4,
         };
+        if (payload.booking_date) {
+          corePayload.booking_date = payload.booking_date;
+        }
         res = await client.from('pogh_bookings').update(corePayload).eq('id', id);
       }
       error = res.error;

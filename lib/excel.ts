@@ -11,6 +11,7 @@ import {
   extractExpenditureFromNotes,
   extractPaymentModeFromNotes,
   extractCollectedByFromNotes,
+  calculateBookingRent,
   getBookingSuitsList,
   isHourlyBooking,
   extractStayHoursFromNotes,
@@ -136,7 +137,7 @@ function normalizeToStayExportItems(input: any[]): StayExportItem[] {
 
     dayBookings.forEach((b) => {
       getBookingSuitsList(b).forEach((s) => suitSet.add(s));
-      totalRent += Number(b.total_amount) || 0;
+      totalRent += calculateBookingRent(b);
       if (!paymentMode && (b.payment_mode || extractPaymentModeFromNotes(b.notes))) {
         paymentMode = b.payment_mode || extractPaymentModeFromNotes(b.notes) || '';
       }

@@ -12,6 +12,7 @@ import {
   getLocalBankBalance,
   BANK_BALANCE_CHANGE_EVENT,
   DEFAULT_BANK_BALANCE,
+  fetchServerBankBalance,
 } from '@/lib/bankBalance';
 import { BankBalanceModal } from './BankBalanceModal';
 
@@ -43,6 +44,7 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
 
   useEffect(() => {
     setBankBalance(getLocalBankBalance());
+    fetchServerBankBalance().catch(() => {});
 
     const handleBalanceChange = (e: any) => {
       if (e?.detail) {

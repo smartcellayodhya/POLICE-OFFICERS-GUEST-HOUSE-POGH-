@@ -402,7 +402,7 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
                       className="w-[66%] px-3.5 font-bold text-slate-900"
                       style={{ verticalAlign: 'middle', paddingTop: '5px', paddingBottom: '9px', lineHeight: '1.25' }}
                     >
-                      {booking.guest_name.startsWith('श्री') ? booking.guest_name : `श्री ${booking.guest_name}`}
+                      {formatGuestDisplayName(booking.guest_name || '')}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50">

@@ -17,6 +17,7 @@ import {
   extractStayHoursFromNotes,
   extractHourlyRateFromNotes,
   isBankPaymentMode,
+  formatGuestDisplayName,
 } from '@/lib/bookingUtils';
 import { X, Printer, Download, Receipt, CheckCircle2 } from 'lucide-react';
 import { downloadElementAsPDF, printDocumentDirectly } from '@/lib/pdfUtils';
@@ -283,7 +284,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             {/* Guest Details */}
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 text-xs space-y-1.5">
               <div className="grid grid-cols-2">
-                <p><span className="font-bold text-slate-700">अतिथि का नाम:</span> <span className="font-bold text-slate-900 text-sm">{booking.guest_name}</span></p>
+                <p><span className="font-bold text-slate-700">अतिथि का नाम:</span> <span className="font-bold text-slate-900 text-sm">{formatGuestDisplayName(booking.guest_name || '')}</span></p>
                 <p className="text-right"><span className="font-bold text-slate-700">मोबाइल नं०:</span> <span className="font-bold font-mono">{booking.mobile_number}</span></p>
               </div>
               <div className="grid grid-cols-2">

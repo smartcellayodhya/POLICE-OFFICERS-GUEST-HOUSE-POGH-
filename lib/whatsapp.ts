@@ -1,7 +1,9 @@
 import { formatToHindiDate } from './dateUtils';
 import { LetterDetails } from './types';
+import { formatGuestDisplayName } from './bookingUtils';
 
 export function generateWhatsAppMessage(details: LetterDetails): string {
+  const formattedGuest = formatGuestDisplayName(details.guest_name || '') || 'श्री ___________';
   const cin_h = formatToHindiDate(details.check_in_date);
   const cout_h = formatToHindiDate(details.check_out_date);
   const suitsList = details.suits.join(', ');
@@ -53,7 +55,7 @@ export function generateWhatsAppMessage(details: LetterDetails): string {
 
   return (
 `सेवा में,
-श्री ${details.guest_name || '___________'}
+${formattedGuest}
 मो0नं0- ${details.mobile_number || '___________'}
 
 ${dispLine}${refLine}विषय: पुलिस ऑफिसर्स गेस्ट हाउस में सूट आरक्षित किये जाने की पुष्टि के संबंध में।
@@ -62,7 +64,7 @@ ${dispLine}${refLine}विषय: पुलिस ऑफिसर्स गे�
   अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में ${datePhrase} आपके प्रवास हेतु ${details.suits.length} रूम आरक्षित कर दिया गया है।
 
 बुकिंग विवरण:
-- गेस्ट का नाम: ${details.guest_name}
+- गेस्ट का नाम: ${formattedGuest}
 - कब से कब तक: ${dateRangeDisplay}
 - रूम की संख्या: ${details.suits.length}
 - सूट नम्बर: ${suitsList}

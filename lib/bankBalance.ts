@@ -98,3 +98,35 @@ export function getLocalBankBalanceHistory(): BankBalanceHistoryItem[] {
     return [];
   }
 }
+
+export async function fetchServerBankBalance(): Promise<BankBalanceRecord | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const token = localStorage.getItem('pogh_auth_token');
+    const res = await fetch('/api/bank-balance', {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    const data = await res.json();
+    if (res.ok && data.success && data.data) {
+      const serverRec: BankBalanceRecord = {
+        account_name: data.data.account_name || DEFAULT_BANK_BALANCE.account_name,
+        account_number: data.data.account_number || DEFAULT_BANK_BALANCE.account_number,
+        current_balance: Number(data.data.current_balance) || 0,
+        as_of_date: data.data.as_of_date || new Date().toISOString().slice(0, 10),
+        notes: data.data.notes || DEFAULT_BANK_BALANCE.notes,
+        updated_by: data.data.updated_by || 'Admin',
+        updated_at: data.data.updated_at || new Date().toISOString(),
+      };
+
+      localStorage.setItem(STORAGE_KEY_RECORD, JSON.stringify(serverRec));
+      window.dispatchEvent(new CustomEvent(BANK_BALANCE_CHANGE_EVENT, { detail: serverRec }));
+      return serverRec;
+    }
+  } catch (err) {
+    console.warn('Could not fetch remote bank balance, using local cache:', err);
+  }
+  return null;
+}
+

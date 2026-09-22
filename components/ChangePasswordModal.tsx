@@ -89,7 +89,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            currentPassword: oldPassword,
+            targetUsername: targetUser,
+            currentPassword: isAdminResettingOther ? undefined : oldPassword,
             newPassword: newPassword,
           }),
         });

@@ -94,14 +94,31 @@ export const RoomMatrix: React.FC<RoomMatrixProps> = ({
     }
   };
 
-  // Helper to find all bookings for a specific suit on selectedDate (supports multiple hourly slots)
+  // Helper to find all bookings for a specific suit on selectedDate (supports multiple hourly slots while deduplicating multi-day stays)
   const getBookingsForSuit = (suitKey: string): Booking[] => {
-    return bookings.filter(
+    const rawMatches = bookings.filter(
       (b) =>
         (b.status || '').toUpperCase() !== 'CANCELLED' &&
         isSuitAllocatedInBooking(b, suitKey) &&
         (b.booking_date === selectedDate || isBookingOccupyingDate(b, selectedDate))
     );
+
+    // Deduplicate records belonging to the same stay/group (e.g. multi-day standard bookings)
+    const groupMap = new Map<string, Booking>();
+    rawMatches.forEach((b) => {
+      const isHourly = isHourlyBooking(b);
+      const key = isHourly ? `hourly_${b.id}` : (b.group_id || extractGroupIdFromNotes(b.notes) || b.id);
+      if (!groupMap.has(key)) {
+        groupMap.set(key, b);
+      } else {
+        const existing = groupMap.get(key)!;
+        if (existing.booking_date !== selectedDate && b.booking_date === selectedDate) {
+          groupMap.set(key, b);
+        }
+      }
+    });
+
+    return Array.from(groupMap.values());
   };
 
   // Count occupied rooms on this date

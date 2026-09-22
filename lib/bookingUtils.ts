@@ -441,17 +441,17 @@ export function calculateBookingRent(b: Booking): number {
     (Number(b.suit_3) > 0 ? 1 : 0) +
     (Number(b.suit_4) > 0 ? 1 : 0) || 1;
 
+  const metaRate = extractRatePerRoomFromNotes(b.notes);
+  if (metaRate > 0) {
+    return metaRate * roomsCount;
+  }
+
   if (isHourlyBooking(b)) {
     const hourlyRate = b.hourly_rate || extractHourlyRateFromNotes(b.notes);
     const stayHours = b.stay_hours || extractStayHoursFromNotes(b.notes) || calculateStayHours(b.check_in_time, b.check_out_time);
     if (hourlyRate > 0 && stayHours > 0) {
       return hourlyRate * stayHours * roomsCount;
     }
-  }
-
-  const metaRate = extractRatePerRoomFromNotes(b.notes);
-  if (metaRate > 0) {
-    return metaRate * roomsCount;
   }
 
   const rawTotal = Number(b.total_amount) || 0;
@@ -691,15 +691,15 @@ export function isCashPaymentMode(mode?: string): boolean {
 /**
  * Computes split of rent and net collection between Bank/Online and Cash for a booking.
  */
-export function getBookingPaymentSplit(b: Booking): {
+export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
   bankRent: number;
   cashRent: number;
   bankAmount: number;
   cashAmount: number;
 } {
   const rent = calculateBookingRent(b);
-  const food = calculateBookingFoodAmount(b);
-  const exp = calculateBookingExpenditure(b);
+  const food = isPrimary ? calculateBookingFoodAmount(b) : 0;
+  const exp = isPrimary ? calculateBookingExpenditure(b) : 0;
   const gross = rent + food;
   const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
 
@@ -722,6 +722,16 @@ export function getBookingPaymentSplit(b: Booking): {
       bRent = Math.min(rent, bAmt);
       cRent = Math.max(0, rent - bRent);
     }
+
+    if (!isPrimary) {
+      return {
+        bankRent: bRent,
+        cashRent: cRent,
+        bankAmount: bRent,
+        cashAmount: cRent,
+      };
+    }
+
     return {
       bankRent: bRent,
       cashRent: cRent,
