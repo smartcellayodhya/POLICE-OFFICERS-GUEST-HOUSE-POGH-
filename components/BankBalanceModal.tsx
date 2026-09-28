@@ -76,6 +76,7 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
           setAccountNumber(res.record.account_number || '');
           setAsOfDate(res.record.as_of_date || new Date().toISOString().slice(0, 10));
           setNotes(res.record.notes || (isHindi ? 'पासबुक प्रविष्टि के अनुसार' : 'As per passbook entry'));
+          setHistoryList(getLocalBankBalanceHistory());
           setSyncStatus('synced');
         } else {
           setSyncStatus(res?.synced ? 'synced' : 'local_only');

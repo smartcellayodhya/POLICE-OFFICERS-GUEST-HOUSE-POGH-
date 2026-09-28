@@ -65,6 +65,13 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
         .channel('pogh_realtime_bank_balance')
         .on(
           'postgres_changes',
+          { event: '*', schema: 'public', table: 'pogh_auth_config' },
+          () => {
+            fetchServerBankBalance().catch(() => {});
+          }
+        )
+        .on(
+          'postgres_changes',
           { event: '*', schema: 'public', table: 'pogh_bank_balance' },
           () => {
             fetchServerBankBalance().catch(() => {});
@@ -73,8 +80,20 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
         .subscribe();
     }
 
+    // Periodic cloud poll and on-focus refresh for 100% cross-device consistency
+    const pollTimer = setInterval(() => {
+      fetchServerBankBalance().catch(() => {});
+    }, 30000);
+
+    const handleFocus = () => {
+      fetchServerBankBalance().catch(() => {});
+    };
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       window.removeEventListener(BANK_BALANCE_CHANGE_EVENT, handleBalanceChange);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(pollTimer);
       if (client && channel) {
         client.removeChannel(channel);
       }

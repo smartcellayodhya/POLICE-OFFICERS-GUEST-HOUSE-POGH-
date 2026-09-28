@@ -126,6 +126,11 @@ export async function fetchServerBankBalance(): Promise<{ record: BankBalanceRec
       };
 
       localStorage.setItem(STORAGE_KEY_RECORD, JSON.stringify(serverRec));
+
+      if (Array.isArray(data.history) && data.history.length > 0) {
+        localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(data.history));
+      }
+
       window.dispatchEvent(new CustomEvent(BANK_BALANCE_CHANGE_EVENT, { detail: serverRec }));
       return { record: serverRec, synced: true };
     }
