@@ -695,8 +695,8 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         </div>
       </div>
 
-      {/* 7 KPI Summary Tiles including Bank Balance */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3 sm:gap-3.5">
+      {/* 6 KPI Summary Tiles */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-3.5">
         
         {/* 1. Room Rent Total Tile */}
         <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all duration-200 flex flex-col justify-between">
@@ -815,26 +815,6 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           </div>
           <p className="mt-1 text-[11px] text-slate-400 font-normal leading-tight break-words">
             {language === 'hi' ? 'शुद्ध शासकीय राजस्व' : 'Net official revenue'}
-          </p>
-        </div>
-
-        {/* 7. Dedicated Bank Balance Tile */}
-        <div className="bg-gradient-to-br from-slate-900 to-blue-950 text-white rounded-xl p-3.5 sm:p-4 border border-blue-900/60 shadow-xs hover:shadow-sm hover:border-amber-400/60 transition-all duration-200 flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10.5px] font-bold text-amber-400 uppercase tracking-wider leading-tight">
-              {language === 'hi' ? 'गेस्ट हाउस बैंक बैलेंस' : 'Bank Balance'}
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-blue-900/70 text-amber-300 flex items-center justify-center shrink-0">
-              <Building2 className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-lg sm:text-[21px] font-extrabold text-white tracking-tight tabular-nums leading-tight">
-              ₹{bankRecord.current_balance.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <p className="mt-1 text-[11px] text-blue-200 font-normal leading-tight break-words truncate">
-            {bankRecord.notes || 'पासबुक प्रविष्टि अनुसार'}
           </p>
         </div>
 
