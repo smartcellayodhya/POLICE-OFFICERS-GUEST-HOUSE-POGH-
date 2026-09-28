@@ -17,6 +17,8 @@ import {
   isHourlyBooking,
   extractStayHoursFromNotes,
   extractHourlyRateFromNotes,
+  parseBookingMeta,
+  isBankPaymentMode,
 } from '@/lib/bookingUtils';
 import { calculateStayNights, formatToDisplayDate, formatToHindiDate } from '@/lib/dateUtils';
 import {
@@ -47,6 +49,9 @@ interface RecordCollectionModalProps {
     foodAmount: number;
     expenditure: number;
     paymentMode: string;
+    rentPaymentMode?: 'CASH' | 'UPI' | 'GOVT';
+    foodPaymentMode?: 'CASH' | 'UPI';
+    expPaymentMode?: 'CASH' | 'UPI';
     remarks?: string;
     markCheckedOut?: boolean;
   }) => Promise<void>;
@@ -66,6 +71,9 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
   const [foodAmountInput, setFoodAmountInput] = useState<string>('');
   const [expenditureInput, setExpenditureInput] = useState<string>('');
   const [paymentMode, setPaymentMode] = useState<string>('CASH');
+  const [rentPaymentMode, setRentPaymentMode] = useState<'CASH' | 'UPI' | 'GOVT'>('CASH');
+  const [foodPaymentMode, setFoodPaymentMode] = useState<'CASH' | 'UPI'>('CASH');
+  const [expPaymentMode, setExpPaymentMode] = useState<'CASH' | 'UPI'>('CASH');
   const [remarks, setRemarks] = useState<string>('');
   const [markCheckedOut, setMarkCheckedOut] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -100,9 +108,22 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
       const existingExp = extractExpenditureFromNotes(booking.notes) || Number(booking.expenditure) || 0;
       setExpenditureInput(existingExp > 0 ? String(existingExp) : '');
 
-      // Payment mode
-      const existingPay = booking.payment_mode || extractPaymentModeFromNotes(booking.notes) || 'CASH';
-      setPaymentMode(existingPay);
+      // Parse metadata for individual item payment modes
+      const meta = parseBookingMeta(booking.notes);
+      const existingPay = (booking.payment_mode || extractPaymentModeFromNotes(booking.notes) || 'CASH').toUpperCase();
+      const defaultRent: 'CASH' | 'UPI' | 'GOVT' =
+        (meta.rentPaymentMode as any) ||
+        (isBankPaymentMode(existingPay) ? 'UPI' : (existingPay === 'GOVT' ? 'GOVT' : 'CASH'));
+      const defaultFood: 'CASH' | 'UPI' =
+        (meta.foodPaymentMode as any) ||
+        (isBankPaymentMode(existingPay) ? 'UPI' : 'CASH');
+      const defaultExp: 'CASH' | 'UPI' =
+        (meta.expPaymentMode as any) || 'CASH';
+
+      setPaymentMode(defaultRent);
+      setRentPaymentMode(defaultRent);
+      setFoodPaymentMode(defaultFood);
+      setExpPaymentMode(defaultExp);
 
       // Remarks
       const existingNote = extractCollectionNoteFromNotes(booking.notes);
@@ -164,6 +185,16 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
   // User condition: If room is free/govt with 0 rent & 0 food, net shouldn't be negative!
   const netGrandTotal = grossCollection <= 0 ? 0 : Math.max(0, grossCollection - parsedExp);
 
+  // Live itemized Bank vs Cash calculations
+  const bankRent = rentPaymentMode === 'UPI' ? totalRoomRent : 0;
+  const cashRent = rentPaymentMode === 'CASH' ? totalRoomRent : 0;
+  const bankFood = foodPaymentMode === 'UPI' ? parsedFood : 0;
+  const cashFood = foodPaymentMode === 'CASH' ? parsedFood : 0;
+  const bankExp = expPaymentMode === 'UPI' ? parsedExp : 0;
+  const cashExp = expPaymentMode === 'CASH' ? parsedExp : 0;
+  const netBank = Math.max(0, bankRent + bankFood - bankExp);
+  const netCash = Math.max(0, cashRent + cashFood - cashExp);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -172,7 +203,10 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
         roomRentPerDay: parsedRent,
         foodAmount: parsedFood,
         expenditure: parsedExp,
-        paymentMode,
+        paymentMode: rentPaymentMode,
+        rentPaymentMode,
+        foodPaymentMode,
+        expPaymentMode,
         remarks: remarks.trim(),
         markCheckedOut,
       });
@@ -254,27 +288,65 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
               </div>
             </div>
 
-            {/* 1. Room Rent Input */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
+            {/* 1. Room Rent Input with Payment Mode Selector */}
+            <div className="space-y-1.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <IndianRupee className="w-3.5 h-3.5 text-amber-600" />
                   <span>
                     {isHourly
-                      ? (language === 'hi' ? `कमरा शुल्क (${stayHours} घंटे स्टे / प्रति कमरा)` : `Room Charges (${stayHours}h stay / per room)`)
+                      ? (language === 'hi' ? `कमरा किराया (${stayHours}h स्टे)` : `Room Rent (${stayHours}h stay)`)
                       : (language === 'hi' ? 'कमरा किराया (प्रति कमरा / दिन)' : 'Room Rent (Per Room / Day)')}
                   </span>
-                </span>
-                {parsedRent > 0 && (
-                  <span className="text-[11px] font-mono font-semibold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                    {isHourly
-                      ? (hourlyRate > 0 && parsedRent === hourlyRate * stayHours
-                          ? `${numRooms} × (₹${hourlyRate}/h × ${stayHours}h) = ₹${totalRoomRent.toLocaleString('en-IN')}`
-                          : `${numRooms} × ₹${parsedRent} = ₹${totalRoomRent.toLocaleString('en-IN')}`)
-                      : `${numRooms} × ₹${parsedRent} × ${stayNights} = ₹${totalRoomRent.toLocaleString('en-IN')}`}
-                  </span>
-                )}
-              </label>
+                </label>
+
+                {/* Room Rent Mode Pills */}
+                <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRentPaymentMode('CASH');
+                      setPaymentMode('CASH');
+                    }}
+                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                      rentPaymentMode === 'CASH'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    💵 {language === 'hi' ? 'नकद' : 'Cash'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRentPaymentMode('UPI');
+                      setPaymentMode('UPI');
+                    }}
+                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                      rentPaymentMode === 'UPI'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    🏦 {language === 'hi' ? 'बैंक / UPI' : 'Bank/UPI'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRentPaymentMode('GOVT');
+                      setPaymentMode('GOVT');
+                    }}
+                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                      rentPaymentMode === 'GOVT'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    🏛️ {language === 'hi' ? 'शासकीय' : 'Govt'}
+                  </button>
+                </div>
+              </div>
+
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
                 <input
@@ -287,15 +359,53 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
                   className="w-full pl-7 pr-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white font-mono font-semibold text-slate-900"
                 />
               </div>
+
+              {parsedRent > 0 && (
+                <div className="text-[11px] font-mono font-semibold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                  {isHourly
+                    ? (hourlyRate > 0 && parsedRent === hourlyRate * stayHours
+                        ? `${numRooms} × (₹${hourlyRate}/h × ${stayHours}h) = ₹${totalRoomRent.toLocaleString('en-IN')}`
+                        : `${numRooms} × ₹${parsedRent} = ₹${totalRoomRent.toLocaleString('en-IN')}`)
+                    : `${numRooms} × ₹${parsedRent} × ${stayNights} = ₹${totalRoomRent.toLocaleString('en-IN')}`}
+                </div>
+              )}
             </div>
 
-            {/* 2. Food / Mess Collection & Expenditure in 2-Col Grid */}
+            {/* 2. Food & Expenditure in 2-Col Grid with Bank/Cash Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Utensils className="w-3.5 h-3.5 text-blue-600" />
-                  <span>{language === 'hi' ? 'खान-पान / भोजन संग्रह' : 'Food / Meal Collection'}</span>
-                </label>
+              {/* Food Box */}
+              <div className="space-y-1.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Utensils className="w-3.5 h-3.5 text-blue-600" />
+                    <span>{language === 'hi' ? 'भोजन संग्रह' : 'Food Collection'}</span>
+                  </label>
+                  {/* Food Mode Pill Toggle */}
+                  <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 text-[10.5px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setFoodPaymentMode('CASH')}
+                      className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                        foodPaymentMode === 'CASH'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      💵 {language === 'hi' ? 'नकद' : 'Cash'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFoodPaymentMode('UPI')}
+                      className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                        foodPaymentMode === 'UPI'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      🏦 {language === 'hi' ? 'बैंक' : 'Bank'}
+                    </button>
+                  </div>
+                </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
                   <input
@@ -309,11 +419,39 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
-                  <span>{language === 'hi' ? 'व्यय / खर्च कटौती' : 'Expenditure / Deduction'}</span>
-                </label>
+              {/* Expenditure Box */}
+              <div className="space-y-1.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                    <span>{language === 'hi' ? 'व्यय / खर्च कटौती' : 'Expenditure'}</span>
+                  </label>
+                  {/* Expenditure Mode Pill Toggle */}
+                  <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 text-[10.5px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setExpPaymentMode('CASH')}
+                      className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                        expPaymentMode === 'CASH'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      💵 {language === 'hi' ? 'नकद' : 'Cash'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpPaymentMode('UPI')}
+                      className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                        expPaymentMode === 'UPI'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      🏦 {language === 'hi' ? 'बैंक' : 'Bank'}
+                    </button>
+                  </div>
+                </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
                   <input
@@ -328,24 +466,8 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
               </div>
             </div>
 
-            {/* 3. Payment Mode & Collected By */}
+            {/* 3. Collector & Remarks */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{language === 'hi' ? 'भुगतान माध्यम' : 'Payment Mode'}</span>
-                </label>
-                <select
-                  value={paymentMode}
-                  onChange={(e) => setPaymentMode(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 outline-none bg-white font-medium"
-                >
-                  <option value="CASH">{language === 'hi' ? 'नकद' : 'Cash'}</option>
-                  <option value="UPI">{language === 'hi' ? 'ऑनलाइन / यूपीआई' : 'UPI / Online'}</option>
-                  <option value="GOVT">{language === 'hi' ? 'शासकीय / वीआईपी' : 'Govt / VIP'}</option>
-                </select>
-              </div>
-
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-slate-500" />
@@ -358,24 +480,23 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-100 text-slate-700 font-medium cursor-not-allowed outline-none"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{language === 'hi' ? 'टिप्पणी (वैकल्पिक)' : 'Notes (Optional)'}</span>
+                </label>
+                <input
+                  type="text"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder={language === 'hi' ? 'उदा. यूपीआई संदर्भ / रसीद विवरण' : 'e.g. UPI ref or receipt details'}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 outline-none"
+                />
+              </div>
             </div>
 
-            {/* 4. Optional Remarks */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-slate-500" />
-                <span>{language === 'hi' ? 'टिप्पणी (वैकल्पिक)' : 'Notes (Optional)'}</span>
-              </label>
-              <input
-                type="text"
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                placeholder={language === 'hi' ? 'उदा. यूपीआई संदर्भ / रसीद विवरण' : 'e.g. UPI ref or receipt details'}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 outline-none"
-              />
-            </div>
-
-            {/* 5. Check-Out Status Toggle */}
+            {/* 4. Check-Out Status Toggle */}
             <div className="pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 select-none">
                 <input
@@ -388,22 +509,36 @@ export const RecordCollectionModal: React.FC<RecordCollectionModalProps> = ({
               </label>
             </div>
 
-            {/* 6. Clean Settlement Summary Strip */}
-            <div className="p-3.5 bg-slate-900 text-white rounded-xl flex items-center justify-between gap-3 shadow-xs">
-              <div className="text-xs space-y-0.5">
-                <div className="text-slate-400 font-medium">
-                  {language === 'hi' ? 'कुल संकलित धनराशि (नेट):' : 'Net Total Amount:'}
+            {/* 5. Clean Settlement Summary Strip with Bank vs Cash Breakdown */}
+            <div className="p-3.5 bg-slate-900 text-white rounded-xl shadow-xs space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs space-y-0.5">
+                  <div className="text-slate-400 font-medium">
+                    {language === 'hi' ? 'कुल संकलित धनराशि (शुद्ध):' : 'Net Total Amount:'}
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-mono flex items-center gap-2 flex-wrap">
+                    <span>{language === 'hi' ? 'कमरा:' : 'Rent:'} ₹{totalRoomRent.toLocaleString('en-IN')}</span>
+                    {parsedFood > 0 && <span className="text-blue-300">+ {language === 'hi' ? 'भोजन:' : 'Food:'} ₹{parsedFood}</span>}
+                    {parsedExp > 0 && <span className="text-rose-300">- {language === 'hi' ? 'खर्च:' : 'Exp:'} ₹{parsedExp}</span>}
+                  </div>
                 </div>
-                <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2">
-                  <span>{language === 'hi' ? 'किराया:' : 'Rent:'} ₹{totalRoomRent.toLocaleString('en-IN')}</span>
-                  {parsedFood > 0 && <span className="text-blue-300">+ {language === 'hi' ? 'भोजन:' : 'Food:'} ₹{parsedFood}</span>}
-                  {parsedExp > 0 && <span className="text-rose-300">- {language === 'hi' ? 'खर्च:' : 'Exp:'} ₹{parsedExp}</span>}
+                <div className="text-right">
+                  <span className="text-xl font-black font-mono text-emerald-400">
+                    ₹{netGrandTotal.toLocaleString('en-IN')}/-
+                  </span>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-xl font-black font-mono text-emerald-400">
-                  ₹{netGrandTotal.toLocaleString('en-IN')}/-
-                </span>
+
+              {/* Bank vs Cash breakdown badge */}
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono flex-wrap gap-1">
+                <div className="flex items-center gap-1.5 text-blue-300 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/60">
+                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                  <span><strong>बैंक / UPI शुद्ध:</strong> ₹{netBank.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span><strong>नकद शुद्ध:</strong> ₹{netCash.toLocaleString('en-IN')}</span>
+                </div>
               </div>
             </div>
 

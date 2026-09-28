@@ -487,6 +487,9 @@ function HomePageContent() {
     foodAmount: number;
     expenditure: number;
     paymentMode: string;
+    rentPaymentMode?: 'CASH' | 'UPI' | 'GOVT';
+    foodPaymentMode?: 'CASH' | 'UPI';
+    expPaymentMode?: 'CASH' | 'UPI';
     remarks?: string;
     markCheckedOut?: boolean;
   }) => {
@@ -520,7 +523,14 @@ function HomePageContent() {
       data.expenditure,
       bType,
       sHours,
-      hRate
+      hRate,
+      existingMeta.checkInTime,
+      existingMeta.checkOutTime,
+      undefined,
+      undefined,
+      data.rentPaymentMode,
+      data.foodPaymentMode,
+      data.expPaymentMode
     );
 
     const roomsCount =

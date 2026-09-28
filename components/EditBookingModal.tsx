@@ -365,7 +365,12 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             stayType === 'HOURLY' ? hourlyHours : undefined,
             stayType === 'HOURLY' && hrRate > 0 ? hrRate : undefined,
             checkInTime.trim(),
-            checkOutTime.trim()
+            checkOutTime.trim(),
+            existingMeta.bankAmount,
+            existingMeta.cashAmount,
+            existingMeta.rentPaymentMode,
+            existingMeta.foodPaymentMode,
+            existingMeta.expPaymentMode
           )
         : notes.trim();
 

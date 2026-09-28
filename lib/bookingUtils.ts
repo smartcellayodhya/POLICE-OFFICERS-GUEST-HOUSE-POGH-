@@ -67,7 +67,10 @@ export function encodeNotesWithMeta(
   checkInTime?: string,
   checkOutTime?: string,
   bankAmount?: number,
-  cashAmount?: number
+  cashAmount?: number,
+  rentPaymentMode?: string,
+  foodPaymentMode?: string,
+  expPaymentMode?: string
 ): string {
   const cleanNotes = (notes || '').replace(/\[META:.*?\]/g, '').trim();
   const metaObj: Record<string, any> = {
@@ -80,6 +83,9 @@ export function encodeNotesWithMeta(
   if (foodAmount !== undefined && foodAmount >= 0) metaObj.food_amount = foodAmount;
   if (expenditure !== undefined && expenditure >= 0) metaObj.expenditure = expenditure;
   if (paymentMode) metaObj.payment_mode = paymentMode;
+  if (rentPaymentMode) metaObj.rent_payment_mode = rentPaymentMode;
+  if (foodPaymentMode) metaObj.food_payment_mode = foodPaymentMode;
+  if (expPaymentMode) metaObj.exp_payment_mode = expPaymentMode;
   if (collectedBy) metaObj.collected_by = collectedBy;
   if (collectionNote) metaObj.collection_note = collectionNote;
   if (bookingType) metaObj.booking_type = bookingType;
@@ -104,6 +110,9 @@ export interface BookingMeta {
   foodAmount?: number;
   expenditure?: number;
   paymentMode?: string;
+  rentPaymentMode?: string;
+  foodPaymentMode?: string;
+  expPaymentMode?: string;
   bankAmount?: number;
   cashAmount?: number;
   collectedBy?: string;
@@ -130,6 +139,9 @@ export function parseBookingMeta(notes?: string): BookingMeta {
         foodAmount: parsed.food_amount !== undefined ? Number(parsed.food_amount) : undefined,
         expenditure: parsed.expenditure !== undefined ? Number(parsed.expenditure) : undefined,
         paymentMode: parsed.payment_mode || undefined,
+        rentPaymentMode: parsed.rent_payment_mode || parsed.rentPaymentMode || undefined,
+        foodPaymentMode: parsed.food_payment_mode || parsed.foodPaymentMode || undefined,
+        expPaymentMode: parsed.exp_payment_mode || parsed.expPaymentMode || undefined,
         bankAmount: parsed.bank_amount !== undefined ? Number(parsed.bank_amount) : undefined,
         cashAmount: parsed.cash_amount !== undefined ? Number(parsed.cash_amount) : undefined,
         collectedBy: parsed.collected_by || undefined,
@@ -707,9 +719,81 @@ export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
   const gross = rent + food;
   const net = gross <= 0 ? 0 : Math.max(0, gross - exp);
 
-  const rawMode = (b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH').toUpperCase();
+  const meta = parseBookingMeta(b.notes);
+  const rawMode = (meta.paymentMode || b.payment_mode || extractPaymentModeFromNotes(b.notes) || 'CASH').toUpperCase();
 
-  // If explicit split is recorded in notes or booking properties
+  // 1. If explicit itemized payment modes (Rent, Food, Exp) are recorded in notes
+  if (meta.rentPaymentMode !== undefined || meta.foodPaymentMode !== undefined || meta.expPaymentMode !== undefined) {
+    const rentMode = (meta.rentPaymentMode || rawMode).toUpperCase();
+    const foodMode = (meta.foodPaymentMode || rawMode).toUpperCase();
+    const expMode = (meta.expPaymentMode || 'CASH').toUpperCase();
+
+    let bRent = 0;
+    let cRent = 0;
+    if (['GOVT', 'VIP', 'FREE', 'COMPLIMENTARY', 'AS_PER_APPLICABLE'].includes(rentMode)) {
+      bRent = 0;
+      cRent = 0;
+    } else if (isBankPaymentMode(rentMode)) {
+      bRent = rent;
+      cRent = 0;
+    } else {
+      bRent = 0;
+      cRent = rent;
+    }
+
+    let bFood = 0;
+    let cFood = 0;
+    if (food > 0) {
+      if (isBankPaymentMode(foodMode)) {
+        bFood = food;
+        cFood = 0;
+      } else {
+        bFood = 0;
+        cFood = food;
+      }
+    }
+
+    let bExp = 0;
+    let cExp = 0;
+    if (exp > 0) {
+      if (isBankPaymentMode(expMode)) {
+        bExp = exp;
+        cExp = 0;
+      } else {
+        bExp = 0;
+        cExp = exp;
+      }
+    }
+
+    if (!isPrimary) {
+      return {
+        bankRent: bRent,
+        cashRent: cRent,
+        bankFood: 0,
+        cashFood: 0,
+        bankExp: 0,
+        cashExp: 0,
+        bankAmount: bRent,
+        cashAmount: cRent,
+      };
+    }
+
+    const bAmt = bRent + bFood - bExp;
+    const cAmt = cRent + cFood - cExp;
+
+    return {
+      bankRent: bRent,
+      cashRent: cRent,
+      bankFood: bFood,
+      cashFood: cFood,
+      bankExp: bExp,
+      cashExp: cExp,
+      bankAmount: Math.max(0, bAmt),
+      cashAmount: Math.max(0, cAmt),
+    };
+  }
+
+  // 2. If explicit split is recorded in notes or booking properties
   const bankExplicit = extractBankAmountFromNotes(b.notes) ?? b.bank_amount;
   const cashExplicit = extractCashAmountFromNotes(b.notes) ?? b.cash_amount;
 
