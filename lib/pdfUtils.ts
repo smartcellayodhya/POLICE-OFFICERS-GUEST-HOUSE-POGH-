@@ -315,6 +315,14 @@ export function printDocumentDirectly(
   cleanElement.classList.remove('hidden');
   cleanElement.style.display = 'block';
   cleanElement.style.visibility = 'visible';
+  cleanElement.style.position = 'static';
+  cleanElement.style.left = '0';
+  cleanElement.style.top = '0';
+  cleanElement.style.width = '100%';
+  cleanElement.style.minWidth = '0';
+  cleanElement.style.maxWidth = '100%';
+  cleanElement.style.margin = '0';
+  cleanElement.style.padding = '0';
   cleanElement.querySelectorAll('.hidden').forEach((el) => {
     el.classList.remove('hidden');
     (el as HTMLElement).style.display = 'block';
@@ -325,33 +333,38 @@ export function printDocumentDirectly(
   doc.open();
   doc.write(`
     <!DOCTYPE html>
-    <html lang="hi">
+    <html lang="hi" class="${typeof document !== 'undefined' ? document.documentElement.className : ''}">
       <head>
         <meta charset="utf-8">
         <title>${title}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
         ${stylesHtml}
         <style>
           @page {
             size: A4 ${orientation};
-            margin: ${orientation === 'landscape' ? '6mm 8mm 6mm 8mm' : '8mm 10mm 8mm 10mm'};
+            margin: ${orientation === 'landscape' ? '5mm 6mm 5mm 6mm' : '8mm 10mm 8mm 10mm'};
           }
           *, *::before, *::after {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             color-adjust: exact !important;
             box-sizing: border-box;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: optimizeLegibility !important;
           }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
-            font-family: 'Noto Sans Devanagari', 'Inter', sans-serif !important;
+            font-family: 'Mukta', 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
             height: auto !important;
             overflow: visible !important;
-            color: #0f172a !important;
+            color: #000000 !important;
+            font-size: 10.5px;
+            line-height: 1.35;
           }
           #print-root {
             width: 100% !important;
@@ -363,6 +376,13 @@ export function printDocumentDirectly(
                 ? ''
                 : 'page-break-after: avoid !important; page-break-inside: avoid !important; break-after: avoid !important; break-inside: avoid !important;'
             }
+          }
+          table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+          }
+          th, td {
+            color: #000000 !important;
           }
           tr {
             page-break-inside: avoid !important;
@@ -386,7 +406,7 @@ export function printDocumentDirectly(
   `);
   doc.close();
 
-  setTimeout(() => {
+  const triggerPrint = () => {
     try {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
@@ -398,7 +418,20 @@ export function printDocumentDirectly(
         if (document.body.contains(iframe)) {
           document.body.removeChild(iframe);
         }
-      }, 2500);
+      }, 3500);
     }
-  }, 350);
+  };
+
+  const iframeDoc = iframe.contentWindow?.document;
+  if (iframeDoc && 'fonts' in iframeDoc && iframeDoc.fonts.ready) {
+    iframeDoc.fonts.ready
+      .then(() => {
+        setTimeout(triggerPrint, 250);
+      })
+      .catch(() => {
+        setTimeout(triggerPrint, 500);
+      });
+  } else {
+    setTimeout(triggerPrint, 500);
+  }
 }
