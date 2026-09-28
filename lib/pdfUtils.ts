@@ -363,7 +363,7 @@ export function printDocumentDirectly(
             height: auto !important;
             overflow: visible !important;
             color: #000000 !important;
-            font-size: 10.5px;
+            font-size: 11.5px;
             line-height: 1.35;
           }
           #print-root {
