@@ -15,6 +15,7 @@ import {
   fetchServerBankBalance,
 } from '@/lib/bankBalance';
 import { BankBalanceModal } from './BankBalanceModal';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 
 interface TopHeaderProps {
   currentUser: AuthUser;
@@ -55,7 +56,29 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
     };
 
     window.addEventListener(BANK_BALANCE_CHANGE_EVENT, handleBalanceChange);
-    return () => window.removeEventListener(BANK_BALANCE_CHANGE_EVENT, handleBalanceChange);
+
+    // Setup Supabase Realtime channel subscription for instant live updates across devices
+    let channel: any = null;
+    const client = getSupabaseClient();
+    if (client && isSupabaseConfigured()) {
+      channel = client
+        .channel('pogh_realtime_bank_balance')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'pogh_bank_balance' },
+          () => {
+            fetchServerBankBalance().catch(() => {});
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      window.removeEventListener(BANK_BALANCE_CHANGE_EVENT, handleBalanceChange);
+      if (client && channel) {
+        client.removeChannel(channel);
+      }
+    };
   }, []);
 
   const getTitle = () => {

@@ -113,6 +113,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
         roomsCount: number;
         totalBankRent: number;
         totalCashRent: number;
+        totalBankFood: number;
+        totalCashFood: number;
+        totalBankExp: number;
+        totalCashExp: number;
         totalBankCollection: number;
         totalCashCollection: number;
       }
@@ -133,6 +137,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           roomsCount: 0,
           totalBankRent: 0,
           totalCashRent: 0,
+          totalBankFood: 0,
+          totalCashFood: 0,
+          totalBankExp: 0,
+          totalCashExp: 0,
           totalBankCollection: 0,
           totalCashCollection: 0,
         };
@@ -156,6 +164,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       monthMap[monthKey].roomsCount += rooms;
       monthMap[monthKey].totalBankRent += paySplit.bankRent;
       monthMap[monthKey].totalCashRent += paySplit.cashRent;
+      monthMap[monthKey].totalBankFood += paySplit.bankFood;
+      monthMap[monthKey].totalCashFood += paySplit.cashFood;
+      monthMap[monthKey].totalBankExp += paySplit.bankExp;
+      monthMap[monthKey].totalCashExp += paySplit.cashExp;
       monthMap[monthKey].totalBankCollection += paySplit.bankAmount;
       monthMap[monthKey].totalCashCollection += paySplit.cashAmount;
     });
@@ -182,6 +194,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     let grandTotalRevenue = 0;
     let grandTotalBankRent = 0;
     let grandTotalCashRent = 0;
+    let grandTotalBankFood = 0;
+    let grandTotalCashFood = 0;
+    let grandTotalBankExp = 0;
+    let grandTotalCashExp = 0;
     let grandTotalBankCollection = 0;
     let grandTotalCashCollection = 0;
     let totalBookingsCount = 0;
@@ -210,6 +226,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       grandTotalRevenue += m.grandTotal;
       grandTotalBankRent += m.totalBankRent;
       grandTotalCashRent += m.totalCashRent;
+      grandTotalBankFood += m.totalBankFood;
+      grandTotalCashFood += m.totalCashFood;
+      grandTotalBankExp += m.totalBankExp;
+      grandTotalCashExp += m.totalCashExp;
       grandTotalBankCollection += m.totalBankCollection;
       grandTotalCashCollection += m.totalCashCollection;
       totalBookingsCount += m.bookings.length;
@@ -247,6 +267,10 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
       grandTotalRevenue,
       grandTotalBankRent,
       grandTotalCashRent,
+      grandTotalBankFood,
+      grandTotalCashFood,
+      grandTotalBankExp,
+      grandTotalCashExp,
       grandTotalBankCollection,
       grandTotalCashCollection,
       totalBookingsCount,
@@ -1022,6 +1046,11 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                                     {b.reference}
                                   </div>
                                 )}
+                                {b.mobile_number && (
+                                  <div className="text-[11px] font-mono font-semibold text-slate-700 mt-0.5">
+                                    मो०: {b.mobile_number}
+                                  </div>
+                                )}
                               </td>
                               <td className="py-3 px-2.5 font-medium text-slate-700 whitespace-nowrap">
                                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-xs font-semibold border border-slate-200">
@@ -1147,16 +1176,16 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
             <div>
               {/* Ink-Saver Official Summary Strip (Zero background fill, crisp black border) */}
               {/* Ink-Saver Official Summary Strip (Zero background fill, crisp black border) */}
-              <div style={{ border: '1.5px solid #000000', padding: '6px 10px', marginBottom: '10px', background: '#FFFFFF', fontSize: '10.5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ border: '1.5px solid #000000', padding: '6px 8px', marginBottom: '10px', background: '#FFFFFF', fontSize: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                 <span><strong>कुल आवंटन:</strong> {singleMonthPrintData.bookings.length} पत्र ({singleMonthPrintData.roomsCount} कक्ष दिवस)</span>
                 <span>|</span>
                 <span><strong>कमरा किराया:</strong> ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankRent.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashRent.toLocaleString('en-IN')})</span>
                 <span>|</span>
-                <span><strong>भोजन संग्रह:</strong> ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}</span>
+                <span><strong>भोजन संग्रह:</strong> ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankFood.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashFood.toLocaleString('en-IN')})</span>
                 <span>|</span>
-                <span><strong>कुल व्यय/खर्च:</strong> ₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}</span>
+                <span><strong>कुल व्यय/खर्च:</strong> ₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankExp.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashExp.toLocaleString('en-IN')})</span>
                 <span>|</span>
-                <span style={{ fontSize: '11px', fontWeight: 900 }}><strong>शुद्ध राजकीय संग्रह: ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}</strong></span>
+                <span style={{ fontSize: '10.5px', fontWeight: 900 }}><strong>शुद्ध राजकीय संग्रह: ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}</strong></span>
               </div>
 
               {/* Single Month Allotment Table */}
@@ -1165,19 +1194,36 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
                   दैनिक आवंटन, कमरा किराया, मेस भोजन एवं व्यय विवरण तालिका:
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', background: '#FFFFFF' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', background: '#FFFFFF' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', color: '#000000' }}>
-                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '32px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>क्र०</th>
-                      <th style={{ padding: '6px 8px', border: '1.5px solid #000000', textAlign: 'left', fontWeight: 800, verticalAlign: 'middle' }}>अधिकारी का नाम एवं संदर्भ/पदनाम</th>
-                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '85px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>आवंटित सूट</th>
-                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '105px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>चेक-इन (दिनांक/समय)</th>
-                      <th style={{ padding: '6px 4px', border: '1.5px solid #000000', width: '105px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>चेक-आउट (दिनांक/समय)</th>
-                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '75px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>कमरा किराया (बैंक)</th>
-                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '75px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>कमरा किराया (नकद)</th>
-                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>भोजन</th>
-                      <th style={{ padding: '6px 6px', border: '1.5px solid #000000', width: '65px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>व्यय</th>
-                      <th style={{ padding: '6px 8px', border: '1.5px solid #000000', width: '85px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>शुद्ध संग्रह</th>
+                      <th rowSpan={2} style={{ padding: '4px 3px', border: '1.5px solid #000000', width: '28px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>क्र०</th>
+                      <th rowSpan={2} style={{ padding: '4px 6px', border: '1.5px solid #000000', textAlign: 'left', fontWeight: 800, verticalAlign: 'middle' }}>अधिकारी का नाम, मो० एवं संदर्भ/पदनाम</th>
+                      <th rowSpan={2} style={{ padding: '4px 3px', border: '1.5px solid #000000', width: '65px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>आवंटित सूट</th>
+                      <th rowSpan={2} style={{ padding: '4px 3px', border: '1.5px solid #000000', width: '82px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>चेक-इन (दिनांक/समय)</th>
+                      <th rowSpan={2} style={{ padding: '4px 3px', border: '1.5px solid #000000', width: '82px', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle' }}>चेक-आउट (दिनांक/समय)</th>
+                      {/* बैंक सेक्शन (समस्त बैंक/ऑनलाइन प्रविष्टियां एक तरफ) */}
+                      <th colSpan={3} style={{ padding: '4px 4px', border: '1.5px solid #000000', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', background: '#f1f5f9' }}>
+                        बैंक / ऑनलाइन (BANK)
+                      </th>
+                      
+                      {/* नकद सेक्शन (समस्त नकद प्रविष्टियां एक तरफ) */}
+                      <th colSpan={3} style={{ padding: '4px 4px', border: '1.5px solid #000000', textAlign: 'center', fontWeight: 800, verticalAlign: 'middle', background: '#f8fafc' }}>
+                        नकद / हस्तगत (CASH)
+                      </th>
+                      
+                      <th rowSpan={2} style={{ padding: '4px 6px', border: '1.5px solid #000000', width: '70px', textAlign: 'right', fontWeight: 800, verticalAlign: 'middle' }}>शुद्ध संग्रह</th>
+                    </tr>
+                    <tr style={{ background: '#f8fafc', color: '#000000' }}>
+                      {/* बैंक सब-कॉलम्स */}
+                      <th style={{ padding: '3px 4px', border: '1.5px solid #000000', width: '52px', textAlign: 'right', fontWeight: 800, background: '#f1f5f9' }}>कमरा किराया</th>
+                      <th style={{ padding: '3px 4px', border: '1.5px solid #000000', width: '48px', textAlign: 'right', fontWeight: 800, background: '#f1f5f9' }}>भोजन</th>
+                      <th style={{ padding: '3px 4px', border: '1.5px solid #000000', width: '48px', textAlign: 'right', fontWeight: 800, background: '#f1f5f9' }}>व्यय</th>
+                      
+                      {/* नकद सब-कॉलम्स */}
+                      <th style={{ padding: '3px 4px', border: '1.5px solid #000000', width: '52px', textAlign: 'right', fontWeight: 800 }}>कमरा किराया</th>
+                      <th style={{ padding: '3px 4px', border: '1.5px solid #000000', width: '48px', textAlign: 'right', fontWeight: 800 }}>भोजन</th>
+                      <th style={{ padding: '3px 4px', border: '1.5px solid #000000', width: '48px', textAlign: 'right', fontWeight: 800 }}>व्यय</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1205,57 +1251,94 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
                       return (
                         <tr key={`print-single-${b.id}`} style={{ background: '#FFFFFF' }}>
-                          <td style={{ padding: '4px 4px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
-                          <td style={{ padding: '4px 8px', border: '1px solid #000000' }}>
-                            <span style={{ fontWeight: 700, color: '#000000' }}>{formatGuestDisplayName(b.guest_name || '')}</span>
-                            {b.reference && <span style={{ color: '#334155', fontWeight: 500 }}> ({b.reference})</span>}
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'center', fontWeight: 600 }}>{idx + 1}</td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #000000' }}>
+                            <div style={{ fontWeight: 700, color: '#000000', lineHeight: 1.2 }}>
+                              {formatGuestDisplayName(b.guest_name || '')}
+                              {b.reference && <span style={{ color: '#334155', fontWeight: 500, fontSize: '8.5px' }}> ({b.reference})</span>}
+                            </div>
+                            {b.mobile_number && (
+                              <div style={{ color: '#0f172a', fontSize: '8.5px', fontWeight: 700, fontFamily: 'monospace', marginTop: '1.5px' }}>
+                                मो०: {b.mobile_number}
+                              </div>
+                            )}
                           </td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{suits}</td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '9.5px' }}>
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{suits}</td>
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '9px' }}>
                             <div style={{ fontWeight: 700 }}>{cinShort}</div>
-                            <div style={{ color: '#475569', fontSize: '8.5px' }}>{cinTime}</div>
+                            <div style={{ color: '#475569', fontSize: '8px' }}>{cinTime}</div>
                           </td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '9.5px' }}>
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '9px' }}>
                             <div style={{ fontWeight: 700 }}>{coutShort}</div>
-                            <div style={{ color: '#475569', fontSize: '8.5px' }}>{coutTime}</div>
+                            <div style={{ color: '#475569', fontSize: '8px' }}>{coutTime}</div>
                           </td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>
+
+                          {/* बैंक पक्ष (कमरा, भोजन, व्यय) */}
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', background: '#fafbfc' }}>
                             {paySplit.bankRent > 0 ? `₹${paySplit.bankRent.toLocaleString('en-IN')}` : '₹0'}
                           </td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', background: '#fafbfc' }}>
+                            {paySplit.bankFood > 0 ? `₹${paySplit.bankFood.toLocaleString('en-IN')}` : '₹0'}
+                          </td>
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', background: '#fafbfc' }}>
+                            {paySplit.bankExp > 0 ? `-₹${paySplit.bankExp.toLocaleString('en-IN')}` : '₹0'}
+                          </td>
+
+                          {/* नकद पक्ष (कमरा, भोजन, व्यय) */}
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>
                             {paySplit.cashRent > 0 ? `₹${paySplit.cashRent.toLocaleString('en-IN')}` : '₹0'}
                           </td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ padding: '4px 8px', border: '1px solid #000000', textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap' }}>₹{net.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            {paySplit.cashFood > 0 ? `₹${paySplit.cashFood.toLocaleString('en-IN')}` : '₹0'}
+                          </td>
+                          <td style={{ padding: '4px 3px', border: '1px solid #000000', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            {paySplit.cashExp > 0 ? `-₹${paySplit.cashExp.toLocaleString('en-IN')}` : '₹0'}
+                          </td>
+
+                          {/* शुद्ध संग्रह */}
+                          <td style={{ padding: '4px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                            ₹{net.toLocaleString('en-IN')}
+                          </td>
                         </tr>
                       );
                     })}
 
                     {/* Official Total Row (Double bottom border, bold black text) */}
-                    <tr style={{ background: '#FFFFFF', fontWeight: 900, fontSize: '11px' }}>
-                      <td colSpan={2} style={{ padding: '6px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
+                    <tr style={{ background: '#FFFFFF', fontWeight: 900, fontSize: '10.5px' }}>
+                      <td colSpan={2} style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
                         कुल योग (TOTAL COLLECTION — {formatMonthKey(singleMonthPrintData.monthKey, 'hi')})
                       </td>
-                      <td style={{ padding: '6px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
+                      <td style={{ padding: '5px 3px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>
                         {singleMonthPrintData.roomsCount} कक्ष
                       </td>
-                      <td colSpan={2} style={{ padding: '6px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center', fontSize: '10px' }}>
+                      <td colSpan={2} style={{ padding: '5px 4px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'center', fontSize: '9.5px' }}>
                         {singleMonthPrintData.bookings.length} पत्र
                       </td>
-                      <td style={{ padding: '6px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
+
+                      {/* बैंक योग (कमरा, भोजन, व्यय) */}
+                      <td style={{ padding: '5px 3px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000', background: '#fafbfc' }}>
                         ₹{singleMonthPrintData.totalBankRent.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '6px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
+                      <td style={{ padding: '5px 3px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000', background: '#fafbfc' }}>
+                        ₹{singleMonthPrintData.totalBankFood.toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ padding: '5px 3px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000', background: '#fafbfc' }}>
+                        -₹{singleMonthPrintData.totalBankExp.toLocaleString('en-IN')}
+                      </td>
+
+                      {/* नकद योग (कमरा, भोजन, व्यय) */}
+                      <td style={{ padding: '5px 3px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
                         ₹{singleMonthPrintData.totalCashRent.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '6px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
-                        ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')}
+                      <td style={{ padding: '5px 3px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
+                        ₹{singleMonthPrintData.totalCashFood.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '6px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
-                        -₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}
+                      <td style={{ padding: '5px 3px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
+                        -₹{singleMonthPrintData.totalCashExp.toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '6px 8px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
+
+                      {/* शुद्ध संग्रह योग */}
+                      <td style={{ padding: '5px 6px', borderTop: '2px solid #000000', borderBottom: '3px double #000000', borderRight: '1px solid #000000', textAlign: 'right', color: '#000000' }}>
                         ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}
                       </td>
                     </tr>
@@ -1485,27 +1568,30 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
                 {monthlyData.map((m) => (
                   <div key={`print-detail-${m.monthKey}`} style={{ marginBottom: '12px' }}>
-                    <div style={{ border: '1px solid #000000', padding: '3px 6px', fontWeight: 800, fontSize: '9.5px', display: 'flex', justifyContent: 'space-between', background: '#FFFFFF' }}>
+                    <div style={{ border: '1px solid #000000', padding: '3px 6px', fontWeight: 800, fontSize: '9px', display: 'flex', justifyContent: 'space-between', background: '#FFFFFF', flexWrap: 'wrap', gap: '3px' }}>
                       <span>माह: {formatMonthKey(m.monthKey, 'hi')} ({m.bookings.length} आवंटन)</span>
-                      <span>कमरा: ₹{m.totalRent.toLocaleString('en-IN')} (बैंक: ₹{m.totalBankRent.toLocaleString('en-IN')} | नकद: ₹{m.totalCashRent.toLocaleString('en-IN')}) • भोजन: ₹{m.totalFood.toLocaleString('en-IN')} • व्यय: ₹{m.totalExpenditure.toLocaleString('en-IN')} • <strong>शुद्ध कुल: ₹{m.grandTotal.toLocaleString('en-IN')}</strong></span>
+                      <span>कमरा: ₹{m.totalRent.toLocaleString('en-IN')} (बैंक: ₹{m.totalBankRent.toLocaleString('en-IN')} | नकद: ₹{m.totalCashRent.toLocaleString('en-IN')}) • भोजन: ₹{m.totalFood.toLocaleString('en-IN')} (बैंक: ₹{m.totalBankFood.toLocaleString('en-IN')} | नकद: ₹{m.totalCashFood.toLocaleString('en-IN')}) • व्यय: ₹{m.totalExpenditure.toLocaleString('en-IN')} (बैंक: ₹{m.totalBankExp.toLocaleString('en-IN')} | नकद: ₹{m.totalCashExp.toLocaleString('en-IN')}) • <strong>शुद्ध कुल: ₹{m.grandTotal.toLocaleString('en-IN')}</strong></span>
                     </div>
 
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', background: '#FFFFFF' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px', background: '#FFFFFF' }}>
                       <thead>
                         <tr style={{ background: '#FFFFFF', color: '#000000' }}>
-                          <th rowSpan={2} style={{ padding: '4px 3px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', width: '28px', textAlign: 'center' }}>क्र०</th>
-                          <th rowSpan={2} style={{ padding: '4px 6px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'left' }}>अधिकारी का नाम एवं संदर्भ</th>
-                          <th rowSpan={2} style={{ padding: '4px 4px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '80px', textAlign: 'center' }}>सूट</th>
-                          <th rowSpan={2} style={{ padding: '4px 4px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '100px', textAlign: 'center' }}>चेक-इन (दिनांक/समय)</th>
-                          <th rowSpan={2} style={{ padding: '4px 4px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '100px', textAlign: 'center' }}>चेक-आउट (दिनांक/समय)</th>
-                          <th colSpan={2} style={{ padding: '4px 4px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center' }}>कमरा किराया</th>
-                          <th rowSpan={2} style={{ padding: '4px 4px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'right' }}>भोजन</th>
-                          <th rowSpan={2} style={{ padding: '4px 4px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'right' }}>व्यय</th>
-                          <th rowSpan={2} style={{ padding: '4px 6px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '75px', textAlign: 'right' }}>शुद्ध कुल</th>
+                          <th rowSpan={2} style={{ padding: '3px 2px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderLeft: '1px solid #000000', borderRight: '1px solid #000000', width: '26px', textAlign: 'center' }}>क्र०</th>
+                          <th rowSpan={2} style={{ padding: '3px 5px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'left' }}>अधिकारी का नाम, मो० एवं संदर्भ</th>
+                          <th rowSpan={2} style={{ padding: '3px 3px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '60px', textAlign: 'center' }}>सूट</th>
+                          <th rowSpan={2} style={{ padding: '3px 3px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '75px', textAlign: 'center' }}>चेक-इन (दिनांक/समय)</th>
+                          <th rowSpan={2} style={{ padding: '3px 3px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '75px', textAlign: 'center' }}>चेक-आउट (दिनांक/समय)</th>
+                          <th colSpan={3} style={{ padding: '3px 3px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center', background: '#f1f5f9' }}>बैंक / ऑनलाइन (BANK)</th>
+                          <th colSpan={3} style={{ padding: '3px 3px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', textAlign: 'center', background: '#f8fafc' }}>नकद / हस्तगत (CASH)</th>
+                          <th rowSpan={2} style={{ padding: '3px 5px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '65px', textAlign: 'right' }}>शुद्ध कुल</th>
                         </tr>
                         <tr style={{ background: '#FFFFFF', color: '#000000' }}>
-                          <th style={{ padding: '3px 4px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'right' }}>बैंक</th>
-                          <th style={{ padding: '3px 4px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '55px', textAlign: 'right' }}>नकद</th>
+                          <th style={{ padding: '2px 3px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '46px', textAlign: 'right', background: '#f1f5f9' }}>कमरा</th>
+                          <th style={{ padding: '2px 3px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '44px', textAlign: 'right', background: '#f1f5f9' }}>भोजन</th>
+                          <th style={{ padding: '2px 3px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '44px', textAlign: 'right', background: '#f1f5f9' }}>व्यय</th>
+                          <th style={{ padding: '2px 3px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '46px', textAlign: 'right' }}>कमरा</th>
+                          <th style={{ padding: '2px 3px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '44px', textAlign: 'right' }}>भोजन</th>
+                          <th style={{ padding: '2px 3px', borderBottom: '1px solid #000000', borderRight: '1px solid #000000', width: '44px', textAlign: 'right' }}>व्यय</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1532,29 +1618,52 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
                           return (
                             <tr key={`print-row-${m.monthKey}-${b.id}`} style={{ background: '#FFFFFF' }}>
-                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'center' }}>{bIdx + 1}</td>
-                              <td style={{ padding: '3px 6px', border: '1px solid #000000' }}>
-                                <span style={{ fontWeight: 700 }}>{formatGuestDisplayName(b.guest_name || '')}</span>
-                                {b.reference && <span style={{ color: '#334155' }}> ({b.reference})</span>}
+                              <td style={{ padding: '3px 2px', border: '1px solid #000000', textAlign: 'center' }}>{bIdx + 1}</td>
+                              <td style={{ padding: '3px 5px', border: '1px solid #000000' }}>
+                                <div style={{ fontWeight: 700, color: '#000000' }}>{formatGuestDisplayName(b.guest_name || '')}</div>
+                                {b.reference && <div style={{ color: '#334155', fontSize: '8px' }}>({b.reference})</div>}
+                                {b.mobile_number && (
+                                  <div style={{ color: '#0f172a', fontSize: '8px', fontWeight: 700, fontFamily: 'monospace' }}>
+                                    मो०: {b.mobile_number}
+                                  </div>
+                                )}
                               </td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{suits}</td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '9px' }}>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap' }}>{suits}</td>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '8.5px' }}>
                                 <div style={{ fontWeight: 700 }}>{cinShort}</div>
-                                <div style={{ color: '#475569', fontSize: '8px' }}>{cinTime}</div>
+                                <div style={{ color: '#475569', fontSize: '7.5px' }}>{cinTime}</div>
                               </td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '9px' }}>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'center', whiteSpace: 'nowrap', fontSize: '8.5px' }}>
                                 <div style={{ fontWeight: 700 }}>{coutShort}</div>
-                                <div style={{ color: '#475569', fontSize: '8px' }}>{coutTime}</div>
+                                <div style={{ color: '#475569', fontSize: '7.5px' }}>{coutTime}</div>
                               </td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap' }}>
+
+                              {/* बैंक पक्ष */}
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap', background: '#fafbfc' }}>
                                 {paySplit.bankRent > 0 ? `₹${paySplit.bankRent.toLocaleString('en-IN')}` : '₹0'}
                               </td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap', background: '#fafbfc' }}>
+                                {paySplit.bankFood > 0 ? `₹${paySplit.bankFood.toLocaleString('en-IN')}` : '₹0'}
+                              </td>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap', background: '#fafbfc' }}>
+                                {paySplit.bankExp > 0 ? `-₹${paySplit.bankExp.toLocaleString('en-IN')}` : '₹0'}
+                              </td>
+
+                              {/* नकद पक्ष */}
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                 {paySplit.cashRent > 0 ? `₹${paySplit.cashRent.toLocaleString('en-IN')}` : '₹0'}
                               </td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap' }}>{food > 0 ? `₹${food.toLocaleString('en-IN')}` : '-'}</td>
-                              <td style={{ padding: '3px 4px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap' }}>{exp > 0 ? `-₹${exp.toLocaleString('en-IN')}` : '-'}</td>
-                              <td style={{ padding: '3px 6px', border: '1px solid #000000', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>₹{net.toLocaleString('en-IN')}</td>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                {paySplit.cashFood > 0 ? `₹${paySplit.cashFood.toLocaleString('en-IN')}` : '₹0'}
+                              </td>
+                              <td style={{ padding: '3px 3px', border: '1px solid #000000', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                {paySplit.cashExp > 0 ? `-₹${paySplit.cashExp.toLocaleString('en-IN')}` : '₹0'}
+                              </td>
+
+                              {/* शुद्ध संग्रह */}
+                              <td style={{ padding: '3px 5px', border: '1px solid #000000', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                ₹{net.toLocaleString('en-IN')}
+                              </td>
                             </tr>
                           );
                         })}

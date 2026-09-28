@@ -689,11 +689,15 @@ export function isCashPaymentMode(mode?: string): boolean {
 }
 
 /**
- * Computes split of rent and net collection between Bank/Online and Cash for a booking.
+ * Computes split of rent, food, expenditure, and net collection between Bank/Online and Cash for a booking.
  */
 export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
   bankRent: number;
   cashRent: number;
+  bankFood: number;
+  cashFood: number;
+  bankExp: number;
+  cashExp: number;
   bankAmount: number;
   cashAmount: number;
 } {
@@ -723,10 +727,37 @@ export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
       cRent = Math.max(0, rent - bRent);
     }
 
+    let bFood = 0;
+    let cFood = 0;
+    if (food > 0) {
+      if (totalExplicit > 0) {
+        bFood = Math.min(food, Math.round((bAmt / totalExplicit) * food));
+        cFood = Math.max(0, food - bFood);
+      } else if (bAmt > 0 && cAmt === 0) {
+        bFood = food;
+      } else {
+        cFood = food;
+      }
+    }
+
+    let bExp = 0;
+    let cExp = 0;
+    if (exp > 0) {
+      if (totalExplicit > 0 && bAmt > 0 && cAmt === 0) {
+        bExp = exp;
+      } else {
+        cExp = exp;
+      }
+    }
+
     if (!isPrimary) {
       return {
         bankRent: bRent,
         cashRent: cRent,
+        bankFood: 0,
+        cashFood: 0,
+        bankExp: 0,
+        cashExp: 0,
         bankAmount: bRent,
         cashAmount: cRent,
       };
@@ -735,6 +766,10 @@ export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
     return {
       bankRent: bRent,
       cashRent: cRent,
+      bankFood: bFood,
+      cashFood: cFood,
+      bankExp: bExp,
+      cashExp: cExp,
       bankAmount: bAmt,
       cashAmount: cAmt,
     };
@@ -745,6 +780,10 @@ export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
     return {
       bankRent: 0,
       cashRent: 0,
+      bankFood: 0,
+      cashFood: 0,
+      bankExp: 0,
+      cashExp: 0,
       bankAmount: 0,
       cashAmount: 0,
     };
@@ -754,6 +793,10 @@ export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
     return {
       bankRent: rent,
       cashRent: 0,
+      bankFood: food,
+      cashFood: 0,
+      bankExp: exp,
+      cashExp: 0,
       bankAmount: net,
       cashAmount: 0,
     };
@@ -763,6 +806,10 @@ export function getBookingPaymentSplit(b: Booking, isPrimary: boolean = true): {
   return {
     bankRent: 0,
     cashRent: rent,
+    bankFood: 0,
+    cashFood: food,
+    bankExp: 0,
+    cashExp: exp,
     bankAmount: 0,
     cashAmount: net,
   };

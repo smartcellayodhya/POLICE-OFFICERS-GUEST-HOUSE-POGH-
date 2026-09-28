@@ -1,18 +1,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Building2, Calendar, FileText, CheckCircle2, History, Pencil, ShieldCheck } from 'lucide-react';
+import { 
+  X, 
+  Building2, 
+  Calendar, 
+  FileText, 
+  CheckCircle2, 
+  History, 
+  Pencil, 
+  ShieldCheck, 
+  Cloud, 
+  AlertCircle,
+  Loader2 
+} from 'lucide-react';
 import {
   BankBalanceRecord,
   BankBalanceHistoryItem,
   getLocalBankBalance,
-  saveLocalBankBalance,
   getLocalBankBalanceHistory,
   fetchServerBankBalance,
+  saveServerBankBalance,
 } from '@/lib/bankBalance';
 import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import { useLanguage } from '@/lib/languageContext';
-import { getAuthToken } from '@/lib/auth';
 
 interface BankBalanceModalProps {
   isOpen: boolean;
@@ -39,7 +50,8 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
   const [asOfDate, setAsOfDate] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'local_only' | 'checking'>('checking');
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -49,24 +61,30 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
       setAccountName(rec.account_name || '');
       setAccountNumber(rec.account_number || '');
       setAsOfDate(rec.as_of_date || new Date().toISOString().slice(0, 10));
-      setNotes(rec.notes || 'पासबुक प्रविष्टि के अनुसार');
+      setNotes(rec.notes || (isHindi ? 'पासबुक प्रविष्टि के अनुसार' : 'As per passbook entry'));
       setHistoryList(getLocalBankBalanceHistory());
-      setSaveSuccess(false);
+      setSaveMessage(null);
       setActiveTab('update');
+      setSyncStatus('checking');
 
       // Fetch remote bank balance from Supabase database via API
-      fetchServerBankBalance().then((serverRec) => {
-        if (serverRec) {
-          setBalanceRecord(serverRec);
-          setAmountInput(String(serverRec.current_balance || 0));
-          setAccountName(serverRec.account_name || '');
-          setAccountNumber(serverRec.account_number || '');
-          setAsOfDate(serverRec.as_of_date || new Date().toISOString().slice(0, 10));
-          setNotes(serverRec.notes || 'पासबुक प्रविष्टि के अनुसार');
+      fetchServerBankBalance().then((res) => {
+        if (res && res.record) {
+          setBalanceRecord(res.record);
+          setAmountInput(String(res.record.current_balance || 0));
+          setAccountName(res.record.account_name || '');
+          setAccountNumber(res.record.account_number || '');
+          setAsOfDate(res.record.as_of_date || new Date().toISOString().slice(0, 10));
+          setNotes(res.record.notes || (isHindi ? 'पासबुक प्रविष्टि के अनुसार' : 'As per passbook entry'));
+          setSyncStatus('synced');
+        } else {
+          setSyncStatus(res?.synced ? 'synced' : 'local_only');
         }
-      }).catch(() => {});
+      }).catch(() => {
+        setSyncStatus('local_only');
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, isHindi]);
 
   if (!isOpen) return null;
 
@@ -75,11 +93,12 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setSaveMessage(null);
 
     try {
       const updated: BankBalanceRecord = {
         ...balanceRecord,
-        account_name: accountName.trim() || 'SBI - पुलिस ऑफिसर्स गेस्ट हाउस संचालन खाता',
+        account_name: accountName.trim() || 'भारतीय स्टेट बैंक (SBI) - पुलिस ऑफिसर्स गेस्ट हाउस संचालन खाता',
         account_number: accountNumber.trim() || 'XXXX4589',
         current_balance: parsedAmount,
         as_of_date: asOfDate || new Date().toISOString().slice(0, 10),
@@ -87,29 +106,36 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
         updated_by: currentUser?.displayName || currentUser?.name || currentUser?.username || 'SSP Office',
       };
 
-      // Save locally & broadcast event
-      saveLocalBankBalance(updated);
-      setBalanceRecord(updated);
+      // Save via server API and update local store
+      const result = await saveServerBankBalance(updated);
+      setBalanceRecord(result.data || updated);
       setHistoryList(getLocalBankBalanceHistory());
 
-      // Attempt remote sync in background
-      try {
-        const token = getAuthToken();
-        fetch('/api/bank-balance', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(updated),
-        }).catch(() => {});
-      } catch {}
-
-      setSaveSuccess(true);
-      setTimeout(() => {
-        setSaveSuccess(false);
-        onClose();
-      }, 700);
+      if (result.synced) {
+        setSyncStatus('synced');
+        setSaveMessage(isHindi ? 'क्लाउड सर्वर पर सफलतापूर्वक सिंक हो गया!' : 'Successfully synced to cloud database!');
+        setTimeout(() => {
+          onClose();
+        }, 800);
+      } else {
+        setSyncStatus('local_only');
+        if (result.tableMissing) {
+          setSaveMessage(
+            isHindi 
+              ? 'ब्राउज़र में सहेजा गया! (Supabase में pogh_bank_balance टेबल अभी बनाई जानी बाकी है)' 
+              : 'Saved in browser! (pogh_bank_balance table needs to be created in Supabase)'
+          );
+        } else {
+          setSaveMessage(
+            isHindi
+              ? `ब्राउज़र में सुरक्षित हुआ (${result.error || 'सर्वर सिंक लंबित'})`
+              : `Saved locally (${result.error || 'Server sync pending'})`
+          );
+        }
+        setTimeout(() => {
+          onClose();
+        }, 2200);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -144,14 +170,32 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
 
         {/* Current Balance Hero Card */}
         <div className="bg-gradient-to-br from-emerald-50 via-slate-50 to-emerald-50/50 p-4 sm:p-5 border-b border-slate-200">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
             <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               {isHindi ? 'वर्तमान उपलब्ध बैंक बैलेंस' : 'Current Available Bank Balance'}
             </span>
-            <span className="text-[11px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-              {balanceRecord.as_of_date ? (isHindi ? formatToHindiDate(balanceRecord.as_of_date) : formatToDisplayDate(balanceRecord.as_of_date)) : ''}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {syncStatus === 'synced' ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-300 shadow-2xs">
+                  <Cloud className="w-3 h-3 text-emerald-600" />
+                  {isHindi ? 'क्लाउड सिंक सक्रिय' : 'Cloud Synced'}
+                </span>
+              ) : syncStatus === 'local_only' ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-300 shadow-2xs" title={isHindi ? 'Supabase में pogh_bank_balance टेबल बनाएं' : 'pogh_bank_balance table missing in Supabase'}>
+                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                  {isHindi ? 'लोकल (ब्राउज़र में सीमित)' : 'Local Only'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
+                  {isHindi ? 'जाँच...' : 'Checking...'}
+                </span>
+              )}
+              <span className="text-[11px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                {balanceRecord.as_of_date ? (isHindi ? formatToHindiDate(balanceRecord.as_of_date) : formatToDisplayDate(balanceRecord.as_of_date)) : ''}
+              </span>
+            </div>
           </div>
 
           <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight tabular-nums mt-1">
@@ -291,6 +335,24 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
                 </div>
               </div>
 
+              {/* Save message / feedback banner */}
+              {saveMessage && (
+                <div
+                  className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150 ${
+                    syncStatus === 'synced'
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      : 'bg-amber-50 border-amber-300 text-amber-900'
+                  }`}
+                >
+                  {syncStatus === 'synced' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  )}
+                  <span>{saveMessage}</span>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button
@@ -304,15 +366,17 @@ export const BankBalanceModal: React.FC<BankBalanceModalProps> = ({
                   type="submit"
                   disabled={isSaving}
                   className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition active:scale-95 ${
-                    saveSuccess
-                      ? 'bg-emerald-600'
+                    isSaving
+                      ? 'bg-slate-500 cursor-not-allowed'
+                      : syncStatus === 'synced'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
                       : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
                 >
-                  {saveSuccess ? (
+                  {isSaving ? (
                     <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      {isHindi ? 'सफलतापूर्वक अपडेट हुआ!' : 'Updated!'}
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {isHindi ? 'सहेज रहे हैं...' : 'Saving...'}
                     </>
                   ) : (
                     <>

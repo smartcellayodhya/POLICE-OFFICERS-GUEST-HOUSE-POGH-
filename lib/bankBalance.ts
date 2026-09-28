@@ -23,8 +23,10 @@ export interface BankBalanceHistoryItem {
 const STORAGE_KEY_RECORD = 'pogh_bank_balance_record';
 const STORAGE_KEY_HISTORY = 'pogh_bank_balance_history';
 export const BANK_BALANCE_CHANGE_EVENT = 'pogh_bank_balance_changed';
+export const SINGLETON_BANK_BALANCE_ID = '00000000-0000-0000-0000-000000000001';
 
 export const DEFAULT_BANK_BALANCE: BankBalanceRecord = {
+  id: SINGLETON_BANK_BALANCE_ID,
   account_name: 'भारतीय स्टेट बैंक (SBI) - पुलिस ऑफिसर्स गेस्ट हाउस संचालन खाता',
   account_number: 'XXXX4589',
   current_balance: 145000,
@@ -44,6 +46,7 @@ export function getLocalBankBalance(): BankBalanceRecord {
     }
     const parsed = JSON.parse(raw);
     return {
+      id: parsed.id || SINGLETON_BANK_BALANCE_ID,
       account_name: parsed.account_name || DEFAULT_BANK_BALANCE.account_name,
       account_number: parsed.account_number || DEFAULT_BANK_BALANCE.account_number,
       current_balance: typeof parsed.current_balance === 'number' ? parsed.current_balance : DEFAULT_BANK_BALANCE.current_balance,
@@ -63,6 +66,7 @@ export function saveLocalBankBalance(record: BankBalanceRecord): void {
   try {
     const updated = {
       ...record,
+      id: SINGLETON_BANK_BALANCE_ID,
       updated_at: new Date().toISOString(),
     };
     localStorage.setItem(STORAGE_KEY_RECORD, JSON.stringify(updated));
@@ -99,8 +103,8 @@ export function getLocalBankBalanceHistory(): BankBalanceHistoryItem[] {
   }
 }
 
-export async function fetchServerBankBalance(): Promise<BankBalanceRecord | null> {
-  if (typeof window === 'undefined') return null;
+export async function fetchServerBankBalance(): Promise<{ record: BankBalanceRecord | null; synced: boolean; tableMissing?: boolean }> {
+  if (typeof window === 'undefined') return { record: null, synced: false };
   try {
     const token = localStorage.getItem('pogh_auth_token');
     const res = await fetch('/api/bank-balance', {
@@ -111,6 +115,7 @@ export async function fetchServerBankBalance(): Promise<BankBalanceRecord | null
     const data = await res.json();
     if (res.ok && data.success && data.data) {
       const serverRec: BankBalanceRecord = {
+        id: data.data.id || SINGLETON_BANK_BALANCE_ID,
         account_name: data.data.account_name || DEFAULT_BANK_BALANCE.account_name,
         account_number: data.data.account_number || DEFAULT_BANK_BALANCE.account_number,
         current_balance: Number(data.data.current_balance) || 0,
@@ -122,11 +127,61 @@ export async function fetchServerBankBalance(): Promise<BankBalanceRecord | null
 
       localStorage.setItem(STORAGE_KEY_RECORD, JSON.stringify(serverRec));
       window.dispatchEvent(new CustomEvent(BANK_BALANCE_CHANGE_EVENT, { detail: serverRec }));
-      return serverRec;
+      return { record: serverRec, synced: true };
     }
+    return { record: null, synced: false, tableMissing: data.tableMissing };
   } catch (err) {
     console.warn('Could not fetch remote bank balance, using local cache:', err);
+    return { record: null, synced: false };
   }
-  return null;
 }
+
+export async function saveServerBankBalance(record: BankBalanceRecord): Promise<{
+  success: boolean;
+  synced: boolean;
+  tableMissing?: boolean;
+  error?: string;
+  data?: BankBalanceRecord;
+}> {
+  // 1. Immediately save to local storage for zero-lag response
+  saveLocalBankBalance(record);
+
+  // 2. Synchronize with server and Supabase database
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('pogh_auth_token') : null;
+    const res = await fetch('/api/bank-balance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(record),
+    });
+
+    const result = await res.json();
+    if (res.ok && result.success && result.synced) {
+      const syncedRecord: BankBalanceRecord = {
+        ...record,
+        id: SINGLETON_BANK_BALANCE_ID,
+        updated_at: result.data?.updated_at || new Date().toISOString(),
+      };
+      saveLocalBankBalance(syncedRecord);
+      return { success: true, synced: true, data: syncedRecord };
+    }
+
+    return {
+      success: true,
+      synced: false,
+      tableMissing: result.tableMissing || false,
+      error: result.error || 'सर्वर पर सिंक नहीं हो सका',
+    };
+  } catch (err: any) {
+    return {
+      success: true,
+      synced: false,
+      error: err.message || 'नेटवर्क समस्या के कारण सिंक नहीं हुआ',
+    };
+  }
+}
+
 
