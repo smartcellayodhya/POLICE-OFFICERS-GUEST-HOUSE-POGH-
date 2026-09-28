@@ -596,14 +596,20 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
     return monthlyData.find((m) => m.monthKey === activePrintingMonth) || null;
   }, [monthlyData, activePrintingMonth]);
 
-  // Previous month data for financial reconciliation
+  // Previous month data for financial reconciliation (resilient lookup)
   const prevMonthPrintData = useMemo(() => {
     if (!singleMonthPrintData) return null;
     const [yr, mo] = singleMonthPrintData.monthKey.split('-').map(Number);
     if (!yr || !mo) return null;
     const prevDate = new Date(yr, mo - 2, 1);
     const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-    return monthlyData.find((m) => m.monthKey === prevKey) || null;
+    const directPrev = monthlyData.find((m) => m.monthKey === prevKey);
+    if (directPrev) return directPrev;
+    // Fallback: locate most recent month prior to this month in existing database records
+    const priorMonths = monthlyData
+      .filter((m) => m.monthKey < singleMonthPrintData.monthKey)
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    return priorMonths.length > 0 ? priorMonths[0] : null;
   }, [singleMonthPrintData, monthlyData]);
 
   return (
@@ -1201,22 +1207,49 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
           {/* =================================================================== */}
           {singleMonthPrintData ? (
             <div>
-              {/* Ink-Saver Official Summary Strip */}
-              <div style={{ border: '1.5px solid #000000', padding: '5px 8px', marginBottom: '8px', background: '#FFFFFF', fontSize: '11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '3px' }}>
-                <span><strong>कुल आवंटन:</strong> {singleMonthPrintData.bookings.length} पत्र ({singleMonthPrintData.roomsCount} कक्ष दिवस)</span>
+              {/* Ink-Saver Official Summary Strip (Current Month) */}
+              <div style={{ border: '1.5px solid #000000', padding: '5px 8px', marginBottom: '4px', background: '#FFFFFF', fontSize: '11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '3px' }}>
+                <span><strong>चालू माह ({formatMonthKey(singleMonthPrintData.monthKey, 'hi')}) कुल आवंटन:</strong> {singleMonthPrintData.bookings.length} पत्र ({singleMonthPrintData.roomsCount} कक्ष दिवस)</span>
                 <span>|</span>
-                <span><strong>कमरा किराया:</strong> ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankRent.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashRent.toLocaleString('en-IN')})</span>
+                <span><strong>कमरा:</strong> ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankRent.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashRent.toLocaleString('en-IN')})</span>
                 <span>|</span>
-                <span><strong>भोजन संग्रह:</strong> ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankFood.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashFood.toLocaleString('en-IN')})</span>
+                <span><strong>भोजन:</strong> ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankFood.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashFood.toLocaleString('en-IN')})</span>
                 <span>|</span>
-                <span><strong>व्यय/खर्च:</strong> ₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankExp.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashExp.toLocaleString('en-IN')})</span>
+                <span><strong>व्यय:</strong> ₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')} (बैंक: ₹{singleMonthPrintData.totalBankExp.toLocaleString('en-IN')} | नकद: ₹{singleMonthPrintData.totalCashExp.toLocaleString('en-IN')})</span>
                 <span>|</span>
                 <span><strong>शुद्ध संग्रह:</strong> ₹{singleMonthPrintData.grandTotal.toLocaleString('en-IN')}</span>
-                <span>|</span>
-                <span style={{ fontSize: '11.5px', fontWeight: 900, background: '#f8fafc', padding: '2px 6px', border: '1px solid #000000' }}>
-                  <strong>बैंक खाता अवशेष: ₹{bankRecord.current_balance.toLocaleString('en-IN')}</strong>
-                </span>
               </div>
+
+              {/* Last Month Financial Carry-Forward Strip */}
+              {(() => {
+                const prevGross = prevMonthPrintData ? prevMonthPrintData.totalRent + prevMonthPrintData.totalFood : 0;
+                const prevExp = prevMonthPrintData ? prevMonthPrintData.totalExpenditure : 0;
+                const prevCashCollected = prevMonthPrintData ? prevMonthPrintData.totalCashRent + prevMonthPrintData.totalCashFood : 0;
+                const prevCashExp = prevMonthPrintData ? prevMonthPrintData.totalCashExp : 0;
+                const prevCashInHand = prevMonthPrintData ? Math.max(0, prevCashCollected - prevCashExp) : 0;
+                const prevMonthLabel = prevMonthPrintData ? formatMonthKey(prevMonthPrintData.monthKey, 'hi') : 'विगत माह (प्रारंभिक सत्र)';
+
+                const currCashCollected = singleMonthPrintData.totalCashRent + singleMonthPrintData.totalCashFood;
+                const currCashExp = singleMonthPrintData.totalCashExp;
+                const currCashInHand = Math.max(0, currCashCollected - currCashExp);
+                const totalInHandNow = prevCashInHand + currCashInHand;
+
+                return (
+                  <div style={{ border: '1.5px solid #000000', borderTop: 'none', padding: '4px 8px', marginBottom: '8px', background: '#f8fafc', fontSize: '10.5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                    <span>
+                      <strong>विगत माह ({prevMonthLabel}) स्थिति:</strong> कुल रुपया मिला: <strong>₹{prevGross.toLocaleString('en-IN')}</strong> | कुल खर्चा: <strong>₹{prevExp.toLocaleString('en-IN')}</strong> | <strong>हस्तगत नकद बचा था (In-Hand): ₹{prevCashInHand.toLocaleString('en-IN')}</strong>
+                    </span>
+                    <span>|</span>
+                    <span>
+                      <strong>कुल संचयी हस्तगत नकद (विगत + चालू): ₹{totalInHandNow.toLocaleString('en-IN')}</strong>
+                    </span>
+                    <span>|</span>
+                    <span style={{ fontSize: '11px', fontWeight: 900, background: '#FFFFFF', padding: '1px 6px', border: '1px solid #000000' }}>
+                      <strong>बैंक खाता अवशेष: ₹{bankRecord.current_balance.toLocaleString('en-IN')}</strong>
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Single Month Allotment Table */}
               <div style={{ marginBottom: '10px' }}>
@@ -1381,71 +1414,171 @@ export const MonthlyCollectionPage: React.FC<MonthlyCollectionPageProps> = ({
 
               {/* ================================================================= */}
               {/* राजकीय वित्तीय समाधान एवं अवशेष सार (EXECUTIVE FINANCIAL SUMMARY)  */}
-              {/* Clean, official 5-column summary box suitable for Senior Officers */}
+              {/* Official 3-tier Reconciliation: Last Month, Current Month & Total  */}
               {/* ================================================================= */}
               {(() => {
-                const currBank = singleMonthPrintData.totalBankRent;
-                const currCashCollected = singleMonthPrintData.totalCashRent + singleMonthPrintData.totalFood;
+                // Current Month Metrics
+                const currRent = singleMonthPrintData.totalRent;
+                const currFood = singleMonthPrintData.totalFood;
+                const currGross = currRent + currFood;
                 const currExp = singleMonthPrintData.totalExpenditure;
-                const currCashInHand = Math.max(0, currCashCollected - currExp);
+                const currBankExp = singleMonthPrintData.totalBankExp;
+                const currCashExp = singleMonthPrintData.totalCashExp;
+                const currCashCollected = singleMonthPrintData.totalCashRent + singleMonthPrintData.totalCashFood;
+                const currCashInHand = Math.max(0, currCashCollected - currCashExp);
                 const currNet = singleMonthPrintData.grandTotal;
+                const currMonthName = formatMonthKey(singleMonthPrintData.monthKey, 'hi');
+
+                // Previous Month Metrics (Last Month Carry Forward)
+                const prevRent = prevMonthPrintData ? prevMonthPrintData.totalRent : 0;
+                const prevFood = prevMonthPrintData ? prevMonthPrintData.totalFood : 0;
+                const prevGross = prevRent + prevFood;
+                const prevExp = prevMonthPrintData ? prevMonthPrintData.totalExpenditure : 0;
+                const prevBankExp = prevMonthPrintData ? prevMonthPrintData.totalBankExp : 0;
+                const prevCashExp = prevMonthPrintData ? prevMonthPrintData.totalCashExp : 0;
+                const prevCashCollected = prevMonthPrintData ? prevMonthPrintData.totalCashRent + prevMonthPrintData.totalCashFood : 0;
+                const prevCashInHand = prevMonthPrintData ? Math.max(0, prevCashCollected - prevCashExp) : 0;
                 const prevNet = prevMonthPrintData ? prevMonthPrintData.grandTotal : 0;
+                const prevMonthName = prevMonthPrintData ? formatMonthKey(prevMonthPrintData.monthKey, 'hi') : 'विगत माह (प्रारंभिक सत्र)';
+
                 const cumulativeNet = prevNet + currNet;
+                const totalInHandNow = prevCashInHand + currCashInHand;
+                const totalLiquidNow = totalInHandNow + bankRecord.current_balance;
 
                 return (
                   <div style={{ marginTop: '8px', border: '1.5px solid #000000', padding: '6px 10px', background: '#FFFFFF', pageBreakInside: 'avoid', fontSize: '10.5px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #000000', paddingBottom: '4px', marginBottom: '5px', fontWeight: 800, fontSize: '11.5px' }}>
-                      <span>राजकीय वित्तीय समाधान एवं मासिक अवशेष स्थिति (माह: {formatMonthKey(singleMonthPrintData.monthKey, 'hi')}):</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #000000', paddingBottom: '4px', marginBottom: '6px', fontWeight: 800, fontSize: '11.5px' }}>
+                      <span>राजकीय वित्तीय समाधान, विगत अवशेष एवं चालू माह लेखा सार (माह: {currMonthName}):</span>
                       <span>पत्रांक: POGH/लेखा-{singleMonthPrintData.monthKey}</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-                      <div style={{ borderRight: '1px dashed #000000', paddingRight: '6px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '10.5px' }}>१. कुल सकल प्राप्तियां:</div>
-                        <div style={{ fontWeight: 900, fontSize: '13px', color: '#000000', marginTop: '1px' }}>
-                          ₹{(singleMonthPrintData.totalRent + singleMonthPrintData.totalFood).toLocaleString('en-IN')}
+
+                    {/* भाग (क): विगत माह लेखा एवं अवशेष (Last Month Carry Forward) */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #000000', padding: '5px 8px', marginBottom: '6px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '11px', color: '#000000', marginBottom: '3px', textDecoration: 'underline' }}>
+                        भाग (क) — विगत माह ({prevMonthName}) का लेखा एवं अवशेष स्थिति:
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                        <div style={{ borderRight: '1px dashed #94a3b8', paddingRight: '4px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '10px' }}>१. कुल मिला रुपया (सकल प्राप्ति):</div>
+                          <div style={{ fontWeight: 900, fontSize: '12.5px', color: '#000000', marginTop: '1px' }}>
+                            ₹{prevGross.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (कमरा ₹{prevRent.toLocaleString('en-IN')} + भोजन ₹{prevFood.toLocaleString('en-IN')})
+                          </div>
                         </div>
-                        <div style={{ fontSize: '9px', color: '#000000', marginTop: '1px' }}>
-                          (कमरा ₹{singleMonthPrintData.totalRent.toLocaleString('en-IN')} + भोजन ₹{singleMonthPrintData.totalFood.toLocaleString('en-IN')})
+
+                        <div style={{ borderRight: '1px dashed #94a3b8', paddingRight: '4px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '10px' }}>२. कुल खर्चा हुआ (स्वीकृत व्यय):</div>
+                          <div style={{ fontWeight: 900, fontSize: '12.5px', color: '#000000', marginTop: '1px' }}>
+                            ₹{prevExp.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (बैंक ₹{prevBankExp.toLocaleString('en-IN')} + नकद ₹{prevCashExp.toLocaleString('en-IN')})
+                          </div>
+                        </div>
+
+                        <div style={{ borderRight: '1px dashed #94a3b8', paddingRight: '4px' }}>
+                          <div style={{ fontWeight: 800, fontSize: '10px', color: '#000000' }}>३. इन-हैंड नकद बचा था:</div>
+                          <div style={{ fontWeight: 900, fontSize: '13px', color: '#000000', marginTop: '1px' }}>
+                            ₹{prevCashInHand.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (विगत हस्तगत नकद अवशेष)
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '10px' }}>४. विगत शुद्ध राजकीय संग्रह:</div>
+                          <div style={{ fontWeight: 900, fontSize: '12.5px', color: '#000000', marginTop: '1px' }}>
+                            ₹{prevNet.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (मासिक शुद्ध योग)
+                          </div>
                         </div>
                       </div>
+                    </div>
 
-                      <div style={{ borderRight: '1px dashed #000000', paddingRight: '6px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '10.5px' }}>२. स्वीकृत व्यय / खर्च:</div>
-                        <div style={{ fontWeight: 900, fontSize: '13px', color: '#000000', marginTop: '1px' }}>
-                          ₹{singleMonthPrintData.totalExpenditure.toLocaleString('en-IN')}
+                    {/* भाग (ख): चालू माह लेखा एवं लेन-देन (Current Month Transactions) */}
+                    <div style={{ background: '#FFFFFF', border: '1px solid #000000', padding: '5px 8px', marginBottom: '6px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '11px', color: '#000000', marginBottom: '3px', textDecoration: 'underline' }}>
+                        भाग (ख) — चालू माह ({currMonthName}) का लेखा एवं वित्तीय स्थिति:
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                        <div style={{ borderRight: '1px dashed #94a3b8', paddingRight: '4px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '10px' }}>१. चालू माह मिला रुपया:</div>
+                          <div style={{ fontWeight: 900, fontSize: '12.5px', color: '#000000', marginTop: '1px' }}>
+                            ₹{currGross.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (कमरा ₹{currRent.toLocaleString('en-IN')} + भोजन ₹{currFood.toLocaleString('en-IN')})
+                          </div>
                         </div>
-                        <div style={{ fontSize: '9px', color: '#000000', marginTop: '1px' }}>
-                          (बैंक ₹{singleMonthPrintData.totalBankExp.toLocaleString('en-IN')} + नकद ₹{singleMonthPrintData.totalCashExp.toLocaleString('en-IN')})
+
+                        <div style={{ borderRight: '1px dashed #94a3b8', paddingRight: '4px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '10px' }}>२. चालू माह खर्चा (व्यय):</div>
+                          <div style={{ fontWeight: 900, fontSize: '12.5px', color: '#000000', marginTop: '1px' }}>
+                            ₹{currExp.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (बैंक ₹{currBankExp.toLocaleString('en-IN')} + नकद ₹{currCashExp.toLocaleString('en-IN')})
+                          </div>
+                        </div>
+
+                        <div style={{ borderRight: '1px dashed #94a3b8', paddingRight: '4px' }}>
+                          <div style={{ fontWeight: 800, fontSize: '10px', color: '#000000' }}>३. चालू इन-हैंड नकद अवशेष:</div>
+                          <div style={{ fontWeight: 900, fontSize: '13px', color: '#000000', marginTop: '1px' }}>
+                            ₹{currCashInHand.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (नकद मिला ₹{currCashCollected.toLocaleString('en-IN')} - नकद खर्च ₹{currCashExp.toLocaleString('en-IN')})
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '10px' }}>४. चालू शुद्ध संग्रह:</div>
+                          <div style={{ fontWeight: 900, fontSize: '12.5px', color: '#000000', marginTop: '1px' }}>
+                            ₹{currNet.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (संचयी: ₹{cumulativeNet.toLocaleString('en-IN')})
+                          </div>
                         </div>
                       </div>
+                    </div>
 
-                      <div style={{ borderRight: '1px dashed #000000', paddingRight: '6px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '10.5px' }}>३. हस्तगत नकद अवशेष:</div>
-                        <div style={{ fontWeight: 900, fontSize: '13px', color: '#000000', marginTop: '1px' }}>
-                          ₹{currCashInHand.toLocaleString('en-IN')}
+                    {/* भाग (ग): सर्वकुल समेकित अंतिम अवशेष स्थिति (Closing Balance) */}
+                    <div style={{ background: '#f1f5f9', border: '1.5px solid #000000', padding: '6px 8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ borderRight: '1.5px solid #000000', paddingRight: '8px' }}>
+                          <div style={{ fontWeight: 800, fontSize: '10.5px' }}>कुल हस्तगत नकद अवशेष (In-Hand):</div>
+                          <div style={{ fontWeight: 900, fontSize: '14px', color: '#000000', marginTop: '1px' }}>
+                            ₹{totalInHandNow.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (विगत नकद ₹{prevCashInHand.toLocaleString('en-IN')} + चालू नकद ₹{currCashInHand.toLocaleString('en-IN')})
+                          </div>
                         </div>
-                        <div style={{ fontSize: '9px', color: '#000000', marginTop: '1px' }}>
-                          (नकद ₹{currCashCollected.toLocaleString('en-IN')} - व्यय ₹{currExp.toLocaleString('en-IN')})
-                        </div>
-                      </div>
 
-                      <div style={{ borderRight: '1px dashed #000000', paddingRight: '6px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '10.5px' }}>४. शुद्ध राजकीय संग्रह:</div>
-                        <div style={{ fontWeight: 900, fontSize: '13.5px', color: '#000000', marginTop: '1px' }}>
-                          ₹{currNet.toLocaleString('en-IN')}
+                        <div style={{ borderRight: '1.5px solid #000000', paddingRight: '8px' }}>
+                          <div style={{ fontWeight: 800, fontSize: '10.5px' }}>वर्तमान बैंक खाता अवशेष:</div>
+                          <div style={{ fontWeight: 900, fontSize: '14px', color: '#000000', marginTop: '1px' }}>
+                            ₹{bankRecord.current_balance.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            ({bankRecord.notes || 'पासबुक / नेट बैंकिंग अनुसार'})
+                          </div>
                         </div>
-                        <div style={{ fontSize: '9px', color: '#000000', marginTop: '1px' }}>
-                          {prevMonthPrintData ? `(संचयी: ₹${cumulativeNet.toLocaleString('en-IN')})` : '(मासिक शुद्ध)'}
-                        </div>
-                      </div>
 
-                      <div>
-                        <div style={{ fontWeight: 800, color: '#000000', fontSize: '10.5px' }}>५. बैंक खाता अवशेष:</div>
-                        <div style={{ fontWeight: 900, fontSize: '13.5px', color: '#000000', marginTop: '1px' }}>
-                          ₹{bankRecord.current_balance.toLocaleString('en-IN')}
-                        </div>
-                        <div style={{ fontSize: '9px', color: '#000000', marginTop: '1px' }}>
-                          ({bankRecord.notes || 'पासबुक / पोर्टल अनुसार'})
+                        <div>
+                          <div style={{ fontWeight: 900, fontSize: '11px', textTransform: 'uppercase' }}>सर्वकुल उपलब्ध राजकीय अवशेष:</div>
+                          <div style={{ fontWeight: 900, fontSize: '14.5px', color: '#000000', marginTop: '1px' }}>
+                            ₹{totalLiquidNow.toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '8.5px', color: '#000000' }}>
+                            (कुल हस्तगत नकद + बैंक खाता अवशेष)
+                          </div>
                         </div>
                       </div>
                     </div>
