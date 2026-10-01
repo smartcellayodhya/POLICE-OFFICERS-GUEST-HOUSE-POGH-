@@ -8,11 +8,12 @@ import {
   BookOpenCheck,
   X,
   BarChart3,
+  BellRing,
 } from 'lucide-react';
 
 import { useLanguage } from '@/lib/languageContext';
 
-export type NavTab = 'dashboard' | 'matrix' | 'bookings' | 'monthly';
+export type NavTab = 'dashboard' | 'matrix' | 'bookings' | 'monthly' | 'requests';
 
 interface SidebarProps {
   currentUser?: AuthUser;
@@ -21,6 +22,7 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout?: () => void;
+  pendingRequestsCount?: number;
 }
 
 const SidebarComponent: React.FC<SidebarProps> = ({
@@ -29,6 +31,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
   onSelectTab,
   isOpen,
   onClose,
+  pendingRequestsCount = 0,
 }) => {
   const { language, t } = useLanguage();
 
@@ -37,23 +40,34 @@ const SidebarComponent: React.FC<SidebarProps> = ({
       id: 'dashboard' as NavTab,
       label: t('dashboard'),
       icon: LayoutDashboard,
+      badge: 0,
+    },
+    {
+      id: 'requests' as NavTab,
+      label: language === 'hi' ? 'बुकिंग अनुरोध' : 'Booking Requests',
+      icon: BellRing,
+      badge: pendingRequestsCount,
     },
     {
       id: 'matrix' as NavTab,
       label: t('matrix'),
       icon: BedDouble,
+      badge: 0,
     },
     {
       id: 'bookings' as NavTab,
       label: t('bookings'),
       icon: BookOpenCheck,
+      badge: 0,
     },
     {
       id: 'monthly' as NavTab,
       label: language === 'hi' ? 'माह-वार कलेक्शन' : 'Monthly Collection',
       icon: BarChart3,
+      badge: 0,
     },
   ];
+
 
   const handleNavClick = (tab: NavTab) => {
     onSelectTab(tab);
@@ -123,18 +137,26 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left cursor-pointer ${
                     isActive
                       ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold'
                       : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && item.badge > 0 ? (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10.5px] font-black bg-amber-500 text-slate-950 animate-pulse">
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
           </nav>
+
         </div>
 
       </aside>

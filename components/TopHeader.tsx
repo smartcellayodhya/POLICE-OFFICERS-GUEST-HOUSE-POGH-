@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AuthUser } from '@/lib/auth';
-import { Menu, Plus, Building2, Pencil } from 'lucide-react';
+import { Menu, Plus, Building2, Pencil, BellRing } from 'lucide-react';
 import { NavTab } from './Sidebar';
 import { formatToHindiDate, formatToDisplayDate } from '@/lib/dateUtils';
 import { useLanguage } from '@/lib/languageContext';
@@ -25,6 +25,8 @@ interface TopHeaderProps {
   onOpenAuditLog?: () => void;
   onOpenMonthlyCollection?: () => void;
   onLogout: () => void;
+  pendingRequestsCount?: number;
+  onNavigateToRequests?: () => void;
 }
 
 const TopHeaderComponent: React.FC<TopHeaderProps> = ({
@@ -35,6 +37,8 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
   onOpenAuditLog,
   onOpenMonthlyCollection,
   onLogout,
+  pendingRequestsCount = 0,
+  onNavigateToRequests,
 }) => {
   const { language, t } = useLanguage();
   const isAdmin = currentUser.role === 'admin';
@@ -104,6 +108,8 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
     switch (activeTab) {
       case 'dashboard':
         return t('dashboard');
+      case 'requests':
+        return language === 'hi' ? 'बुकिंग अनुरोध' : 'Booking Requests';
       case 'matrix':
         return t('matrix');
       case 'bookings':
@@ -143,6 +149,20 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
           {/* Right: Actions & User Dropdown Menu */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
 
+            {/* Pending Requests Alert Button */}
+            {pendingRequestsCount > 0 && onNavigateToRequests && (
+              <button
+                type="button"
+                onClick={onNavigateToRequests}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 transition shadow-xs cursor-pointer animate-pulse shrink-0"
+                title={`${pendingRequestsCount} नए आरक्षण अनुरोध (समीक्षा हेतु क्लिक करें)`}
+              >
+                <BellRing className="w-4 h-4 text-amber-600" />
+                <span className="text-xs font-black hidden sm:inline">{pendingRequestsCount} नए अनुरोध</span>
+                <span className="text-xs font-black sm:hidden">{pendingRequestsCount}</span>
+              </button>
+            )}
+
             {/* Guest House Bank Balance Widget */}
             <button
               type="button"
@@ -169,6 +189,7 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
             </button>
 
             {/* Quick New Booking Button (Admin Only) */}
+
             {isAdmin && (
               <button
                 onClick={onOpenBookingModal}

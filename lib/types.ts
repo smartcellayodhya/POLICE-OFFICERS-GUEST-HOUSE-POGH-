@@ -90,3 +90,36 @@ export interface LetterDetails {
   stay_hours?: number;
   hourly_rate?: number;
 }
+
+export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface BookingRequest {
+  id: string;
+  request_number: string;
+  guest_name: string;
+  designation?: string;
+  department?: string;
+  mobile_number: string;
+  email?: string;
+  id_proof_type?: string;
+  id_proof_number?: string;
+  reference: string;
+  purpose?: string;
+  check_in_date: string;
+  check_out_date: string;
+  check_in_time?: string;
+  check_out_time?: string;
+  stay_type?: 'STANDARD' | 'HOURLY';
+  requested_suits?: string[];
+  number_of_guests?: number;
+  status: RequestStatus;
+  rejection_reason?: string;
+  approved_suits?: string[];
+  approved_booking_id?: string;
+  action_by?: string;
+  action_at?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+

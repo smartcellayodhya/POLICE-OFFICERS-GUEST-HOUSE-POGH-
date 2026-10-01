@@ -141,3 +141,62 @@ CREATE POLICY "Allow read bank balance" ON public.pogh_bank_balance
 
 CREATE POLICY "Allow service role bank balance mutations" ON public.pogh_bank_balance
     FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ====================================================================
+-- 11. GUEST BOOKING REQUESTS TABLE (Public Request & Approval Workflow)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.pogh_booking_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_number TEXT UNIQUE NOT NULL,
+    guest_name TEXT NOT NULL,
+    designation TEXT,
+    department TEXT,
+    mobile_number TEXT NOT NULL,
+    email TEXT,
+    id_proof_type TEXT,
+    id_proof_number TEXT,
+    reference TEXT DEFAULT 'SSP SIR',
+    purpose TEXT,
+    check_in_date DATE NOT NULL,
+    check_out_date DATE NOT NULL,
+    check_in_time TEXT DEFAULT '12:00 PM',
+    check_out_time TEXT DEFAULT '12:00 PM',
+    stay_type TEXT DEFAULT 'STANDARD',
+    requested_suits TEXT[],
+    number_of_guests INTEGER DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'PENDING', -- 'PENDING', 'APPROVED', 'REJECTED'
+    rejection_reason TEXT,
+    approved_suits TEXT[],
+    approved_booking_id UUID REFERENCES public.pogh_bookings(id) ON DELETE SET NULL,
+    action_by TEXT,
+    action_at TIMESTAMPTZ,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('Asia/Kolkata', now()),
+    updated_at TIMESTAMPTZ DEFAULT TIMEZONE('Asia/Kolkata', now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_pogh_requests_mobile ON public.pogh_booking_requests (mobile_number);
+CREATE INDEX IF NOT EXISTS idx_pogh_requests_status ON public.pogh_booking_requests (status);
+CREATE INDEX IF NOT EXISTS idx_pogh_requests_dates ON public.pogh_booking_requests (check_in_date, check_out_date);
+
+ALTER TABLE public.pogh_booking_requests ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone (public/anon) to submit a new request
+CREATE POLICY "Allow public insert requests" ON public.pogh_booking_requests
+    FOR INSERT
+    WITH CHECK (true);
+
+-- Allow public to view requests (for request tracking by tracking code or mobile)
+CREATE POLICY "Allow public read requests" ON public.pogh_booking_requests
+    FOR SELECT
+    USING (true);
+
+-- Full mutation access for service_role (Approve/Reject operations via Server API)
+CREATE POLICY "Allow service role full access to requests" ON public.pogh_booking_requests
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+-- Enable Realtime for live request alerts
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pogh_booking_requests;

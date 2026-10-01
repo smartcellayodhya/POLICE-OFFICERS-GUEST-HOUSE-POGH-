@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Booking, BookingStatus } from '@/lib/types';
+import { Booking, BookingStatus, BookingRequest } from '@/lib/types';
 import {
   getSupabaseClient,
   isSupabaseConfigured,
@@ -27,6 +27,11 @@ import {
   apiUpdateBooking,
   apiDeleteBooking,
 } from '@/lib/apiClient';
+import {
+  apiFetchBookingRequests,
+  getLocalBookingRequests,
+  saveLocalBookingRequests,
+} from '@/lib/requestUtils';
 
 import { LoginPage } from '@/components/LoginPage';
 import { Sidebar, NavTab } from '@/components/Sidebar';
@@ -44,6 +49,7 @@ import { HindiLetterModal } from '@/components/HindiLetterModal';
 import { ReceiptModal } from '@/components/ReceiptModal';
 import { AuditLogModal } from '@/components/AuditLogModal';
 import { MonthlyCollectionPage } from '@/components/MonthlyCollectionPage';
+import { BookingRequestsView } from '@/components/BookingRequestsView';
 import { SplashScreen } from '@/components/SplashScreen';
 import { LanguageProvider, useLanguage } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
@@ -69,6 +75,19 @@ function HomePageContent() {
     if (typeof window !== 'undefined') {
       try {
         const cached = getLocalBookings();
+        if (cached && cached.length > 0) return cached;
+      } catch {
+        // ignore
+      }
+    }
+    return [];
+  });
+
+  // Booking Requests State
+  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = getLocalBookingRequests();
         if (cached && cached.length > 0) return cached;
       } catch {
         // ignore
@@ -106,6 +125,7 @@ function HomePageContent() {
   const [selectedCollectionBooking, setSelectedCollectionBooking] = useState<Booking | null>(null);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
 
+
   // Check login and sync URL route on mount
   useEffect(() => {
     const user = getLoggedInUser();
@@ -122,7 +142,9 @@ function HomePageContent() {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
 
-      if (path === 'monthly' || path === 'monthly-collection' || tabParam === 'monthly') {
+      if (path === 'requests' || tabParam === 'requests') {
+        setActiveTab('requests');
+      } else if (path === 'monthly' || path === 'monthly-collection' || tabParam === 'monthly') {
         setActiveTab('monthly');
       } else if (path === 'matrix' || tabParam === 'matrix') {
         setActiveTab('matrix');
@@ -133,6 +155,7 @@ function HomePageContent() {
       }
     }
   }, []);
+
 
   // 15-Minute Inactivity Auto-Logout with Sleep/Wake-up & Cross-Tab Sync
   const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
@@ -298,27 +321,48 @@ function HomePageContent() {
     setLoading(false);
   }, []);
 
-  // Realtime Sync Listener
+  // Fetch Booking Requests (Admin & Operator)
+  const fetchBookingRequests = useCallback(async () => {
+    try {
+      const res = await apiFetchBookingRequests();
+      if (res.success && res.requests) {
+        setBookingRequests(res.requests);
+      }
+    } catch (err) {
+      console.error('Error fetching booking requests:', err);
+    }
+  }, []);
+
+  // Realtime Sync Listener (Bookings & Requests)
   useEffect(() => {
     if (!currentUser) return;
 
     fetchBookings();
+    fetchBookingRequests();
 
     let debounceTimer: NodeJS.Timeout | null = null;
     const debouncedFetch = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         fetchBookings();
+        fetchBookingRequests();
       }, 350);
     };
 
     const client = getSupabaseClient();
     if (client && isSupabaseConfigured()) {
       const channel = client
-        .channel('pogh_realtime_bookings')
+        .channel('pogh_realtime_bookings_and_requests')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'pogh_bookings' },
+          () => {
+            debouncedFetch();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'pogh_booking_requests' },
           () => {
             debouncedFetch();
           }
@@ -330,7 +374,8 @@ function HomePageContent() {
         client.removeChannel(channel);
       };
     }
-  }, [currentUser, fetchBookings]);
+  }, [currentUser, fetchBookings, fetchBookingRequests]);
+
 
   // Handle New Bookings Save (Admin Only - Strictly via Server API using Private Key)
   const handleSaveBookings = async (newBookings: Booking[]) => {
@@ -671,6 +716,11 @@ function HomePageContent() {
   const isAdmin = currentUser?.role === 'admin';
   const isOperator = currentUser?.role === 'operator';
 
+  // Count pending booking requests
+  const pendingRequestsCount = useMemo(() => {
+    return bookingRequests.filter((r) => r.status === 'PENDING').length;
+  }, [bookingRequests]);
+
   if (!authChecked) {
     return null;
   }
@@ -703,6 +753,7 @@ function HomePageContent() {
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
           onLogout={handleLogout}
+          pendingRequestsCount={pendingRequestsCount}
         />
 
         {/* 2. Main Content Layout (Padded for Desktop Sidebar) */}
@@ -722,7 +773,10 @@ function HomePageContent() {
             onOpenAuditLog={() => setIsAuditModalOpen(true)}
             onOpenMonthlyCollection={() => handleSelectTab('monthly')}
             onLogout={handleLogout}
+            pendingRequestsCount={pendingRequestsCount}
+            onNavigateToRequests={() => handleSelectTab('requests')}
           />
+
 
         {/* Dynamic Main Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 min-w-0">
@@ -836,7 +890,28 @@ function HomePageContent() {
             />
           )}
 
+          {/* Tab 5: Guest Booking Requests Review & Approval */}
+          {activeTab === 'requests' && (
+            <div className="space-y-6">
+              <BookingRequestsView
+                requests={bookingRequests}
+                existingBookings={bookings}
+                isAdmin={isAdmin}
+                isOperator={isOperator}
+                onRefresh={async () => {
+                  await Promise.all([fetchBookingRequests(), fetchBookings()]);
+                }}
+                onNavigateToBookings={() => handleSelectTab('bookings')}
+                onOpenLetter={(b) => {
+                  setSelectedLetterBooking(b);
+                  setIsLetterModalOpen(true);
+                }}
+              />
+            </div>
+          )}
+
         </main>
+
 
         {/* Clean Official Footer */}
         <footer className="bg-slate-900 text-slate-400 border-t border-slate-800 text-xs py-5">

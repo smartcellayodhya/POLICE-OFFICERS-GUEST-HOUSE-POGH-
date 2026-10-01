@@ -6,10 +6,12 @@ export const SUITS = [
 ];
 
 export const REFERENCES = [
-  'SSP SIR',
-  'DIG SIR',
-  'IG SIR',
+  'DGP SIR',
+  'SPL. DGP SIR',
   'ADG SIR',
+  'IG SIR',
+  'DIG SIR',
+  'SSP SIR',
   'SP CITY',
   'SP RURAL',
   'CO SIR',

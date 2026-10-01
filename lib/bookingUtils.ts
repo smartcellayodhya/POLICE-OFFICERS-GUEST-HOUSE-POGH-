@@ -11,11 +11,12 @@ export function formatGuestDisplayName(rawName: string): string {
 }
 
 // Generate unique sequential reference number e.g. POGH-2026-003
-export function generateBookingRef(existingBookings: Booking[]): string {
+export function generateBookingRef(existingBookings: Booking[] = []): string {
   const currentYear = new Date().getFullYear();
   let maxNum = 0;
 
-  existingBookings.forEach((b) => {
+  (existingBookings || []).forEach((b) => {
+
     const ref = b.group_id || extractGroupIdFromNotes(b.notes);
     if (ref && ref.startsWith(`POGH-${currentYear}-`)) {
       const parts = ref.split('-');
@@ -31,11 +32,12 @@ export function generateBookingRef(existingBookings: Booking[]): string {
 }
 
 // Generate auto dispatch number e.g. 003
-export function generateDispatchNumber(existingBookings: Booking[]): string {
+export function generateDispatchNumber(existingBookings: Booking[] = []): string {
   const currentYear = new Date().getFullYear();
   let maxNum = 0;
 
-  existingBookings.forEach((b) => {
+  (existingBookings || []).forEach((b) => {
+
     const disp = b.dispatch_no || extractDispatchNoFromNotes(b.notes);
     if (disp) {
       const num = parseInt(disp, 10);

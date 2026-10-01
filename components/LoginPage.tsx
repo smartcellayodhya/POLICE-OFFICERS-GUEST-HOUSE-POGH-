@@ -307,9 +307,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, logoutReas
           </button>
         </form>
 
+        {/* Public Booking Request CTA Section */}
+        <div className="mt-5 pt-4 border-t border-slate-800 text-center">
+          <p className="text-xs text-slate-400 mb-2">
+            {language === 'hi' ? 'अतिथि अथवा अधिकारी कमरा आरक्षण हेतु अनुरोध करें:' : 'Guest or Officer requesting a room stay:'}
+          </p>
+          <a
+            href="/request"
+            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 hover:border-amber-400/60 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>{language === 'hi' ? '📝 नया आरक्षण अनुरोध करें / स्थिति जांचें' : '📝 Request Room Booking / Track Status'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
       </div>
 
       {/* Footer info below login card */}
+
       <footer className="mt-6 text-center z-10 select-none space-y-1">
         <p className="text-xs text-slate-500 font-medium tracking-wide">
           &copy; {new Date().getFullYear()} {language === 'hi' ? 'अयोध्या पुलिस • सर्वाधिकार सुरक्षित' : 'Ayodhya Police • All Rights Reserved'}
