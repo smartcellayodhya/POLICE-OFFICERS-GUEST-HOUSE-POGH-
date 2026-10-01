@@ -2,49 +2,56 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { BookingRequest } from '@/lib/types';
+import { REFERENCES } from '@/lib/constants';
+import { formatToDisplayDate } from '@/lib/dateUtils';
+import { apiSubmitBookingRequest, apiTrackBookingRequest } from '@/lib/requestUtils';
 import {
-  Calendar,
-  User,
-  Phone,
   Send,
   Search,
   CheckCircle2,
   AlertCircle,
-  XCircle,
-  ArrowLeft,
   Copy,
-  Loader2,
+  Calendar,
   Clock,
+  Phone,
+  User,
+  ArrowLeft,
+  Loader2,
   Languages,
+  Shield,
+  Briefcase,
+  Building,
 } from 'lucide-react';
-import { REFERENCES } from '@/lib/constants';
-import { formatToISODate, formatToDisplayDate } from '@/lib/dateUtils';
-import { apiSubmitBookingRequest, apiTrackBookingRequest } from '@/lib/requestUtils';
-import { BookingRequest } from '@/lib/types';
 
-export default function RequestBookingPage() {
-  const today = formatToISODate(new Date());
-  const tomorrow = formatToISODate(new Date(Date.now() + 24 * 60 * 60 * 1000));
-
-  // Language state: English by default ('en'), switchable to Hindi ('hi')
+export default function BookingRequestPublicPage() {
   const [lang, setLang] = useState<'en' | 'hi'>('en');
+  const isEn = lang === 'en';
 
   const [activeTab, setActiveTab] = useState<'request' | 'track'>('request');
 
-  // Form State - Ultra minimal & clean
+  // Form State
   const [guestName, setGuestName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [designation, setDesignation] = useState('');
   const [department, setDepartment] = useState('');
+
+  // Default dates: Today & Tomorrow
+  const todayISO = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowISO = tomorrow.toISOString().split('T')[0];
+
+  const [checkInDate, setCheckInDate] = useState(todayISO);
+  const [checkOutDate, setCheckOutDate] = useState(tomorrowISO);
+  const [checkInTime, setCheckInTime] = useState('12:00 PM');
+  const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
+
   const [reference, setReference] = useState('SSP SIR');
   const [customRef, setCustomRef] = useState('');
-  const [checkInDate, setCheckInDate] = useState(today);
-  const [checkInTime, setCheckInTime] = useState('12:00 PM');
-  const [checkOutDate, setCheckOutDate] = useState(tomorrow);
-  const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
   const [notes, setNotes] = useState('');
 
-  // Submission State
+  // UI state
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [submittedRequest, setSubmittedRequest] = useState<BookingRequest | null>(null);
@@ -55,8 +62,6 @@ export default function RequestBookingPage() {
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackResults, setTrackResults] = useState<BookingRequest[] | null>(null);
   const [trackError, setTrackError] = useState('');
-
-  const isEn = lang === 'en';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,12 +74,17 @@ export default function RequestBookingPage() {
 
     const cleanMobile = mobileNumber.replace(/\D/g, '');
     if (cleanMobile.length < 10) {
-      setErrorMsg(isEn ? 'Please enter a valid 10-digit mobile number.' : 'कृपया 10 अंकों का मान्य मोबाइल नंबर दर्ज करें।');
+      setErrorMsg(isEn ? 'Please enter a valid 10-digit mobile number.' : 'कृपया 10 अंकों का सक्रिय मोबाइल नंबर दर्ज करें।');
+      return;
+    }
+
+    if (!checkInDate || !checkOutDate) {
+      setErrorMsg(isEn ? 'Please select valid check-in and check-out dates.' : 'कृपया आगमन एवं प्रस्थान की मान्य तिथियां चुनें।');
       return;
     }
 
     if (checkOutDate < checkInDate) {
-      setErrorMsg(isEn ? 'Check-out date cannot be earlier than check-in date.' : 'प्रस्थान तिथि आगमन तिथि से पहले नहीं हो सकती।');
+      setErrorMsg(isEn ? 'Check-out date cannot be before check-in date.' : 'प्रस्थान तिथि आगमन तिथि से पूर्व नहीं हो सकती।');
       return;
     }
 
@@ -144,21 +154,21 @@ export default function RequestBookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950 font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between font-sans selection:bg-slate-900 selection:text-white">
       
-      {/* Modern Top Header with Language Switcher */}
-      <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-30">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      {/* Executive Clean Header */}
+      <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-2xs">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white p-1 shadow-md border border-amber-400/40 flex-shrink-0 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-white p-1 shadow-sm border border-slate-200 flex-shrink-0 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/up_police_logo.png" alt="UP Police" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-sm font-extrabold text-white tracking-wide leading-tight">
+              <h1 className="text-sm font-bold text-slate-900 tracking-tight leading-tight">
                 {isEn ? 'Police Officers Guest House (POGH)' : 'पुलिस ऑफिसर्स गेस्ट हाउस (POGH)'}
               </h1>
-              <p className="text-[11px] text-amber-400 font-medium">
+              <p className="text-[11px] text-slate-500 font-medium">
                 {isEn ? 'Ayodhya Police • Booking Request Portal' : 'अयोध्या पुलिस • आरक्षण अनुरोध पोर्टल'}
               </p>
             </div>
@@ -169,16 +179,16 @@ export default function RequestBookingPage() {
             <button
               type="button"
               onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-amber-300 transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
               title={isEn ? 'Switch to Hindi (हिंदी में देखें)' : 'Switch to English'}
             >
-              <Languages className="w-3.5 h-3.5 text-amber-400" />
+              <Languages className="w-3.5 h-3.5 text-slate-500" />
               <span>{isEn ? 'हिंदी' : 'English'}</span>
             </button>
 
             <Link
               href="/"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 transition"
+              className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-2xs transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>{isEn ? 'Login' : 'लॉगिन'}</span>
@@ -192,10 +202,10 @@ export default function RequestBookingPage() {
         
         {/* Title */}
         <div className="text-center mb-6">
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             {isEn ? 'Guest Booking Request' : 'कमरा आरक्षण अनुरोध'}
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             {isEn
               ? 'Submit your stay details. Room allocation will be processed upon approval.'
               : 'विवरण भरें, अनुमोदन के पश्चात आपका कमरा आरक्षित कर दिया जाएगा।'}
@@ -203,14 +213,14 @@ export default function RequestBookingPage() {
         </div>
 
         {/* Clean Pill Tab Switcher */}
-        <div className="p-1 rounded-2xl bg-slate-900 border border-slate-800/80 flex items-center max-w-sm mx-auto mb-6 shadow-inner">
+        <div className="p-1 rounded-xl bg-slate-200/80 border border-slate-200 flex items-center max-w-xs mx-auto mb-6 shadow-inner">
           <button
             type="button"
             onClick={() => setActiveTab('request')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'request'
-                ? 'bg-amber-400 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Send className="w-3.5 h-3.5" />
@@ -219,10 +229,10 @@ export default function RequestBookingPage() {
           <button
             type="button"
             onClick={() => setActiveTab('track')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'track'
-                ? 'bg-amber-400 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Search className="w-3.5 h-3.5" />
@@ -237,63 +247,63 @@ export default function RequestBookingPage() {
           <div>
             {submittedRequest ? (
               /* Success Confirmation Card */
-              <div className="p-6 sm:p-7 rounded-3xl bg-slate-900/90 border border-emerald-500/40 shadow-2xl text-center backdrop-blur-md animate-in zoom-in-95">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center mx-auto mb-3 border border-emerald-500/30">
+              <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200 shadow-sm text-center animate-in zoom-in-95">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3 border border-emerald-200">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-black text-white">
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">
                   {isEn ? 'Request Submitted Successfully!' : 'अनुरोध सफलतापूर्वक दर्ज हो गया!'}
                 </h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                   {isEn
                     ? 'Your booking request has been sent for review by SSP Office / Guest House Operator.'
                     : 'आपका आवेदन समीक्षा हेतु वरिष्ठ पुलिस अधीक्षक कार्यालय / ऑपरेटर के पास पहुंच गया है।'}
                 </p>
 
                 {/* Tracking ID Box */}
-                <div className="my-5 p-3.5 rounded-2xl bg-slate-950 border border-amber-500/30">
-                  <span className="text-[10.5px] text-slate-400 font-semibold block uppercase tracking-wider">
+                <div className="my-5 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[11px] text-slate-500 font-semibold block uppercase tracking-wider">
                     {isEn ? 'Booking Request Reference ID' : 'आपकी संदर्भ संख्या (Request ID)'}
                   </span>
                   <div className="flex items-center justify-center gap-2 mt-1">
-                    <span className="text-xl font-black text-amber-400 font-mono tracking-widest">
+                    <span className="text-xl sm:text-2xl font-bold text-slate-900 font-mono tracking-wider">
                       {submittedRequest.request_number}
                     </span>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(submittedRequest.request_number)}
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                      className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 transition cursor-pointer"
                       title={isEn ? 'Copy ID' : 'कॉपी करें'}
                     >
-                      {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
                   {copied && (
-                    <span className="text-[11px] text-emerald-400 block mt-1">
+                    <span className="text-xs text-emerald-600 font-semibold block mt-1">
                       {isEn ? 'Copied to clipboard!' : 'आईडी कॉपी हो गई!'}
                     </span>
                   )}
                 </div>
 
                 {/* Quick Details */}
-                <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-left text-xs space-y-2 mb-5 text-slate-300">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2 mb-5 text-slate-700">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">{isEn ? 'Guest Name:' : 'अतिथि:'}</span>
-                    <span className="font-bold text-white">{submittedRequest.guest_name}</span>
+                    <span className="text-slate-500">{isEn ? 'Guest Name:' : 'अतिथि:'}</span>
+                    <span className="font-bold text-slate-900">{submittedRequest.guest_name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">{isEn ? 'Mobile No.:' : 'मोबाइल:'}</span>
-                    <span className="font-mono text-white">{submittedRequest.mobile_number}</span>
+                    <span className="text-slate-500">{isEn ? 'Mobile No.:' : 'मोबाइल:'}</span>
+                    <span className="font-mono text-slate-900 font-medium">{submittedRequest.mobile_number}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">{isEn ? 'Dates:' : 'तारीख:'}</span>
-                    <span className="font-medium text-white">
+                    <span className="text-slate-500">{isEn ? 'Dates:' : 'तारीख:'}</span>
+                    <span className="font-medium text-slate-900">
                       {formatToDisplayDate(submittedRequest.check_in_date)} ({submittedRequest.check_in_time}) → {formatToDisplayDate(submittedRequest.check_out_date)} ({submittedRequest.check_out_time})
                     </span>
                   </div>
-                  <div className="flex justify-between items-center pt-1 border-t border-slate-800">
-                    <span className="text-slate-400">{isEn ? 'Status:' : 'स्थिति:'}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold border border-amber-500/30">
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                    <span className="text-slate-500">{isEn ? 'Status:' : 'स्थिति:'}</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">
                       {isEn ? 'Pending Review' : 'प्रतीक्षारत (Pending)'}
                     </span>
                   </div>
@@ -312,7 +322,7 @@ export default function RequestBookingPage() {
                       setCheckOutTime('12:00 PM');
                       setNotes('');
                     }}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+                    className="w-full py-2.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition cursor-pointer"
                   >
                     {isEn ? 'Submit Another Request' : 'नया अनुरोध भरें'}
                   </button>
@@ -323,7 +333,7 @@ export default function RequestBookingPage() {
                       setActiveTab('track');
                       setTimeout(() => handleTrackSearch(), 100);
                     }}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 transition"
+                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition cursor-pointer shadow-2xs"
                   >
                     {isEn ? 'Track Status' : 'स्थिति ट्रैक करें'}
                   </button>
@@ -331,18 +341,18 @@ export default function RequestBookingPage() {
               </div>
             ) : (
               /* Ultra-Clean Modern Form */
-              <form onSubmit={handleSubmit} className="p-5 sm:p-7 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl backdrop-blur-md space-y-4">
+              <form onSubmit={handleSubmit} className="p-5 sm:p-7 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
                 {errorMsg && (
-                  <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                     <span>{errorMsg}</span>
                   </div>
                 )}
 
                 {/* 1. Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    {isEn ? 'Guest Name' : 'अतिथि का नाम'} <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    {isEn ? 'Guest Name' : 'अतिथि का नाम'} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -350,14 +360,14 @@ export default function RequestBookingPage() {
                     value={guestName}
                     onChange={(e) => setGuestName(e.target.value)}
                     placeholder={isEn ? 'e.g. Rahul Yadav' : 'उदा. राहुल यादव'}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-amber-400 focus:outline-none transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                   />
                 </div>
 
                 {/* 2. Mobile */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    {isEn ? 'Mobile Number' : 'मोबाइल नंबर'} <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    {isEn ? 'Mobile Number' : 'मोबाइल नंबर'} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -366,7 +376,7 @@ export default function RequestBookingPage() {
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                     placeholder={isEn ? '10-digit active mobile number' : '10 अंकों का सक्रिय मोबाइल नंबर'}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-amber-400 focus:outline-none transition font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition font-mono"
                   />
                 </div>
 
@@ -374,33 +384,33 @@ export default function RequestBookingPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-slate-300">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         {isEn ? 'Designation' : 'पदनाम (Designation)'}
                       </label>
-                      <span className="text-[10px] text-slate-500 font-medium">{isEn ? '(Optional)' : '(वैकल्पिक)'}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{isEn ? '(Optional)' : '(वैकल्पिक)'}</span>
                     </div>
                     <input
                       type="text"
                       value={designation}
                       onChange={(e) => setDesignation(e.target.value)}
                       placeholder={isEn ? 'e.g. Dy. SP / Inspector' : 'उदा. पुलिस उपाधीक्षक / निरीक्षक'}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-amber-400 focus:outline-none transition"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-slate-300">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         {isEn ? 'Department / Unit' : 'विभाग / इकाई (Department)'}
                       </label>
-                      <span className="text-[10px] text-slate-500 font-medium">{isEn ? '(Optional)' : '(वैकल्पिक)'}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{isEn ? '(Optional)' : '(वैकल्पिक)'}</span>
                     </div>
                     <input
                       type="text"
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
                       placeholder={isEn ? 'e.g. UP Police, Varanasi' : 'उदा. यूपी पुलिस, वाराणसी'}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-amber-400 focus:outline-none transition"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                     />
                   </div>
                 </div>
@@ -408,19 +418,19 @@ export default function RequestBookingPage() {
                 {/* 4. Arrival Date & Time */}
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      {isEn ? 'Check-In Date' : 'आगमन तिथि'} <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      {isEn ? 'Check-In Date' : 'आगमन तिथि'} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="date"
                       required
                       value={checkInDate}
                       onChange={(e) => setCheckInDate(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none transition"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       {isEn ? 'Check-In Time' : 'आगमन समय (Time)'}
                     </label>
                     <input
@@ -428,7 +438,7 @@ export default function RequestBookingPage() {
                       value={checkInTime}
                       onChange={(e) => setCheckInTime(e.target.value)}
                       placeholder="12:00 PM"
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none transition font-medium"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition font-medium"
                     />
                   </div>
                 </div>
@@ -436,8 +446,8 @@ export default function RequestBookingPage() {
                 {/* 5. Departure Date & Time */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      {isEn ? 'Check-Out Date' : 'प्रस्थान तिथि'} <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      {isEn ? 'Check-Out Date' : 'प्रस्थान तिथि'} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -445,11 +455,11 @@ export default function RequestBookingPage() {
                       min={checkInDate}
                       value={checkOutDate}
                       onChange={(e) => setCheckOutDate(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none transition"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       {isEn ? 'Check-Out Time' : 'प्रस्थान समय (Time)'}
                     </label>
                     <input
@@ -457,21 +467,21 @@ export default function RequestBookingPage() {
                       value={checkOutTime}
                       onChange={(e) => setCheckOutTime(e.target.value)}
                       placeholder="12:00 PM"
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none transition font-medium"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition font-medium"
                     />
                   </div>
                 </div>
 
                 {/* 6. Reference (Mandatory) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    {isEn ? 'Reference' : 'संदर्भ (Reference)'} <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    {isEn ? 'Reference' : 'संदर्भ (Reference)'} <span className="text-rose-500">*</span>
                   </label>
                   <select
                     required
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none transition"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                   >
                     {REFERENCES.map((r) => (
                       <option key={r} value={r}>
@@ -486,7 +496,7 @@ export default function RequestBookingPage() {
                       value={customRef}
                       onChange={(e) => setCustomRef(e.target.value)}
                       placeholder={isEn ? 'Enter officer or reference name *' : 'अधिकारी अथवा संदर्भ का नाम दर्ज करें *'}
-                      className="mt-2 w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:border-amber-400 focus:outline-none"
+                      className="mt-2 w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-slate-400 focus:outline-none"
                     />
                   )}
                 </div>
@@ -494,17 +504,17 @@ export default function RequestBookingPage() {
                 {/* 7. Remarks (Optional) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-slate-300">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                       {isEn ? 'Special Remarks' : 'विशेष टिप्पणी'}
                     </label>
-                    <span className="text-[10px] text-slate-500 font-medium">{isEn ? '(Optional)' : '(वैकल्पिक)'}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">{isEn ? '(Optional)' : '(वैकल्पिक)'}</span>
                   </div>
                   <input
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder={isEn ? 'Any special requirement or notes...' : 'कोई विशेष आवश्यकता अथवा विवरण...'}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                   />
                 </div>
 
@@ -513,11 +523,11 @@ export default function RequestBookingPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3 rounded-xl text-sm font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-400/20 transition active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full py-3 rounded-xl text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {submitting ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
                         <span>{isEn ? 'Submitting request...' : 'सबमिट हो रहा है...'}</span>
                       </>
                     ) : (
@@ -538,8 +548,8 @@ export default function RequestBookingPage() {
         {/* ======================================================== */}
         {activeTab === 'track' && (
           <div className="space-y-4">
-            <div className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl backdrop-blur-md">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                 {isEn ? 'Enter Request ID or Mobile Number:' : 'अनुरोध संदर्भ संख्या अथवा मोबाइल नंबर:'}
               </label>
 
@@ -550,12 +560,12 @@ export default function RequestBookingPage() {
                   value={trackQuery}
                   onChange={(e) => setTrackQuery(e.target.value)}
                   placeholder={isEn ? 'Request ID or 10-digit Mobile No.' : 'Request ID या 10 अंकों का मोबाइल नंबर'}
-                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                 />
                 <button
                   type="submit"
                   disabled={trackingLoading || !trackQuery.trim()}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
                 >
                   {trackingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                   <span>{isEn ? 'Search' : 'खोजें'}</span>
@@ -563,8 +573,8 @@ export default function RequestBookingPage() {
               </form>
 
               {trackError && (
-                <div className="mt-3 p-3 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <div className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                   <span>{trackError}</span>
                 </div>
               )}
@@ -580,52 +590,49 @@ export default function RequestBookingPage() {
                   return (
                     <div
                       key={req.id}
-                      className={`p-4 rounded-2xl bg-slate-900 border transition shadow-lg ${
-                        isApproved
-                          ? 'border-emerald-500/50'
-                          : isRejected
-                          ? 'border-rose-500/50'
-                          : 'border-amber-500/40'
-                      }`}
+                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs transition"
                     >
-                      <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
-                        <span className="font-mono font-black text-amber-400 text-sm">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <span className="font-mono font-bold text-slate-900 text-sm">
                           {req.request_number}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold border flex items-center gap-1 ${
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                             isApproved
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                               : isRejected
-                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                              : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
                           }`}
                         >
                           {isApproved
-                            ? (isEn ? 'APPROVED' : 'स्वीकृत (APPROVED)')
+                            ? (isEn ? 'Approved' : 'स्वीकृत')
                             : isRejected
-                            ? (isEn ? 'REJECTED' : 'अस्वीकृत (REJECTED)')
-                            : (isEn ? 'PENDING' : 'प्रतीक्षारत (PENDING)')}
+                            ? (isEn ? 'Rejected' : 'अस्वीकृत')
+                            : (isEn ? 'Pending Review' : 'प्रतीक्षारत')}
                         </span>
                       </div>
 
-                      <div className="py-2.5 text-xs space-y-1 text-slate-300">
+                      <div className="py-3 text-xs space-y-1.5 text-slate-600">
                         <div>
-                          {isEn ? 'Guest:' : 'अतिथि:'} <strong className="text-white">{req.guest_name}</strong>
-                          {req.designation && <span className="text-amber-300"> • {req.designation}</span>}
-                          {req.department && <span className="text-slate-400"> ({req.department})</span>}
+                          <span className="text-slate-400 font-semibold">{isEn ? 'Guest: ' : 'अतिथि: '}</span>
+                          <strong className="text-slate-900">{req.guest_name}</strong>
+                          {req.designation && <span> • {req.designation}</span>}
+                          {req.department && <span className="text-slate-500"> ({req.department})</span>}
                         </div>
                         <div>
-                          {isEn ? 'Dates:' : 'तारीख:'} <strong>{formatToDisplayDate(req.check_in_date)}</strong> → <strong>{formatToDisplayDate(req.check_out_date)}</strong>
+                          <span className="text-slate-400 font-semibold">{isEn ? 'Dates: ' : 'तारीख: '}</span>
+                          <strong className="text-slate-800">{formatToDisplayDate(req.check_in_date)}</strong> → <strong className="text-slate-800">{formatToDisplayDate(req.check_out_date)}</strong>
                         </div>
                         <div>
-                          {isEn ? 'Reference:' : 'संदर्भ:'} <span className="text-amber-300 font-semibold">{req.reference || '-'}</span>
+                          <span className="text-slate-400 font-semibold">{isEn ? 'Reference: ' : 'संदर्भ: '}</span>
+                          <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{req.reference || '-'}</span>
                         </div>
                       </div>
 
                       {/* Status note */}
                       {isApproved && (
-                        <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-800 text-[11.5px] text-emerald-200">
+                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
                           {isEn ? (
                             <>
                               🎉 <strong>Congratulations!</strong> Your booking request has been approved.
@@ -649,7 +656,7 @@ export default function RequestBookingPage() {
                       )}
 
                       {isRejected && (
-                        <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-800 text-[11.5px] text-rose-200">
+                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900">
                           {isEn
                             ? 'Request was declined due to room occupancy or administrative constraints.'
                             : 'कमरे उपलब्ध न होने अथवा प्रशासनिक कारणों से अनुरोध अस्वीकृत किया गया है।'}
@@ -664,9 +671,9 @@ export default function RequestBookingPage() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 py-3.5 text-center text-xs text-slate-600">
-        <p>&copy; {new Date().getFullYear()} {isEn ? 'Ayodhya Police • Police Officers Guest House' : 'अयोध्या पुलिस • पुलिस ऑफिसर्स गेस्ट हाउस'}</p>
+      {/* Clean Footer */}
+      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+        <p>&copy; {new Date().getFullYear()} {isEn ? 'Ayodhya Police • Police Officers Guest House (POGH)' : 'अयोध्या पुलिस • पुलिस ऑफिसर्स गेस्ट हाउस (POGH)'}</p>
       </footer>
     </div>
   );
