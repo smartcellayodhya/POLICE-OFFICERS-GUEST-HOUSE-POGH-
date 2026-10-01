@@ -49,6 +49,7 @@ export async function apiFetchBookingRequests(): Promise<{
   success: boolean;
   requests?: BookingRequest[];
   error?: string;
+  warning?: string;
 }> {
   try {
     const res = await fetch('/api/booking-requests', {
@@ -57,7 +58,16 @@ export async function apiFetchBookingRequests(): Promise<{
     });
     const data = await res.json();
     if (data.success && Array.isArray(data.requests)) {
-      saveLocalBookingRequests(data.requests);
+      const local = getLocalBookingRequests();
+      const serverNumbers = new Set(data.requests.map((r: BookingRequest) => r.request_number || r.id));
+      const localOnly = local.filter((l) => !serverNumbers.has(l.request_number || l.id));
+      const merged = [...data.requests, ...localOnly];
+      saveLocalBookingRequests(merged);
+      return { success: true, requests: merged, warning: data.warning };
+    }
+    const cached = getLocalBookingRequests();
+    if (cached.length > 0) {
+      return { success: true, requests: cached, error: data.error };
     }
     return data;
   } catch (err: any) {

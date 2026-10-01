@@ -61,6 +61,13 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Error fetching booking requests:', error);
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+        return NextResponse.json({
+          success: true,
+          requests: [],
+          warning: 'pogh_booking_requests table not yet created in Supabase. Run RUN_IN_SUPABASE.sql to migrate.',
+        });
+      }
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
@@ -154,13 +161,16 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         console.error('Failed to insert booking request into Supabase:', error);
-        // If table doesn't exist yet, return gracefully with generated request number
-        return NextResponse.json({
-          success: true,
-          request_number: reqNumber,
-          request: { id: `req-${Date.now()}`, ...requestPayload },
-          warning: 'Database table pogh_booking_requests may need migration. Request generated successfully.',
-        });
+        const isTableMissing = error.code === 'PGRST205' || error.message?.includes('schema cache');
+        return NextResponse.json(
+          {
+            success: false,
+            error: isTableMissing
+              ? 'डेटाबेस में pogh_booking_requests टेबल अनुपलब्ध है। कृपया Supabase SQL Editor में RUN_IN_SUPABASE.sql रन करें।'
+              : `डेटाबेस में सेव करने में त्रुटि: ${error.message}`,
+          },
+          { status: 500 }
+        );
       }
 
       return NextResponse.json({
