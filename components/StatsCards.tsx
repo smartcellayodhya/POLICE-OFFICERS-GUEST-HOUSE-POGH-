@@ -79,6 +79,15 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
     return map;
   }, [activeBookings]);
 
+  // Online Request vs Direct Admin Bookings Count
+  const onlineBookingsCount = useMemo(() => {
+    return activeBookings.filter((b) =>
+      (b.notes || '').includes('Approved from Request:') ||
+      (b.notes || '').includes('POGH-REQ-')
+    ).length;
+  }, [activeBookings]);
+  const directBookingsCount = Math.max(0, activeBookings.length - onlineBookingsCount);
+
   // Revenue, Food, Expenditure & Monthly aggregations
   const stats = useMemo(() => {
     let totalRent = 0;
@@ -237,9 +246,11 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
                 {language === 'hi' ? 'बुकिंग्स' : 'Bookings'}
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5">
-              {language === 'hi' ? 'सक्रिय आरक्षण' : 'Active records'}
-            </p>
+            <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+              <span className="text-blue-700 font-semibold">🌐 {onlineBookingsCount}</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-600 font-semibold">👮 {directBookingsCount}</span>
+            </div>
           </div>
         </div>
 
@@ -364,8 +375,13 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
             <span className="text-lg sm:text-xl font-bold text-slate-900 tabular-nums">{activeBookings.length}</span>
             <span className="text-xs text-slate-500">{language === 'hi' ? 'बुकिंग' : 'Bookings'}</span>
           </div>
-          <div className="mt-1 text-[11px] text-slate-500 truncate">
-            <span>{language === 'hi' ? 'सक्रिय आरक्षण' : 'Active records'}</span>
+          <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10px]">
+            <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-100">
+              {language === 'hi' ? '🌐 ऑनलाइन:' : '🌐 Online:'} {onlineBookingsCount}
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+              {language === 'hi' ? '👮 प्रत्यक्ष:' : '👮 Direct:'} {directBookingsCount}
+            </span>
           </div>
         </div>
 

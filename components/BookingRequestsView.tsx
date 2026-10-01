@@ -21,8 +21,11 @@ import {
   Inbox,
   AlertCircle,
   Briefcase,
+  Globe,
+  ShieldCheck,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
+import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
 import { ApproveRequestModal } from './ApproveRequestModal';
 import { RejectRequestModal } from './RejectRequestModal';
 
@@ -125,6 +128,44 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
     return `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
   };
 
+  // Booking Source Metrics: Online Form vs Direct Admin Bookings
+  const sourceStats = useMemo(() => {
+    const activeStaysMap = new Map<string, Booking[]>();
+    existingBookings
+      .filter((b) => b.status !== 'CANCELLED')
+      .forEach((b) => {
+        const gId = b.group_id || extractGroupIdFromNotes(b.notes) || b.id;
+        if (!activeStaysMap.has(gId)) {
+          activeStaysMap.set(gId, []);
+        }
+        activeStaysMap.get(gId)!.push(b);
+      });
+
+    let onlineStaysCount = 0;
+    let directStaysCount = 0;
+
+    activeStaysMap.forEach((dayBookings) => {
+      const isOnline = dayBookings.some((b) =>
+        (b.notes || '').includes('Approved from Request:') ||
+        (b.notes || '').includes('POGH-REQ-')
+      );
+      if (isOnline) {
+        onlineStaysCount++;
+      } else {
+        directStaysCount++;
+      }
+    });
+
+    const approvedRequestsCount = requests.filter((r) => r.status === 'APPROVED').length;
+    const finalOnlineCount = Math.max(onlineStaysCount, approvedRequestsCount);
+
+    return {
+      totalActiveStays: activeStaysMap.size,
+      onlineBookingsCount: finalOnlineCount,
+      directAdminBookingsCount: directStaysCount,
+    };
+  }, [existingBookings, requests]);
+
   return (
     <div className="space-y-5">
       {/* 1. Header Bar */}
@@ -156,6 +197,85 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-slate-900' : 'text-slate-600'}`} />
           <span>{language === 'hi' ? 'रिफ्रेश' : 'Refresh'}</span>
         </button>
+      </div>
+
+      {/* 2. Two Cards: Booking Source Breakdown (Online vs Direct Admin) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Card A: Online Portal Bookings */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-blue-200/90 shadow-2xs hover:shadow-xs transition relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-100">
+                <Globe className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {language === 'hi' ? 'ऑनलाइन फॉर्म से बुकिंग' : 'Online Form Bookings'}
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  {language === 'hi' ? 'वेबसाइट / ऑनलाइन पोर्टल द्वारा प्राप्त' : 'Via Public Request Portal'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl sm:text-3xl font-bold text-blue-900 tabular-nums">
+                {sourceStats.onlineBookingsCount}
+              </span>
+              <span className="text-xs text-slate-500 block">
+                {language === 'hi' ? 'स्वीकृत बुकिंग' : 'Approved'}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span className="text-slate-600">
+              {language === 'hi' ? 'कुल ऑनलाइन आवेदन: ' : 'Total Submissions: '}
+              <strong className="text-slate-900">{stats.total}</strong>
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">
+              {stats.pending} {language === 'hi' ? 'लंबित अनुरोध' : 'Pending'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card B: Direct Admin Bookings */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center shrink-0 border border-slate-200">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {language === 'hi' ? 'प्रत्यक्ष एडमिन बुकिंग' : 'Direct Admin Bookings'}
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  {language === 'hi' ? 'कार्यालय / ऑपरेटर द्वारा सीधे आरक्षित' : 'Created Directly by Admin / Desk'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums">
+                {sourceStats.directAdminBookingsCount}
+              </span>
+              <span className="text-xs text-slate-500 block">
+                {language === 'hi' ? 'सीधे आरक्षित' : 'Direct Stays'}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span className="text-slate-600">
+              {language === 'hi' ? 'कुल सक्रिय पंजिका प्रवास: ' : 'Total Registered Stays: '}
+              <strong className="text-slate-900">{sourceStats.totalActiveStays}</strong>
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold border border-slate-200">
+              {sourceStats.directAdminBookingsCount > 0
+                ? Math.round((sourceStats.directAdminBookingsCount / Math.max(1, sourceStats.totalActiveStays)) * 100)
+                : 0}% {language === 'hi' ? 'प्रत्यक्ष' : 'Direct'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 2. Stat Cards (Matches StatsCardsComponent design) */}
