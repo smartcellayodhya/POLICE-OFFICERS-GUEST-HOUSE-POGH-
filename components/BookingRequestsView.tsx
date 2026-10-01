@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { BookingRequest, Booking } from '@/lib/types';
 import { formatToDisplayDate, calculateStayNights } from '@/lib/dateUtils';
-import { getWhatsAppUrl } from '@/lib/whatsapp';
 import {
   Search,
   CheckCircle2,
@@ -18,9 +17,10 @@ import {
   Filter,
   Check,
   BedDouble,
-  UserCheck,
-  ChevronRight,
-  ExternalLink,
+  User,
+  Inbox,
+  AlertCircle,
+  Briefcase,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 import { ApproveRequestModal } from './ApproveRequestModal';
@@ -76,10 +76,8 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
   // Filtered requests
   const filteredRequests = useMemo(() => {
     return requests.filter((r) => {
-      // Status filter
       if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
 
-      // Search term
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase();
         const nameMatch = (r.guest_name || '').toLowerCase().includes(query);
@@ -104,7 +102,7 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
 
     if (req.status === 'APPROVED') {
       msg = `*पुलिस ऑफिसर्स गेस्ट हाउस (POGH) अयोध्या*\n\n` +
-        `सादर प्रणाम श्री ${req.guest_name} जी,\n` +
+        ` सादर प्रणाम श्री ${req.guest_name} जी,\n` +
         `आपके द्वारा POGH अयोध्या में कमरा आरक्षण हेतु दिया गया अनुरोध संख्या *${req.request_number}* स्वीकृत कर लिया गया है।\n\n` +
         `📅 आगमन तिथि: ${formatToDisplayDate(req.check_in_date)} (${req.check_in_time || '12:00 PM'})\n` +
         `📅 प्रस्थान तिथि: ${formatToDisplayDate(req.check_out_date)} (${req.check_out_time || '12:00 PM'})\n` +
@@ -129,23 +127,23 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Top Banner & Stats */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-md">
+      {/* 1. Header Bar */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base sm:text-lg font-black text-white">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">
               {language === 'hi' ? 'बुकिंग अनुरोध प्रबंधन' : 'Booking Requests Management'}
             </h2>
             {stats.pending > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950 animate-pulse">
-                {stats.pending} नए अनुरोध
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                {stats.pending} {language === 'hi' ? 'प्रतीक्षारत' : 'Pending'}
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             {language === 'hi'
-              ? 'अधिकारियों एवं आगंतुकों द्वारा सबमिट किए गए आरक्षण अनुरोधों की समीक्षा व कमरा आवंटन'
-              : 'Review guest booking requests and assign rooms'}
+              ? 'अधिकारियों एवं आगंतुकों द्वारा सबमिट किए गए आरक्षण अनुरोधों की समीक्षा एवं आवंटन'
+              : 'Review online booking requests submitted by officers & guests and allocate suits'}
           </p>
         </div>
 
@@ -153,124 +151,170 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
           type="button"
           onClick={handleManualRefresh}
           disabled={refreshing}
-          className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700 cursor-pointer disabled:opacity-50"
+          className="self-start sm:self-auto flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition border border-slate-200 cursor-pointer disabled:opacity-50"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-amber-400' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-slate-900' : 'text-slate-600'}`} />
           <span>{language === 'hi' ? 'रिफ्रेश' : 'Refresh'}</span>
         </button>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <button
-          type="button"
-          onClick={() => setStatusFilter('ALL')}
-          className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${
-            statusFilter === 'ALL'
-              ? 'bg-slate-800 border-amber-400 shadow-md shadow-amber-400/10'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-          }`}
-        >
-          <span className="text-[11px] text-slate-400 font-semibold block">कुल अनुरोध</span>
-          <span className="text-xl sm:text-2xl font-black text-white mt-1 block">
-            {stats.total}
-          </span>
-        </button>
+      {/* 2. Stat Cards (Matches StatsCardsComponent design) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Total Requests */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              {language === 'hi' ? 'कुल अनुरोध' : 'Total Requests'}
+            </p>
+            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <Inbox className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-xl font-bold text-slate-900 tabular-nums">{stats.total}</span>
+            <span className="text-xs text-slate-500">{language === 'hi' ? 'अनुरोध' : 'Requests'}</span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-400 truncate">
+            {language === 'hi' ? 'सभी ऑनलाइन आवेदन' : 'All submissions'}
+          </p>
+        </div>
 
-        <button
-          type="button"
+        {/* Pending Review */}
+        <div
           onClick={() => setStatusFilter('PENDING')}
-          className={`p-3.5 rounded-xl border text-left transition cursor-pointer relative overflow-hidden ${
+          className={`bg-white rounded-2xl p-4 border transition cursor-pointer ${
             statusFilter === 'PENDING'
-              ? 'bg-amber-500/15 border-amber-400 shadow-md shadow-amber-500/20'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              ? 'border-amber-300 ring-2 ring-amber-100 shadow-xs'
+              : 'border-slate-200/90 shadow-2xs hover:border-slate-300'
           }`}
         >
-          {stats.pending > 0 && (
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-          )}
-          <span className="text-[11px] text-amber-300 font-semibold block">प्रतीक्षारत (Pending)</span>
-          <span className="text-xl sm:text-2xl font-black text-amber-400 mt-1 block">
-            {stats.pending}
-          </span>
-        </button>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider truncate">
+              {language === 'hi' ? 'प्रतीक्षारत' : 'Pending Review'}
+            </p>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-xl font-bold text-amber-900 tabular-nums">{stats.pending}</span>
+            <span className="text-xs font-semibold text-amber-700">
+              {language === 'hi' ? 'लंबित' : 'Pending'}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-400 truncate">
+            {language === 'hi' ? 'कार्रवाई हेतु प्रतीक्षारत' : 'Awaiting review'}
+          </p>
+        </div>
 
-        <button
-          type="button"
+        {/* Approved */}
+        <div
           onClick={() => setStatusFilter('APPROVED')}
-          className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${
+          className={`bg-white rounded-2xl p-4 border transition cursor-pointer ${
             statusFilter === 'APPROVED'
-              ? 'bg-emerald-500/15 border-emerald-400 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              ? 'border-emerald-300 ring-2 ring-emerald-100 shadow-xs'
+              : 'border-slate-200/90 shadow-2xs hover:border-slate-300'
           }`}
         >
-          <span className="text-[11px] text-emerald-300 font-semibold block">स्वीकृत (Approved)</span>
-          <span className="text-xl sm:text-2xl font-black text-emerald-400 mt-1 block">
-            {stats.approved}
-          </span>
-        </button>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider truncate">
+              {language === 'hi' ? 'स्वीकृत' : 'Approved'}
+            </p>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-xl font-bold text-emerald-900 tabular-nums">{stats.approved}</span>
+            <span className="text-xs font-semibold text-emerald-700">
+              {language === 'hi' ? 'कमरा आवंटित' : 'Allocated'}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-400 truncate">
+            {language === 'hi' ? 'स्वीकृत बुकिंग्स' : 'Approved stays'}
+          </p>
+        </div>
 
-        <button
-          type="button"
+        {/* Rejected */}
+        <div
           onClick={() => setStatusFilter('REJECTED')}
-          className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${
+          className={`bg-white rounded-2xl p-4 border transition cursor-pointer ${
             statusFilter === 'REJECTED'
-              ? 'bg-rose-500/15 border-rose-400 shadow-md shadow-rose-500/20'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              ? 'border-rose-300 ring-2 ring-rose-100 shadow-xs'
+              : 'border-slate-200/90 shadow-2xs hover:border-slate-300'
           }`}
         >
-          <span className="text-[11px] text-rose-300 font-semibold block">अस्वीकृत (Rejected)</span>
-          <span className="text-xl sm:text-2xl font-black text-rose-400 mt-1 block">
-            {stats.rejected}
-          </span>
-        </button>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-rose-800 uppercase tracking-wider truncate">
+              {language === 'hi' ? 'अस्वीकृत' : 'Rejected'}
+            </p>
+            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0">
+              <XCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-xl font-bold text-rose-900 tabular-nums">{stats.rejected}</span>
+            <span className="text-xs font-semibold text-rose-700">
+              {language === 'hi' ? 'अस्वीकृत' : 'Declined'}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-400 truncate">
+            {language === 'hi' ? 'निरस्त अनुरोध' : 'Declined requests'}
+          </p>
+        </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+      {/* 3. Search and Status Filter Bar */}
+      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="नाम, मोबाइल, अनुरोध संख्या अथवा विभाग से खोजें..."
-            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs sm:text-sm focus:border-amber-400 focus:outline-none"
+            placeholder={language === 'hi' ? 'अतिथि नाम, मोबाइल, अनुरोध संख्या से खोजें...' : 'Search by name, mobile, reference number...'}
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none transition"
           />
         </div>
 
         {/* Status Filter Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 shrink-0">
           {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((st) => (
             <button
               key={st}
               type="button"
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                 statusFilter === st
-                  ? 'bg-amber-400 text-slate-950 font-black'
-                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  ? 'bg-slate-900 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
               {st === 'ALL'
-                ? 'सभी'
+                ? (language === 'hi' ? 'सभी' : 'All')
                 : st === 'PENDING'
-                ? 'प्रतीक्षारत'
+                ? (language === 'hi' ? 'प्रतीक्षारत' : 'Pending')
                 : st === 'APPROVED'
-                ? 'स्वीकृत'
-                : 'अस्वीकृत'}
+                ? (language === 'hi' ? 'स्वीकृत' : 'Approved')
+                : (language === 'hi' ? 'अस्वीकृत' : 'Rejected')}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Requests List */}
+      {/* 4. Requests List */}
       {filteredRequests.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-slate-900/60 border border-slate-800">
-          <Clock className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-          <p className="text-sm font-bold text-slate-300">कोई आरक्षण अनुरोध नहीं मिला</p>
+        <div className="p-12 text-center rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <Clock className="w-6 h-6" />
+          </div>
+          <p className="text-sm font-bold text-slate-800">
+            {language === 'hi' ? 'कोई आरक्षण अनुरोध नहीं मिला' : 'No Booking Requests Found'}
+          </p>
           <p className="text-xs text-slate-500 mt-1">
-            {searchTerm ? 'कृपया खोज शब्द बदलकर पुनः प्रयास करें।' : 'वर्तमान में इस श्रेणी में कोई अनुरोध लंबित नहीं है।'}
+            {searchTerm
+              ? (language === 'hi' ? 'कृपया खोज शब्द बदलकर पुनः प्रयास करें।' : 'Try adjusting your search terms.')
+              : (language === 'hi' ? 'वर्तमान में इस श्रेणी में कोई अनुरोध नहीं है।' : 'There are no requests in this category.')}
           </p>
         </div>
       ) : (
@@ -283,183 +327,179 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
 
             return (
               <div
-                key={req.id}
-                className={`p-4 sm:p-5 rounded-2xl bg-slate-900 border transition shadow-lg ${
-                  isPending
-                    ? 'border-amber-500/50 shadow-amber-500/5'
-                    : isApproved
-                    ? 'border-emerald-500/40'
-                    : 'border-slate-800 opacity-80'
-                }`}
+                key={req.id || req.request_number}
+                className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-xs transition p-4 sm:p-5"
               >
-                {/* Header: Request ID, Dates, Status */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-800">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm sm:text-base font-black text-amber-400 font-mono tracking-wider">
+                {/* Header: ID, Status Badge & Timestamp */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
                       {req.request_number}
                     </span>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 ${
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                         isApproved
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                           : isRejected
-                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                          ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
                       }`}
                     >
-                      {isApproved ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>स्वीकृत (APPROVED)</span>
-                        </>
-                      ) : isRejected ? (
-                        <>
-                          <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                          <span>अस्वीकृत (REJECTED)</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3.5 h-3.5 text-amber-400" />
-                          <span>प्रतीक्षारत (PENDING)</span>
-                        </>
-                      )}
+                      {isApproved
+                        ? (language === 'hi' ? 'स्वीकृत' : 'Approved')
+                        : isRejected
+                        ? (language === 'hi' ? 'अस्वीकृत' : 'Rejected')
+                        : (language === 'hi' ? 'प्रतीक्षारत (Pending)' : 'Pending Review')}
                     </span>
                   </div>
 
-                  <div className="text-xs text-slate-400 flex items-center gap-2">
-                    <span>प्राप्त तिथि:</span>
-                    <span className="font-semibold text-slate-300">
-                      {req.created_at ? new Date(req.created_at).toLocaleString('hi-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
-                    </span>
-                  </div>
+                  <span className="text-xs text-slate-400">
+                    {req.created_at ? new Date(req.created_at).toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    }) : ''}
+                  </span>
                 </div>
 
-                {/* Details Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 border-b border-slate-800 text-xs">
+                {/* Main Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-3.5">
                   {/* Guest Info */}
                   <div>
-                    <span className="text-[10.5px] text-slate-400 block font-semibold">अतिथि का विवरण:</span>
-                    <div className="font-bold text-white text-sm mt-0.5">{req.guest_name}</div>
-                    {req.designation && (
-                      <div className="text-amber-300 font-semibold text-[11px]">{req.designation}</div>
-                    )}
-                    {req.department && (
-                      <div className="text-slate-400 text-[11px]">{req.department}</div>
-                    )}
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <a
-                        href={`tel:${req.mobile_number}`}
-                        className="flex items-center gap-1 text-slate-300 hover:text-white font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded-md"
-                      >
-                        <Phone className="w-3 h-3 text-emerald-400" />
-                        <span>{req.mobile_number}</span>
-                      </a>
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                      {language === 'hi' ? 'अतिथि विवरण' : 'Guest Details'}
+                    </span>
+                    <p className="text-sm font-bold text-slate-900 mt-1">{req.guest_name}</p>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-0.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{req.mobile_number}</span>
                     </div>
+                    {(req.designation || req.department) && (
+                      <p className="text-xs text-slate-500 mt-1 flex items-center gap-1 truncate">
+                        <Briefcase className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{[req.designation, req.department].filter(Boolean).join(', ')}</span>
+                      </p>
+                    )}
                   </div>
 
-                  {/* Schedule */}
+                  {/* Arrival Schedule */}
                   <div>
-                    <span className="text-[10.5px] text-slate-400 block font-semibold">प्रवास अनुसूची:</span>
-                    <div className="text-slate-200 mt-0.5">
-                      <strong>आगमन:</strong> {formatToDisplayDate(req.check_in_date)} ({req.check_in_time})
-                    </div>
-                    <div className="text-slate-200 mt-0.5">
-                      <strong>प्रस्थान:</strong> {formatToDisplayDate(req.check_out_date)} ({req.check_out_time})
-                    </div>
-                    <div className="text-amber-300 font-semibold mt-1">
-                      अवधि: {req.stay_type === 'HOURLY' ? 'घंटेवार' : `${nights} रात्रि`} • अतिथि: {req.number_of_guests || 1}
-                    </div>
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                      {language === 'hi' ? 'आगमन (Check-in)' : 'Arrival'}
+                    </span>
+                    <p className="text-xs font-bold text-slate-800 mt-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      <span>{formatToDisplayDate(req.check_in_date)}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 pl-3.5 mt-0.5">
+                      {req.check_in_time || '12:00 PM'}
+                    </p>
+                  </div>
+
+                  {/* Departure Schedule */}
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                      {language === 'hi' ? 'प्रस्थान (Check-out)' : 'Departure'}
+                    </span>
+                    <p className="text-xs font-bold text-slate-800 mt-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                      <span>{formatToDisplayDate(req.check_out_date)}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 pl-3.5 mt-0.5">
+                      {req.check_out_time || '12:00 PM'} ({nights} {language === 'hi' ? 'रात्रि' : 'night(s)'})
+                    </p>
                   </div>
 
                   {/* Reference */}
                   <div>
-                    <span className="text-[10.5px] text-slate-400 block font-semibold">अनुमोदन संदर्भ:</span>
-                    <div className="text-slate-200 mt-1">
-                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30 text-xs">
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                      {language === 'hi' ? 'संदर्भ (Reference)' : 'Reference'}
+                    </span>
+                    <div className="mt-1">
+                      <span className="inline-block px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold border border-slate-200 text-xs">
                         {req.reference || 'SSP SIR'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-
-
-                {/* Notes or Approval / Rejection details */}
+                {/* Remarks if any */}
                 {req.notes && (
-                  <div className="pt-2 text-[11.5px] text-slate-300 italic">
-                    <span className="text-slate-500 not-italic font-semibold">टिप्पणी:</span> {req.notes}
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 mb-3">
+                    <strong className="text-slate-700">{language === 'hi' ? 'टिप्पणी: ' : 'Remarks: '}</strong>
+                    <span>{req.notes}</span>
                   </div>
                 )}
 
+                {/* Approved Box */}
                 {isApproved && (
-                  <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/80 text-xs flex items-center justify-between flex-wrap gap-2 text-emerald-200">
+                  <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between flex-wrap gap-2 mb-3">
                     <div>
-                      <span>आवंटित कमरे: </span>
-                      <strong className="text-white">
+                      <span>{language === 'hi' ? 'आवंटित कमरे: ' : 'Allocated Suits: '}</span>
+                      <strong className="text-emerald-950 font-bold">
                         {req.approved_suits && req.approved_suits.length > 0
                           ? req.approved_suits.map((s) => s.toUpperCase()).join(', ')
-                          : 'कमरा आवंटित'}
+                          : 'Suit Allocated'}
                       </strong>
                       {req.action_by && (
-                        <span className="text-slate-400 ml-2">
-                          (स्वीकृतकर्ता: {req.action_by})
+                        <span className="text-emerald-700 ml-2">
+                          ({language === 'hi' ? 'स्वीकृतकर्ता' : 'By'}: {req.action_by})
                         </span>
                       )}
                     </div>
                   </div>
                 )}
 
+                {/* Rejected Box */}
                 {isRejected && (
-                  <div className="mt-2.5 p-2.5 rounded-xl bg-rose-950/40 border border-rose-800/80 text-xs text-rose-200">
-                    <span>अस्वीकृति कारण: </span>
-                    <strong className="text-rose-100">{req.rejection_reason || 'कमरे अनुपलब्ध हैं'}</strong>
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 mb-3">
+                    <span>{language === 'hi' ? 'अस्वीकृति कारण: ' : 'Reason: '}</span>
+                    <strong className="text-rose-950 font-bold">{req.rejection_reason || 'कमरे अनुपलब्ध हैं'}</strong>
                     {req.action_by && (
-                      <span className="text-slate-400 ml-2">
-                        (कार्रवाई: {req.action_by})
+                      <span className="text-rose-700 ml-2">
+                        ({language === 'hi' ? 'कार्रवाई' : 'By'}: {req.action_by})
                       </span>
                     )}
                   </div>
                 )}
 
-                {/* Footer Action Bar */}
-                <div className="mt-3.5 pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2">
-                    {/* WhatsApp Notify */}
-                    <a
-                      href={getRequestWhatsAppUrl(req)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition flex items-center gap-1.5"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      <span>व्हाट्सएप संदेश भेजें</span>
-                    </a>
-                  </div>
+                {/* Bottom Actions Bar */}
+                <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <a
+                    href={getRequestWhatsAppUrl(req)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer w-fit"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{language === 'hi' ? 'व्हाट्सएप सूचना भेजें' : 'Send WhatsApp'}</span>
+                  </a>
 
-                  {/* Actions for Admin and Operator */}
                   {(isAdmin || isOperator) && isPending && (
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
                       <button
                         type="button"
                         onClick={() => setSelectedForReject(req)}
-                        className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold text-rose-300 bg-rose-950/50 hover:bg-rose-900/60 border border-rose-800 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1.5 cursor-pointer"
                       >
-                        <XCircle className="w-4 h-4 text-rose-400" />
-                        <span>अस्वीकार करें</span>
+                        <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                        <span>{language === 'hi' ? 'अस्वीकार करें' : 'Reject'}</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setSelectedForApprove(req)}
-                        className="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-md shadow-amber-400/20 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>स्वीकार करें (Approve)</span>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{language === 'hi' ? 'स्वीकार करें (Approve)' : 'Approve & Assign'}</span>
                       </button>
                     </div>
                   )}
                 </div>
-
               </div>
             );
           })}
