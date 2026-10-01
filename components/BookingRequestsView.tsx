@@ -23,6 +23,10 @@ import {
   Briefcase,
   Globe,
   ShieldCheck,
+  FileText,
+  ExternalLink,
+  BookOpen,
+  X,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 import { extractGroupIdFromNotes } from '@/lib/bookingUtils';
@@ -165,6 +169,93 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
       directAdminBookingsCount: directStaysCount,
     };
   }, [existingBookings, requests]);
+
+  // Search in existing confirmed bookings (both direct admin & online past stays)
+  const matchedExistingStays = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    const q = searchTerm.toLowerCase().trim();
+
+    const map = new Map<string, Booking[]>();
+    existingBookings
+      .filter((b) => b.status !== 'CANCELLED')
+      .forEach((b) => {
+        const ref = b.group_id || extractGroupIdFromNotes(b.notes) || b.id;
+        if (!map.has(ref)) {
+          map.set(ref, []);
+        }
+        map.get(ref)!.push(b);
+      });
+
+    const results: {
+      groupId: string;
+      primaryBooking: Booking;
+      guestName: string;
+      designation: string;
+      mobileNumber: string;
+      checkInDate: string;
+      checkOutDate: string;
+      stayDays: number;
+      suits: string[];
+      dispatchNo?: string;
+      reference?: string;
+      isOnline: boolean;
+      status: string;
+    }[] = [];
+
+    map.forEach((bList, gId) => {
+      const dates = bList.map((b) => b.booking_date).filter(Boolean).sort();
+      const primary = bList[0];
+      const guestName = primary.guest_name || '';
+      const designation = (primary as any).guest_designation || (primary as any).designation || '';
+      const mobileNumber = primary.mobile_number || '';
+      const dispatchNo = primary.dispatch_no || '';
+      const reference = primary.reference || '';
+      const notes = bList.map((b) => b.notes || '').join(' ');
+      const suitSet = new Set<string>();
+      bList.forEach((b) => {
+        if (b.suit_1) suitSet.add('Suit 1');
+        if (b.suit_2) suitSet.add('Suit 2');
+        if (b.suit_3) suitSet.add('Suit 3');
+        if (b.suit_4) suitSet.add('Suit 4');
+      });
+      const suits = Array.from(suitSet);
+      const isOnline = bList.some((b) =>
+        (b.notes || '').includes('Approved from Request:') ||
+        (b.notes || '').includes('POGH-REQ-')
+      );
+
+      const matches =
+        guestName.toLowerCase().includes(q) ||
+        designation.toLowerCase().includes(q) ||
+        mobileNumber.includes(q) ||
+        gId.toLowerCase().includes(q) ||
+        dispatchNo.toLowerCase().includes(q) ||
+        reference.toLowerCase().includes(q) ||
+        dates.some((d) => d.includes(q)) ||
+        suits.join(' ').toLowerCase().includes(q) ||
+        notes.toLowerCase().includes(q);
+
+      if (matches) {
+        results.push({
+          groupId: gId,
+          primaryBooking: primary,
+          guestName,
+          designation,
+          mobileNumber,
+          checkInDate: dates[0] || primary.booking_date,
+          checkOutDate: dates[dates.length - 1] || primary.booking_date,
+          stayDays: bList.length,
+          suits,
+          dispatchNo: dispatchNo && dispatchNo !== '-' ? dispatchNo : undefined,
+          reference,
+          isOnline,
+          status: primary.status || 'CONFIRMED',
+        });
+      }
+    });
+
+    return results;
+  }, [existingBookings, searchTerm]);
 
   return (
     <div className="space-y-5">
@@ -387,14 +478,24 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
       {/* 3. Search and Status Filter Bar */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={language === 'hi' ? 'अतिथि नाम, मोबाइल, अनुरोध संख्या से खोजें...' : 'Search by name, mobile, reference number...'}
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none transition"
+            placeholder={language === 'hi' ? 'पुरानी बुकिंग, अतिथि नाम, मोबाइल, अनुरोध संख्या से खोजें...' : 'Search past bookings, name, mobile, reference...'}
+            className="w-full pl-9 pr-9 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none transition"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
+              title={language === 'hi' ? 'हटाएं' : 'Clear'}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Status Filter Chips */}
@@ -422,23 +523,49 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
         </div>
       </div>
 
-      {/* 4. Requests List */}
-      {filteredRequests.length === 0 ? (
+      {/* 4. Requests & Historical Bookings List */}
+      {filteredRequests.length === 0 && matchedExistingStays.length === 0 ? (
         <div className="p-12 text-center rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
           <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
             <Clock className="w-6 h-6" />
           </div>
           <p className="text-sm font-bold text-slate-800">
-            {language === 'hi' ? 'कोई आरक्षण अनुरोध नहीं मिला' : 'No Booking Requests Found'}
+            {language === 'hi' ? 'कोई आरक्षण अनुरोध अथवा पूर्व रिकॉर्ड नहीं मिला' : 'No Requests or Historical Records Found'}
           </p>
           <p className="text-xs text-slate-500 mt-1">
             {searchTerm
-              ? (language === 'hi' ? 'कृपया खोज शब्द बदलकर पुनः प्रयास करें।' : 'Try adjusting your search terms.')
+              ? (language === 'hi' ? 'कृपया नाम, मोबाइल या संदर्भ संख्या बदलकर पुनः खोजें।' : 'Try adjusting your search terms.')
               : (language === 'hi' ? 'वर्तमान में इस श्रेणी में कोई अनुरोध नहीं है।' : 'There are no requests in this category.')}
           </p>
         </div>
       ) : (
-        <div className="space-y-3.5">
+        <div className="space-y-4">
+          {/* If 0 online requests but historical register bookings match */}
+          {filteredRequests.length === 0 && matchedExistingStays.length > 0 && (
+            <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  {language === 'hi'
+                    ? `ऑनलाइन अनुरोधों में कोई नया आवेदन नहीं मिला, परन्तु मुख्य पंजिका में "${searchTerm}" के ${matchedExistingStays.length} पूर्व रिकॉर्ड्स मिले हैं:`
+                    : `No online requests found, but found ${matchedExistingStays.length} historical stays in register for "${searchTerm}":`}
+                </span>
+              </div>
+              {onNavigateToBookings && (
+                <button
+                  type="button"
+                  onClick={onNavigateToBookings}
+                  className="self-start sm:self-auto px-3 py-1 rounded-lg bg-white border border-amber-300 text-amber-900 font-bold hover:bg-amber-100 transition shrink-0 cursor-pointer shadow-2xs"
+                >
+                  {language === 'hi' ? 'पूरी पंजिका खोलें' : 'Open Register'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Online Requests List */}
+          {filteredRequests.length > 0 && (
+            <div className="space-y-3.5">
           {filteredRequests.map((req) => {
             const isApproved = req.status === 'APPROVED';
             const isRejected = req.status === 'REJECTED';
@@ -623,6 +750,136 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Historical Stays Found in Register (When Searching) */}
+      {matchedExistingStays.length > 0 && (
+        <div className="mt-6 pt-5 border-t border-slate-200">
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+                  {language === 'hi' ? '📚 पंजिका में मिले पूर्व रिकॉर्ड्स' : '📚 Historical Stays Found in Register'} ({matchedExistingStays.length})
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  {language === 'hi'
+                    ? 'प्रशासनिक व पूर्व में सीधे दर्ज किए गए आरक्षित प्रवास'
+                    : 'Direct administrative & previously confirmed stays'}
+                </p>
+              </div>
+            </div>
+
+            {onNavigateToBookings && (
+              <button
+                type="button"
+                onClick={onNavigateToBookings}
+                className="flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-800 transition cursor-pointer"
+              >
+                <span>{language === 'hi' ? 'पूरी पंजिका देखें' : 'View Full Register'}</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {matchedExistingStays.map((stay) => (
+              <div
+                key={stay.groupId}
+                className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs hover:shadow-xs transition flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-100">
+                    <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+                      {stay.groupId}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {stay.isOnline ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                          🌐 {language === 'hi' ? 'ऑनलाइन' : 'Online'}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          👮 {language === 'hi' ? 'प्रत्यक्ष' : 'Direct'}
+                        </span>
+                      )}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                        stay.status === 'CHECKED_IN'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : stay.status === 'CHECKED_OUT'
+                          ? 'bg-slate-100 text-slate-700 border-slate-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}>
+                        {stay.status === 'CHECKED_IN'
+                          ? (language === 'hi' ? 'वर्तमान में निवासरत' : 'In-House')
+                          : stay.status === 'CHECKED_OUT'
+                          ? (language === 'hi' ? 'चेक आउट' : 'Checked Out')
+                          : (language === 'hi' ? 'आरक्षित' : 'Confirmed')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <h4 className="text-sm font-bold text-slate-900">{stay.guestName}</h4>
+                  {stay.designation && (
+                    <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                      <Briefcase className="w-3 h-3 text-slate-400" />
+                      <span>{stay.designation}</span>
+                    </p>
+                  )}
+
+                  <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                    <div className="flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-slate-400" />
+                      <span>{stay.mobileNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-slate-400" />
+                      <span>{formatToDisplayDate(stay.checkInDate)} ({stay.stayDays}d)</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                    {stay.suits.map((suit) => (
+                      <span
+                        key={suit}
+                        className="px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 font-bold text-[10px]"
+                      >
+                        {suit}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-end gap-2">
+                  {onOpenLetter && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenLetter(stay.primaryBooking)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{language === 'hi' ? 'आवंटन पत्र' : 'Letter'}</span>
+                    </button>
+                  )}
+                  {onNavigateToBookings && (
+                    <button
+                      type="button"
+                      onClick={onNavigateToBookings}
+                      className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                    >
+                      <span>{language === 'hi' ? 'पंजिका में खोलें' : 'View in Register'}</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-amber-700" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
         </div>
       )}
 

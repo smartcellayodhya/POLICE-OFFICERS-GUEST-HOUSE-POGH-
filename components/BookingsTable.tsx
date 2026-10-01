@@ -122,6 +122,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   } | null>(null);
   const deferredSearch = useDeferredValue(searchTerm);
 
+  // Auto-expand visible limit when searching so all matching historical records appear immediately
+  useEffect(() => {
+    if (deferredSearch.trim()) {
+      setVisibleLimit(100);
+    }
+  }, [deferredSearch]);
+
   // Close card action menu when clicking outside - attached only when a menu is open
   useEffect(() => {
     if (!activeMenuId) return;
@@ -281,23 +288,35 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         if (!stay.suits.includes(suitName)) return false;
       }
 
-      // Date range filter
-      if (fromDate && stay.checkInDate < fromDate && stay.checkOutDate < fromDate) return false;
-      if (toDate && stay.checkInDate > toDate) return false;
-
       // Search term filter (uses deferred value for 60fps typing)
-      if (!deferredSearch.trim()) return true;
-      const q = deferredSearch.toLowerCase().trim();
+      const hasSearch = !!deferredSearch.trim();
+      const q = hasSearch ? deferredSearch.toLowerCase().trim() : '';
 
-      return (
-        (stay.guestName || '').toLowerCase().includes(q) ||
-        (stay.mobileNumber || '').includes(q) ||
-        (stay.groupId || '').toLowerCase().includes(q) ||
-        (stay.dispatchNo || '').toLowerCase().includes(q) ||
-        (stay.reference || '').toLowerCase().includes(q) ||
-        (stay.checkInDate || '').includes(q) ||
-        (stay.checkOutDate || '').includes(q)
-      );
+      if (hasSearch) {
+        const matchesSearch =
+          (stay.guestName || '').toLowerCase().includes(q) ||
+          ((stay as any).guestDesignation || '').toLowerCase().includes(q) ||
+          (stay.mobileNumber || '').includes(q) ||
+          (stay.groupId || '').toLowerCase().includes(q) ||
+          (stay.dispatchNo || '').toLowerCase().includes(q) ||
+          (stay.reference || '').toLowerCase().includes(q) ||
+          (stay.checkInDate || '').includes(q) ||
+          (stay.checkOutDate || '').includes(q) ||
+          (stay.suits.join(' ')).toLowerCase().includes(q) ||
+          (stay.notes || '').toLowerCase().includes(q) ||
+          (stay.primaryBooking.notes || '').toLowerCase().includes(q) ||
+          ((stay.primaryBooking as any).id_proof_number || '').toLowerCase().includes(q) ||
+          ((stay.primaryBooking as any).address || '').toLowerCase().includes(q);
+
+        if (!matchesSearch) return false;
+        // When searching, bypass fromDate / toDate so all older/past bookings are immediately found!
+      } else {
+        // Enforce date range filter only when NOT searching by keyword
+        if (fromDate && stay.checkInDate < fromDate && stay.checkOutDate < fromDate) return false;
+        if (toDate && stay.checkInDate > toDate) return false;
+      }
+
+      return true;
     });
   }, [groupedStays, deferredSearch, statusFilter, stayTypeFilter, referenceFilter, suitFilter, fromDate, toDate]);
 
@@ -437,8 +456,18 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
               {language === 'hi' ? 'अतिथि बुकिंग पंजिका' : 'Guest Booking Directory'}
             </h2>
             <p className="text-xs text-amber-300 font-medium mt-0.5">
-              {language === 'hi' ? 'कुल प्रवास: ' : 'Total Stays: '}
-              <strong>{filteredStays.length}</strong>
+              {deferredSearch.trim() ? (
+                <span>
+                  {language === 'hi' ? 'खोज परिणाम: ' : 'Found: '}
+                  <strong className="text-white">{filteredStays.length}</strong> {language === 'hi' ? 'प्रवास (सभी तिथियों में)' : 'stays (all dates)'}
+                </span>
+              ) : (
+                <span>
+                  {language === 'hi' ? 'कुल प्रवास: ' : 'Total Stays: '}
+                  <strong className="text-white">{filteredStays.length}</strong>{' '}
+                  <span className="text-slate-300">({bookings.length} {language === 'hi' ? 'कमरा-दिवस' : 'room-days'})</span>
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -446,14 +475,24 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
         {/* Excel Export Button & Search Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
           <div className="relative flex-1 sm:w-64 min-w-0">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={language === 'hi' ? 'नाम, मोबाइल, संदर्भ या तिथि खोजें...' : 'Search by name, phone, ref...'}
-              className="w-full pl-8 pr-3 py-2 sm:py-1.5 text-xs rounded-xl bg-slate-800 text-white placeholder-slate-400 border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition"
+              placeholder={language === 'hi' ? 'पुरानी बुकिंग, नाम, मोबाइल, ref...' : 'Search past bookings, name, phone...'}
+              className="w-full pl-8 pr-8 py-2 sm:py-1.5 text-xs rounded-xl bg-slate-800 text-white placeholder-slate-400 border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                title={language === 'hi' ? 'हटाएं' : 'Clear'}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <button

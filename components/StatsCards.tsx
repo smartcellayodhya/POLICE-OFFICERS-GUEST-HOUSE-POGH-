@@ -79,14 +79,39 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
     return map;
   }, [activeBookings]);
 
-  // Online Request vs Direct Admin Bookings Count
-  const onlineBookingsCount = useMemo(() => {
-    return activeBookings.filter((b) =>
-      (b.notes || '').includes('Approved from Request:') ||
-      (b.notes || '').includes('POGH-REQ-')
-    ).length;
+  // Total unique stays (प्रवास) vs Total room-days (दिवस)
+  const staysStats = useMemo(() => {
+    const staysMap = new Map<string, Booking[]>();
+    activeBookings.forEach((b) => {
+      const gId = b.group_id || extractGroupIdFromNotes(b.notes) || b.id;
+      if (!staysMap.has(gId)) {
+        staysMap.set(gId, []);
+      }
+      staysMap.get(gId)!.push(b);
+    });
+
+    let onlineStays = 0;
+    let directStays = 0;
+
+    staysMap.forEach((dayBookings) => {
+      const isOnline = dayBookings.some((b) =>
+        (b.notes || '').includes('Approved from Request:') ||
+        (b.notes || '').includes('POGH-REQ-')
+      );
+      if (isOnline) {
+        onlineStays++;
+      } else {
+        directStays++;
+      }
+    });
+
+    return {
+      totalStays: staysMap.size,
+      onlineStays,
+      directStays,
+      totalRoomDays: activeBookings.length,
+    };
   }, [activeBookings]);
-  const directBookingsCount = Math.max(0, activeBookings.length - onlineBookingsCount);
 
   // Revenue, Food, Expenditure & Monthly aggregations
   const stats = useMemo(() => {
@@ -240,16 +265,19 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
                 <CalendarCheck className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="mt-1.5 flex items-baseline gap-1.5">
-              <span className="text-xl font-black text-slate-900">{activeBookings.length}</span>
-              <span className="text-[10px] font-semibold text-slate-500">
-                {language === 'hi' ? 'बुकिंग्स' : 'Bookings'}
+            <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-xl font-black text-slate-900">{staysStats.totalStays}</span>
+              <span className="text-[10px] font-bold text-slate-700">
+                {language === 'hi' ? 'प्रवास' : 'Stays'}
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                ({staysStats.totalRoomDays} {language === 'hi' ? 'दिन' : 'days'})
               </span>
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-[10px]">
-              <span className="text-blue-700 font-semibold">🌐 {onlineBookingsCount}</span>
+              <span className="text-slate-700 font-semibold">👮 {staysStats.directStays}</span>
               <span className="text-slate-300">•</span>
-              <span className="text-slate-600 font-semibold">👮 {directBookingsCount}</span>
+              <span className="text-blue-700 font-semibold">🌐 {staysStats.onlineStays}</span>
             </div>
           </div>
         </div>
@@ -371,16 +399,17 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
               <CalendarCheck className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-lg sm:text-xl font-bold text-slate-900 tabular-nums">{activeBookings.length}</span>
-            <span className="text-xs text-slate-500">{language === 'hi' ? 'बुकिंग' : 'Bookings'}</span>
+          <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
+            <span className="text-lg sm:text-xl font-bold text-slate-900 tabular-nums">{staysStats.totalStays}</span>
+            <span className="text-xs text-slate-700 font-semibold">{language === 'hi' ? 'प्रवास' : 'Stays'}</span>
+            <span className="text-[11px] text-slate-400">({staysStats.totalRoomDays} {language === 'hi' ? 'दिवस' : 'Days'})</span>
           </div>
           <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10px]">
-            <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-100">
-              {language === 'hi' ? '🌐 ऑनलाइन:' : '🌐 Online:'} {onlineBookingsCount}
-            </span>
             <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-              {language === 'hi' ? '👮 प्रत्यक्ष:' : '👮 Direct:'} {directBookingsCount}
+              {language === 'hi' ? '👮 प्रत्यक्ष:' : '👮 Direct:'} {staysStats.directStays}
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-100">
+              {language === 'hi' ? '🌐 ऑनलाइन:' : '🌐 Online:'} {staysStats.onlineStays}
             </span>
           </div>
         </div>

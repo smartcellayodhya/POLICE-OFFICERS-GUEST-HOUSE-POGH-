@@ -251,16 +251,18 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
   const filteredDates = useMemo(() => {
     let result = masterDates;
 
-    // 1. Primary Tab Filter
-    if (activeFilter === 'upcoming') {
-      result = result.filter((d) => d >= todayStr);
-    } else if (activeFilter === 'past') {
-      result = result.filter((d) => d < todayStr);
-    } else if (activeFilter === 'booked_only') {
-      result = result.filter((d) => bookedDatesSet.has(d));
+    // 1. Primary Tab Filter (Bypass tab restriction when user is searching so past / purani bookings are included)
+    if (!deferredSearch.trim()) {
+      if (activeFilter === 'upcoming') {
+        result = result.filter((d) => d >= todayStr);
+      } else if (activeFilter === 'past') {
+        result = result.filter((d) => d < todayStr);
+      } else if (activeFilter === 'booked_only') {
+        result = result.filter((d) => bookedDatesSet.has(d));
+      }
     }
 
-    // 2. Search query filter (search in date, guest name, mobile, reference)
+    // 2. Search query filter (search across all dates in date, guest name, mobile, designation, reference, group_id, notes)
     if (deferredSearch.trim()) {
       const q = deferredSearch.toLowerCase().trim();
       result = result.filter((d) => {
@@ -277,7 +279,10 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
           (b) =>
             (b.guest_name || '').toLowerCase().includes(q) ||
             (b.mobile_number || '').includes(q) ||
+            ((b as any).guest_designation || '').toLowerCase().includes(q) ||
             (b.reference || '').toLowerCase().includes(q) ||
+            (b.group_id || '').toLowerCase().includes(q) ||
+            (b.notes || '').toLowerCase().includes(q) ||
             (b.dispatch_no && b.dispatch_no.toLowerCase().includes(q))
         );
       });
