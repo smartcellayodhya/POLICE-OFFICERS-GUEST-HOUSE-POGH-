@@ -50,7 +50,6 @@ import { ReceiptModal } from '@/components/ReceiptModal';
 import { AuditLogModal } from '@/components/AuditLogModal';
 import { MonthlyCollectionPage } from '@/components/MonthlyCollectionPage';
 import { BookingRequestsView } from '@/components/BookingRequestsView';
-import { SplashScreen } from '@/components/SplashScreen';
 import { LanguageProvider, useLanguage } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
 
@@ -59,7 +58,6 @@ function HomePageContent() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [showSplash, setShowSplash] = useState(false);
   const [logoutReason, setLogoutReason] = useState<'manual' | 'inactivity' | null>(null);
 
   // Navigation Tab State
@@ -131,9 +129,6 @@ function HomePageContent() {
     const user = getLoggedInUser();
     if (user) {
       setCurrentUser(user);
-      setShowSplash(false);
-    } else {
-      setShowSplash(true);
     }
     setAuthChecked(true);
 
@@ -252,7 +247,6 @@ function HomePageContent() {
     } catch {}
     setBookings([]);
     setCurrentUser(null);
-    setShowSplash(false);
   };
 
   // Load Bookings
@@ -727,17 +721,13 @@ function HomePageContent() {
 
   if (!currentUser) {
     return (
-      <>
-        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-        <LoginPage
-          logoutReason={logoutReason}
-          onLoginSuccess={(user) => {
-            setLogoutReason(null);
-            setShowSplash(false);
-            setCurrentUser(user);
-          }}
-        />
-      </>
+      <LoginPage
+        logoutReason={logoutReason}
+        onLoginSuccess={(user) => {
+          setLogoutReason(null);
+          setCurrentUser(user);
+        }}
+      />
     );
   }
 
