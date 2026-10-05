@@ -1,4 +1,5 @@
 import { Booking } from './types';
+import { formatToISODate } from './dateUtils';
 
 /**
  * Formats guest name cleanly for display without awkward duplicate honorifics.
@@ -570,6 +571,12 @@ export function isBookingOccupyingDate(b: Booking, targetDate: string): boolean 
 
   const target = String(targetDate || '').trim().slice(0, 10);
   const bDate = String(b.booking_date || '').trim().slice(0, 10);
+  const today = formatToISODate(new Date());
+
+  // If a booking has checked out, it frees the room immediately for today and all future dates
+  if (status === 'CHECKED_OUT' && target >= today) {
+    return false;
+  }
 
   // Exact date match
   if (bDate && bDate === target) return true;
@@ -622,7 +629,7 @@ export function findConflictingBooking(
         continue;
       }
       const status = (b.status || '').toUpperCase();
-      if (status === 'CANCELLED') {
+      if (status === 'CANCELLED' || status === 'CHECKED_OUT') {
         continue;
       }
       if (!isSuitAllocatedInBooking(b, suitId)) {

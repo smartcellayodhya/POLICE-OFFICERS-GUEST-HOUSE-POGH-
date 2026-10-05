@@ -105,19 +105,25 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
 
   // Helper to find a booking for a specific suite on a specific date (handles multi-day spans & allocations)
   const getBookingForSuitOnDate = (suitKey: string, dateStr: string): Booking | undefined => {
-    return bookings.find(
-      (b) =>
-        b.status !== 'CANCELLED' &&
+    return bookings.find((b) => {
+      const st = (b.status || '').toUpperCase();
+      if (st === 'CANCELLED') return false;
+      if (st === 'CHECKED_OUT' && dateStr >= todayStr) return false;
+      return (
         (isSuitAllocatedInBooking(b, suitKey) || Number(b[suitKey as keyof Booking]) > 0) &&
         (b.booking_date === dateStr || isBookingOccupyingDate(b, dateStr))
-    );
+      );
+    });
   };
 
   // Group suites for a date with comma separation (e.g. "Suit 2, Suit 3")
   const getDateOccupancyGroups = (dateStr: string) => {
-    const dayBookings = bookings.filter(
-      (b) => b.status !== 'CANCELLED' && (b.booking_date === dateStr || isBookingOccupyingDate(b, dateStr))
-    );
+    const dayBookings = bookings.filter((b) => {
+      const st = (b.status || '').toUpperCase();
+      if (st === 'CANCELLED') return false;
+      if (st === 'CHECKED_OUT' && dateStr >= todayStr) return false;
+      return b.booking_date === dateStr || isBookingOccupyingDate(b, dateStr);
+    });
 
     const occupiedSuitIds = new Set<string>();
 

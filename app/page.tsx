@@ -829,6 +829,7 @@ function HomePageContent() {
               <StatsCards 
                 bookings={bookings} 
                 onOpenMonthlyCollection={() => handleSelectTab('monthly')}
+                onFilterShortBookings={() => handleSelectTab('bookings')}
               />
               
               <RoomMatrix

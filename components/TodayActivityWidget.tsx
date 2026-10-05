@@ -48,9 +48,11 @@ export const TodayActivityWidget: React.FC<TodayActivityWidgetProps> = ({
 
   // Today's active bookings (handles single-day records & multi-day spans)
   const todayBookings = useMemo(() => {
-    const active = bookings.filter(
-      (b) => (b.status || '').toUpperCase() !== 'CANCELLED' && isBookingOccupyingDate(b, todayStr)
-    );
+    const active = bookings.filter((b) => {
+      const st = (b.status || '').toUpperCase();
+      if (st === 'CANCELLED' || st === 'CHECKED_OUT') return false;
+      return isBookingOccupyingDate(b, todayStr);
+    });
     // Deduplicate multi-day rows for the same stay/group so each guest stay appears once
     const seenGroups = new Set<string>();
     const uniqueBookings: Booking[] = [];

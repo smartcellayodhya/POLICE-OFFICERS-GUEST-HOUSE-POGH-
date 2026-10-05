@@ -11,6 +11,8 @@ import {
   getBookingPaymentSplit,
   isBookingOccupyingDate,
   isSuitAllocatedInBooking,
+  isHourlyBooking,
+  extractStayHoursFromNotes,
 } from '@/lib/bookingUtils';
 import {
   IndianRupee,
@@ -22,15 +24,17 @@ import {
   ArrowDownRight,
   Smartphone,
   Wallet,
+  Timer,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/languageContext';
 
 interface StatsCardsProps {
   bookings: Booking[];
   onOpenMonthlyCollection?: () => void;
+  onFilterShortBookings?: () => void;
 }
 
-const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthlyCollection }) => {
+const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthlyCollection, onFilterShortBookings }) => {
   const { language, t } = useLanguage();
 
   const todayStr = formatToISODate(new Date());
@@ -53,9 +57,13 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
     return bookings.filter((b) => b.status !== 'CANCELLED');
   }, [bookings]);
 
-  // Today's Occupancy (accurately accounts for single-day and multi-day spans)
+  // Today's Occupancy (accurately accounts for single-day and multi-day spans, excluding checked-out)
   const todayRoomsOccupied = useMemo(() => {
-    const todayBookings = activeBookings.filter((b) => isBookingOccupyingDate(b, todayStr));
+    const todayBookings = activeBookings.filter((b) => {
+      const st = (b.status || '').toUpperCase();
+      if (st === 'CANCELLED' || st === 'CHECKED_OUT') return false;
+      return isBookingOccupyingDate(b, todayStr);
+    });
     const occupiedSuitSet = new Set<string>();
     todayBookings.forEach((b) => {
       if (isSuitAllocatedInBooking(b, 'suit_1') || Number(b.suit_1) > 0) occupiedSuitSet.add('suit_1');
@@ -110,6 +118,36 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
       onlineStays,
       directStays,
       totalRoomDays: activeBookings.length,
+    };
+  }, [activeBookings]);
+
+  // Short / Hourly Stays Statistics (अल्पकालिक प्रवास)
+  const shortStaysStats = useMemo(() => {
+    const shortMap = new Map<string, Booking[]>();
+    activeBookings.forEach((b) => {
+      if (isHourlyBooking(b)) {
+        const gId = b.group_id || extractGroupIdFromNotes(b.notes) || b.id;
+        if (!shortMap.has(gId)) {
+          shortMap.set(gId, []);
+        }
+        shortMap.get(gId)!.push(b);
+      }
+    });
+
+    let totalShortHours = 0;
+    let totalShortRevenue = 0;
+
+    shortMap.forEach((dayBookings) => {
+      const primary = dayBookings[0];
+      const hrs = extractStayHoursFromNotes(primary.notes) || (primary.stay_hours ? Number(primary.stay_hours) : 4);
+      totalShortHours += hrs;
+      totalShortRevenue += calculateBookingRent(primary);
+    });
+
+    return {
+      totalShortStays: shortMap.size,
+      totalShortHours,
+      totalShortRevenue,
     };
   }, [activeBookings]);
 
@@ -221,8 +259,8 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
          ───────────────────────────────────────────────────────────── */}
       <div className="block md:hidden space-y-2.5 mb-5">
         
-        {/* Row 1: Live Occupancy & Active Bookings (2 Clean Cards) */}
-        <div className="grid grid-cols-2 gap-2.5">
+        {/* Row 1: Live Occupancy, Active Bookings & Short Stays (3 Clean Cards) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
           
           {/* Card 1: Today's Occupancy */}
           <div className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs">
@@ -278,6 +316,40 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
               <span className="text-slate-700 font-semibold">👮 {staysStats.directStays}</span>
               <span className="text-slate-300">•</span>
               <span className="text-blue-700 font-semibold">🌐 {staysStats.onlineStays}</span>
+            </div>
+          </div>
+
+          {/* Card 3: Short / Hourly Bookings (Mobile) */}
+          <div 
+            onClick={onFilterShortBookings}
+            className={`col-span-2 sm:col-span-1 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 rounded-2xl p-3 border border-amber-200/90 shadow-2xs ${
+              onFilterShortBookings ? 'cursor-pointer active:scale-[0.99] transition hover:border-amber-400' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider">
+                {language === 'hi' ? 'अल्पकालिक बुकिंग्स' : 'Short Stays'}
+              </span>
+              <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                <Timer className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-xl font-black text-slate-900">{shortStaysStats.totalShortStays}</span>
+              <span className="text-[10px] font-bold text-slate-700">
+                {language === 'hi' ? 'प्रवास' : 'Stays'}
+              </span>
+              <span className="text-[10px] text-amber-700 font-medium">
+                ({shortStaysStats.totalShortHours} {language === 'hi' ? 'घंटे' : 'hrs'})
+              </span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-[10px]">
+              <span className="text-amber-900 font-bold">
+                ₹{shortStaysStats.totalShortRevenue.toLocaleString('en-IN')}
+              </span>
+              <span className="text-amber-700 font-medium">
+                ⏱️ {language === 'hi' ? 'घंटे अनुसार' : 'Hourly'}
+              </span>
             </div>
           </div>
         </div>
@@ -385,9 +457,9 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. DESKTOP & TABLET VIEW: Full 8 Executive Cards (hidden md:grid)
+          2. DESKTOP & TABLET VIEW: 3x3 Symmetrical Executive Cards (hidden md:grid)
          ───────────────────────────────────────────────────────────── */}
-      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
+      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-6">
         
         {/* Card 1: Total Bookings */}
         <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
@@ -414,7 +486,44 @@ const StatsCardsComponent: React.FC<StatsCardsProps> = ({ bookings, onOpenMonthl
           </div>
         </div>
 
-        {/* Card 2: Today's Occupancy */}
+        {/* Card 2: Short / Hourly Bookings (NEW DEDICATED CARD) */}
+        <div
+          onClick={onFilterShortBookings}
+          className={`bg-gradient-to-br from-amber-50/70 via-white to-amber-50/20 rounded-2xl p-3.5 sm:p-4 border border-amber-200/90 shadow-2xs hover:shadow-xs transition ${
+            onFilterShortBookings ? 'cursor-pointer hover:border-amber-400' : ''
+          }`}
+          title={language === 'hi' ? 'अल्पकालिक (शॉर्ट) बुकिंग्स देखने हेतु क्लिक करें' : 'Click to view short stay bookings'}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-amber-900 uppercase tracking-wider truncate">
+              {language === 'hi' ? 'अल्पकालिक बुकिंग्स' : 'Short Bookings'}
+            </p>
+            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <Timer className="w-4 h-4 text-amber-700" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
+            <span className="text-lg sm:text-xl font-bold text-slate-900 tabular-nums">
+              {shortStaysStats.totalShortStays}
+            </span>
+            <span className="text-xs text-slate-700 font-semibold">
+              {language === 'hi' ? 'प्रवास' : 'Stays'}
+            </span>
+            <span className="text-[11px] text-amber-700 font-medium">
+              ({shortStaysStats.totalShortHours} {language === 'hi' ? 'घंटे' : 'hrs'})
+            </span>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-1 text-[10px]">
+            <span className="px-1.5 py-0.5 rounded bg-amber-100/80 text-amber-900 font-bold border border-amber-200/60">
+              ₹{shortStaysStats.totalShortRevenue.toLocaleString('en-IN')} {language === 'hi' ? 'किराया' : 'Rent'}
+            </span>
+            <span className="text-amber-800 font-medium flex items-center gap-0.5">
+              ⏱️ {language === 'hi' ? 'घंटे अनुसार' : 'Hourly'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Today's Occupancy */}
         <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">

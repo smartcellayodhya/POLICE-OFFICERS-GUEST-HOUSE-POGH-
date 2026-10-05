@@ -70,7 +70,8 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
   const bookingsByDate = useMemo(() => {
     const map = new Map<string, Booking[]>();
     bookings.forEach((b) => {
-      if ((b.status || '').toUpperCase() === 'CANCELLED') return;
+      const st = (b.status || '').toUpperCase();
+      if (st === 'CANCELLED') return;
       const bDate = b.booking_date;
       const cin = extractCheckInDateFromNotes(b.notes) || bDate;
       const cout = extractCheckOutDateFromNotes(b.notes) || bDate;
@@ -78,6 +79,7 @@ export const DateWiseRoomSchedule: React.FC<DateWiseRoomScheduleProps> = ({
 
       const targetDates = stayDates.length > 0 ? stayDates : (bDate ? [bDate] : []);
       targetDates.forEach((d) => {
+        if (st === 'CHECKED_OUT' && d >= todayStr) return;
         const list = map.get(d);
         if (list) {
           if (!list.some((existing) => existing.id === b.id)) {
