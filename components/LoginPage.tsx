@@ -309,15 +309,31 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, logoutReas
 
         {/* Public Booking Request CTA Section */}
         <div className="mt-5 pt-4 border-t border-slate-800 text-center">
-          <p className="text-xs text-slate-400 mb-2">
-            {language === 'hi' ? 'अतिथि अथवा अधिकारी कमरा आरक्षण हेतु अनुरोध करें:' : 'Guest or Officer requesting a room stay:'}
-          </p>
+          <div className="flex items-center justify-center gap-2 mb-2.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            <p className="text-xs font-semibold text-amber-300/90 tracking-wide">
+              {language === 'hi' ? 'कमरा आरक्षण (अतिथि / अधिकारी सीधे अनुरोध करें):' : 'Guest / Officer Room Booking (Direct Request):'}
+            </p>
+          </div>
           <a
             href="/request"
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 hover:border-amber-400/60 transition flex items-center justify-center gap-2 cursor-pointer"
+            id="public-booking-request-btn"
+            className="group relative overflow-hidden w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-amber-200 bg-gradient-to-r from-amber-500/20 via-amber-400/25 to-amber-500/20 hover:from-amber-500/35 hover:via-amber-400/35 hover:to-amber-500/35 border-2 border-amber-400/80 hover:border-amber-300 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/10 animate-flash-border hover:scale-[1.02]"
           >
-            <span>{language === 'hi' ? '📝 नया आरक्षण अनुरोध करें / स्थिति जांचें' : '📝 Request Room Booking / Track Status'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            {/* Shimmer Light Reflection Sweep */}
+            <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
+            <span className="text-base select-none">📝</span>
+            <span className="font-bold tracking-wide drop-shadow text-amber-100">
+              {language === 'hi' ? 'नया आरक्षण अनुरोध करें / स्थिति जांचें' : 'Request Room Booking / Track Status'}
+            </span>
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase font-black bg-amber-400 text-slate-950 rounded-full tracking-wider shadow-sm animate-pulse ml-0.5">
+              {language === 'hi' ? 'नया' : 'NEW'}
+            </span>
+            <ArrowRight className="w-4 h-4 text-amber-300 group-hover:translate-x-1 transition-transform shrink-0" />
           </a>
         </div>
 

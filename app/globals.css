@@ -188,4 +188,32 @@ img[src*="up_police_logo"] {
   animation: pulseGlow 2.5s infinite ease-in-out;
 }
 
+@keyframes flashShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-shimmer {
+  animation: flashShimmer 2.4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes flashBorderPulse {
+  0%, 100% {
+    border-color: rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.2), inset 0 0 8px rgba(245, 158, 11, 0.08);
+  }
+  50% {
+    border-color: rgba(251, 191, 36, 0.95);
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.5), inset 0 0 16px rgba(245, 158, 11, 0.2);
+  }
+}
+
+.animate-flash-border {
+  animation: flashBorderPulse 2s infinite ease-in-out;
+}
+
 
