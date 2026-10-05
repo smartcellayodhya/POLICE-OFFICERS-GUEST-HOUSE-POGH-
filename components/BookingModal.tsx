@@ -142,33 +142,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setNotes('');
   }, [initialDate, initialSuit, existingBookings]);
 
+  const prevIsOpenRef = React.useRef(false);
+
   useEffect(() => {
-    if (isOpen) {
+    // Only reset form once when modal transitions from closed to open
+    if (isOpen && !prevIsOpenRef.current) {
       resetForm();
       const ref = generateBookingRef(existingBookings);
       const disp = generateDispatchNumber(existingBookings);
       setAutoRef(ref);
       setAutoDispatch(disp);
     }
-  }, [isOpen, existingBookings, resetForm]);
-
-  useEffect(() => {
-    if (initialDate) {
-      setCheckInDate(initialDate);
-      const nextDay = getNextDayISO(initialDate);
-      setCheckOutDate(nextDay);
-      if (initialSuit) {
-        const initialStay = getStayDates(initialDate, nextDay);
-        const availInitial = findConflictingBooking(existingBookings, initialSuit, initialStay);
-        setSelectedSuits({
-          suit_1: initialSuit === 'suit_1' && !availInitial.isBooked,
-          suit_2: initialSuit === 'suit_2' && !availInitial.isBooked,
-          suit_3: initialSuit === 'suit_3' && !availInitial.isBooked,
-          suit_4: initialSuit === 'suit_4' && !availInitial.isBooked,
-        });
-      }
-    }
-  }, [initialDate, initialSuit, existingBookings]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, resetForm, existingBookings]);
 
   useEffect(() => {
     if (!isOpen) return;

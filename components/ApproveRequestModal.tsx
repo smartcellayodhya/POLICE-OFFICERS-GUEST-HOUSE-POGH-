@@ -47,9 +47,9 @@ export const ApproveRequestModal: React.FC<ApproveRequestModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Set clean default values when request opens: all rooms start unchecked so admin/operator allocates rooms
+  // Set clean default values ONLY when modal opens or a different request is opened
   useEffect(() => {
-    if (request) {
+    if (isOpen && request) {
       setReference(request.reference || 'SSP SIR');
       setDispatchNo(generateDispatchNumber(existingBookings));
       setSelectedSuits({
@@ -58,9 +58,17 @@ export const ApproveRequestModal: React.FC<ApproveRequestModalProps> = ({
         suit_3: false,
         suit_4: false,
       });
+      setSuitRates({
+        suit_1: 800,
+        suit_2: 800,
+        suit_3: 800,
+        suit_4: 1200,
+      });
+      setMealStatus('PAID');
+      setAdminNotes('');
       setErrorMsg('');
     }
-  }, [request, existingBookings]);
+  }, [isOpen, request?.id]);
 
   if (!isOpen || !request) return null;
 
