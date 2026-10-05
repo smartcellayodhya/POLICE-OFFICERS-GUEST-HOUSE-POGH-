@@ -23,6 +23,7 @@ import {
   ChevronRight,
   CheckCircle2,
   FileText,
+  Receipt,
   BedDouble,
   Plus,
   CalendarCheck,
@@ -35,15 +36,19 @@ import { useLanguage } from '@/lib/languageContext';
 interface RoomStatus7DaysProps {
   bookings: Booking[];
   isAdmin: boolean;
+  isOperator?: boolean;
   onSelectBooking: (booking: Booking) => void;
   onQuickBook?: (dateStr: string, suitKey: string) => void;
+  onOpenRecordCollection?: (booking: Booking) => void;
 }
 
 export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
   bookings,
   isAdmin,
+  isOperator,
   onSelectBooking,
   onQuickBook,
+  onOpenRecordCollection,
 }) => {
   const { language, t } = useLanguage();
   const todayStr = formatToISODate(new Date());
@@ -600,15 +605,27 @@ export const RoomStatus7Days: React.FC<RoomStatus7DaysProps> = ({
                             </span>
                           )
                         ) : (
-                          <div className="w-full flex items-center justify-between">
+                          <div className="w-full flex items-center justify-between gap-1 flex-wrap">
                             <button
                               type="button"
                               onClick={() => group.booking && onSelectBooking(group.booking)}
-                              className="flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:underline"
+                              className="flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:underline cursor-pointer"
                             >
                               <FileText className="w-3.5 h-3.5" />
                               <span>{language === 'hi' ? 'आवंटन पत्र' : 'Official Letter'}</span>
                             </button>
+
+                            {(isAdmin || isOperator) && onOpenRecordCollection && group.booking && (
+                              <button
+                                type="button"
+                                onClick={() => group.booking && onOpenRecordCollection(group.booking)}
+                                className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                                title={language === 'hi' ? 'कलेक्शन दर्ज करें' : 'Record Collection'}
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>{language === 'hi' ? 'कलेक्शन' : 'Billing'}</span>
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>

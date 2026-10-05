@@ -509,31 +509,35 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       {/* 2. Streamlined Filter Bar */}
       <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5 text-xs">
         {/* Status Filter Tabs (Horizontal smooth swipe on mobile) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none w-full lg:w-auto">
-          <div className="flex items-center gap-1 text-slate-500 mr-1 font-semibold shrink-0">
-            <Filter className="w-3.5 h-3.5" />
-            <span>{language === 'hi' ? 'स्थिति:' : 'Status:'}</span>
-          </div>
+        <div className="relative max-w-full w-full lg:w-auto">
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none pr-6 lg:pr-0">
+            <div className="flex items-center gap-1 text-slate-500 mr-1 font-semibold shrink-0">
+              <Filter className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'स्थिति:' : 'Status:'}</span>
+            </div>
 
-          {[
-            { id: 'ALL', label: t('all') },
-            { id: 'CONFIRMED', label: t('confirmed') },
-            { id: 'CHECKED_IN', label: t('checkedIn') },
-            { id: 'CHECKED_OUT', label: t('checkedOut') },
-            { id: 'CANCELLED', label: t('cancelled') },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id as StatusFilter)}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer shrink-0 whitespace-nowrap ${
-                statusFilter === tab.id
-                  ? 'bg-amber-500 text-slate-950 shadow-2xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            {[
+              { id: 'ALL', label: t('all') },
+              { id: 'CONFIRMED', label: t('confirmed') },
+              { id: 'CHECKED_IN', label: t('checkedIn') },
+              { id: 'CHECKED_OUT', label: t('checkedOut') },
+              { id: 'CANCELLED', label: t('cancelled') },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id as StatusFilter)}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer shrink-0 whitespace-nowrap ${
+                  statusFilter === tab.id
+                    ? 'bg-amber-500 text-slate-950 shadow-2xs'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {/* Subtle right-edge fade indicator on mobile to hint scrollability */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-50 to-transparent lg:hidden" />
         </div>
 
         {/* Date, Reference, Suit Filters */}

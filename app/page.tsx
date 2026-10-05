@@ -894,8 +894,10 @@ function HomePageContent() {
                 <RoomStatus7Days
                   bookings={bookings}
                   isAdmin={isAdmin}
+                  isOperator={isOperator}
                   onSelectBooking={handleOpenLetter}
                   onQuickBook={handleQuickBook}
+                  onOpenRecordCollection={handleOpenCollection}
                 />
               ) : (
                 <DateWiseRoomSchedule

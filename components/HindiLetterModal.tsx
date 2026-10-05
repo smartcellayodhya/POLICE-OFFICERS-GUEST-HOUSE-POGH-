@@ -355,7 +355,11 @@ export const HindiLetterModal: React.FC<HindiLetterModalProps> = ({
             <div className="mb-4 space-y-2 text-slate-800">
               <p className="font-semibold">महोदय,</p>
               <p className="indent-8 text-justify leading-relaxed">
-                {isSingleDay ? (
+                {isHourly ? (
+                  <>
+                    अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक <strong>{cinHindi} को अल्पकालिक प्रवास ({stayHours > 9 ? stayHours : `0${stayHours}`} घंटे हेतु, समय {checkInTime} से {checkOutTime} तक)</strong> आपके प्रवास हेतु <strong>{numRooms}</strong> रूम आरक्षित कर दिया गया है, जिसका विवरण निम्नवत है:-
+                  </>
+                ) : isSingleDay ? (
                   <>
                     अवगत कराना है कि पुलिस ऑफिसर्स गेस्ट हाउस में दिनांक <strong>{cinHindi} को (01 दिवस हेतु)</strong> आपके प्रवास हेतु <strong>{numRooms}</strong> रूम आरक्षित कर दिया गया है, जिसका विवरण निम्नवत है:-
                   </>
