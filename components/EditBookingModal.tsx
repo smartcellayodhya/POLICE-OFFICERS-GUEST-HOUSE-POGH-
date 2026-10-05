@@ -48,7 +48,7 @@ interface EditBookingModalProps {
   booking: Booking | null;
   relatedBookings?: Booking[];
   existingBookings?: Booking[];
-  onSave: (updatedData: Partial<Booking>, applyToAll: boolean) => Promise<void>;
+  onSave: (updatedData: Partial<Booking>, applyToAll: boolean, syncDates?: string[]) => Promise<void>;
 }
 
 export const EditBookingModal: React.FC<EditBookingModalProps> = ({
@@ -403,7 +403,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         updatedData.booking_date = checkInDate;
       }
 
-      await onSave(updatedData, applyToAll && relatedBookings.length > 1);
+      await onSave(updatedData, applyToAll && relatedBookings.length > 1, stayDates);
       
       logActivity(
         'UPDATE',

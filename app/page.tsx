@@ -53,6 +53,40 @@ import { BookingRequestsView } from '@/components/BookingRequestsView';
 import { LanguageProvider, useLanguage } from '@/lib/languageContext';
 import { logActivity } from '@/lib/auditLog';
 
+function playNotificationChime() {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(523.25, now);
+    gain1.gain.setValueAtTime(0.12, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(659.25, now + 0.12);
+    gain2.gain.setValueAtTime(0.15, now + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.55);
+  } catch {
+    // Graceful fallback if autoplay requires user gesture
+  }
+}
+
 function HomePageContent() {
   const { language } = useLanguage();
   // Authentication State
@@ -315,19 +349,26 @@ function HomePageContent() {
     setLoading(false);
   }, []);
 
+  const prevPendingCountRef = React.useRef<number | null>(null);
+
   // Fetch Booking Requests (Admin & Operator)
   const fetchBookingRequests = useCallback(async () => {
     try {
       const res = await apiFetchBookingRequests();
       if (res.success && res.requests) {
         setBookingRequests(res.requests);
+        const pendingCount = res.requests.filter((r) => r.status === 'PENDING').length;
+        if (prevPendingCountRef.current !== null && pendingCount > prevPendingCountRef.current) {
+          playNotificationChime();
+        }
+        prevPendingCountRef.current = pendingCount;
       }
     } catch (err) {
       console.error('Error fetching booking requests:', err);
     }
   }, []);
 
-  // Realtime Sync Listener (Bookings & Requests)
+  // Realtime Sync Listener & Heartbeat Polling (Bookings & Requests)
   useEffect(() => {
     if (!currentUser) return;
 
@@ -343,9 +384,16 @@ function HomePageContent() {
       }, 350);
     };
 
+    // Heartbeat auto-poll every 30 seconds so operator never misses a request
+    const pollInterval = setInterval(() => {
+      fetchBookingRequests();
+      fetchBookings();
+    }, 30000);
+
     const client = getSupabaseClient();
+    let channel: any = null;
     if (client && isSupabaseConfigured()) {
-      const channel = client
+      channel = client
         .channel('pogh_realtime_bookings_and_requests')
         .on(
           'postgres_changes',
@@ -362,12 +410,15 @@ function HomePageContent() {
           }
         )
         .subscribe();
-
-      return () => {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        client.removeChannel(channel);
-      };
     }
+
+    return () => {
+      clearInterval(pollInterval);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (client && channel) {
+        client.removeChannel(channel);
+      }
+    };
   }, [currentUser, fetchBookings, fetchBookingRequests]);
 
 
@@ -487,7 +538,7 @@ function HomePageContent() {
   };
 
   // Save Modified Booking Details (Admin Only - Strictly via Server API using Private Key)
-  const handleSaveEdit = async (updatedData: Partial<Booking>, applyToAll: boolean) => {
+  const handleSaveEdit = async (updatedData: Partial<Booking>, applyToAll: boolean, syncDates?: string[]) => {
     if (!selectedEditBooking) return;
     const refCode = selectedEditBooking.group_id || extractGroupIdFromNotes(selectedEditBooking.notes);
 
@@ -496,6 +547,7 @@ function HomePageContent() {
       groupId: refCode,
       updatedData,
       applyToAll: applyToAll && Boolean(refCode),
+      syncDates,
     });
 
     if (apiRes.success) {

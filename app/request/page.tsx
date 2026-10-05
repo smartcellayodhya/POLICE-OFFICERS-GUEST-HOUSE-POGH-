@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { BookingRequest } from '@/lib/types';
 import { REFERENCES } from '@/lib/constants';
-import { formatToDisplayDate } from '@/lib/dateUtils';
+import { formatToDisplayDate, formatToISODate } from '@/lib/dateUtils';
 import { apiSubmitBookingRequest, apiTrackBookingRequest } from '@/lib/requestUtils';
 import {
   Send,
@@ -36,16 +36,25 @@ export default function BookingRequestPublicPage() {
   const [designation, setDesignation] = useState('');
   const [department, setDepartment] = useState('');
 
-  // Default dates: Today & Tomorrow
-  const todayISO = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowISO = tomorrow.toISOString().split('T')[0];
+  // Default dates: Today & Tomorrow using local IST calendar
+  const todayISO = formatToISODate(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowISO = formatToISODate(tomorrowDate);
 
   const [checkInDate, setCheckInDate] = useState(todayISO);
   const [checkOutDate, setCheckOutDate] = useState(tomorrowISO);
   const [checkInTime, setCheckInTime] = useState('12:00 PM');
   const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
+
+  const handleCheckInDateChange = (newCin: string) => {
+    setCheckInDate(newCin);
+    if (!checkOutDate || checkOutDate <= newCin) {
+      const d = new Date(newCin + 'T00:00:00');
+      d.setDate(d.getDate() + 1);
+      setCheckOutDate(formatToISODate(d));
+    }
+  };
 
   const [reference, setReference] = useState('SSP SIR');
   const [customRef, setCustomRef] = useState('');
@@ -124,14 +133,26 @@ export default function BookingRequestPublicPage() {
 
   const handleTrackSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!trackQuery.trim()) return;
+    const clean = trackQuery.trim();
+    if (!clean) return;
+
+    const cleanMobile = clean.replace(/\D/g, '');
+    const isMobile = cleanMobile.length === 10;
+    if (!isMobile && clean.length < 6) {
+      setTrackError(
+        isEn
+          ? 'Please enter a valid 10-digit mobile number or complete Request ID.'
+          : 'कृपया 10 अंकों का सक्रिय मोबाइल नंबर या पूर्ण Request ID दर्ज करें।'
+      );
+      return;
+    }
 
     setTrackingLoading(true);
     setTrackError('');
     setTrackResults(null);
 
     try {
-      const res = await apiTrackBookingRequest(trackQuery.trim());
+      const res = await apiTrackBookingRequest(clean);
       if (res.success && res.requests) {
         setTrackResults(res.requests);
         if (res.requests.length === 0) {
@@ -424,8 +445,9 @@ export default function BookingRequestPublicPage() {
                     <input
                       type="date"
                       required
+                      min={todayISO}
                       value={checkInDate}
-                      onChange={(e) => setCheckInDate(e.target.value)}
+                      onChange={(e) => handleCheckInDateChange(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
                     />
                   </div>

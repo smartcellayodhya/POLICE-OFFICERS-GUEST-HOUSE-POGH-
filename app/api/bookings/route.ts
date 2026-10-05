@@ -196,7 +196,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, groupId, updatedData, applyToAll } = body;
+    const { id, groupId, updatedData, applyToAll, syncDates } = body;
 
     if (!id && !groupId) {
       return NextResponse.json(
@@ -239,6 +239,47 @@ export async function PUT(req: NextRequest) {
     if (applyToAll && groupId) {
       // For multi-record group updates, do not overwrite booking_date across all days
       delete payload.booking_date;
+
+      // Handle stay date extension or reduction (Admin only)
+      if (user.role === 'admin' && syncDates && Array.isArray(syncDates) && syncDates.length > 0) {
+        try {
+          const { data: existingRows } = await client
+            .from('pogh_bookings')
+            .select('*')
+            .or(`group_id.eq.${groupId},notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`);
+
+          if (existingRows && existingRows.length > 0) {
+            const currentDates = existingRows.map((r: any) => r.booking_date);
+            const datesToAdd = syncDates.filter((d: string) => !currentDates.includes(d));
+            const datesToDelete = currentDates.filter((d: string) => !syncDates.includes(d));
+
+            // Delete rows for dates no longer in stay range
+            if (datesToDelete.length > 0) {
+              await client
+                .from('pogh_bookings')
+                .delete()
+                .or(`group_id.eq.${groupId},notes.ilike.%"group_id":"${groupId}"%,notes.ilike.%"groupId":"${groupId}"%`)
+                .in('booking_date', datesToDelete);
+            }
+
+            // Insert newly added days for extended stay
+            if (datesToAdd.length > 0) {
+              const proto = existingRows[0];
+              const newRows = datesToAdd.map((d: string) => {
+                const copy = { ...proto, ...payload };
+                delete copy.id; // DB auto-generates id
+                copy.booking_date = d;
+                copy.created_at = new Date().toISOString();
+                copy.updated_at = new Date().toISOString();
+                return copy;
+              });
+              await client.from('pogh_bookings').insert(newRows);
+            }
+          }
+        } catch (syncErr) {
+          console.error('Error synchronizing stay dates for group booking:', syncErr);
+        }
+      }
 
       // 1. Try full payload with both group_id and notes filters
       let res = await client

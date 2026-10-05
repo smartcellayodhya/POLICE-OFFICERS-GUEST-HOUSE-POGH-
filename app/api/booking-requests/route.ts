@@ -24,13 +24,33 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Public Tracking Query
+    // Public Tracking Query (Secure & Exact Match to Prevent Data Leakage)
     if (trackQuery) {
       const clean = trackQuery.trim();
-      const { data, error } = await client
-        .from('pogh_booking_requests')
-        .select('*')
-        .or(`request_number.ilike.%${clean}%,mobile_number.ilike.%${clean}%`)
+      const cleanMobile = clean.replace(/\D/g, '');
+      const isMobileQuery = cleanMobile.length === 10;
+
+      // Enforce strict query constraints: either a full 10-digit mobile or a valid Request ID (min 6 chars)
+      if (!isMobileQuery && clean.length < 6) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'कृपया सही 10-अंकों का मोबाइल नंबर या पूर्ण Request ID (कम से कम 6 अक्षर) दर्ज करें।',
+            requests: [],
+          },
+          { status: 400 }
+        );
+      }
+
+      let queryBuilder = client.from('pogh_booking_requests').select('*');
+
+      if (isMobileQuery) {
+        queryBuilder = queryBuilder.eq('mobile_number', cleanMobile);
+      } else {
+        queryBuilder = queryBuilder.ilike('request_number', clean);
+      }
+
+      const { data, error } = await queryBuilder
         .order('created_at', { ascending: false })
         .limit(10);
 

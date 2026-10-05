@@ -52,6 +52,7 @@ export async function apiUpdateBooking(params: {
   groupId?: string;
   updatedData: Partial<Booking>;
   applyToAll?: boolean;
+  syncDates?: string[];
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await fetch('/api/bookings', {
