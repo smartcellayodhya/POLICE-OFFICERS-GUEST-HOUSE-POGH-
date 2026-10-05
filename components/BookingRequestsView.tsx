@@ -24,6 +24,7 @@ import {
   Globe,
   ShieldCheck,
   FileText,
+  Receipt,
   ExternalLink,
   BookOpen,
   X,
@@ -41,6 +42,7 @@ interface BookingRequestsViewProps {
   onRefresh: () => Promise<void>;
   onNavigateToBookings?: () => void;
   onOpenLetter?: (booking: Booking) => void;
+  onOpenRecordCollection?: (booking: Booking) => void;
 }
 
 export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
@@ -51,6 +53,7 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
   onRefresh,
   onNavigateToBookings,
   onOpenLetter,
+  onOpenRecordCollection,
 }) => {
   const { language } = useLanguage();
 
@@ -572,6 +575,14 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
             const isPending = req.status === 'PENDING';
             const nights = calculateStayNights(req.check_in_date, req.check_out_date);
 
+            const linkedBooking = existingBookings.find(
+              (b) =>
+                (req.approved_booking_id && b.id === req.approved_booking_id) ||
+                (b.notes && b.notes.includes(req.request_number)) ||
+                ((b.guest_name || '').toLowerCase() === (req.guest_name || '').toLowerCase() &&
+                  b.mobile_number === req.mobile_number)
+            );
+
             return (
               <div
                 key={req.id || req.request_number}
@@ -715,15 +726,41 @@ export const BookingRequestsView: React.FC<BookingRequestsViewProps> = ({
 
                 {/* Bottom Actions Bar */}
                 <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <a
-                    href={getRequestWhatsAppUrl(req)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer w-fit"
-                  >
-                    <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{language === 'hi' ? 'व्हाट्सएप सूचना भेजें' : 'Send WhatsApp'}</span>
-                  </a>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a
+                      href={getRequestWhatsAppUrl(req)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer w-fit"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{language === 'hi' ? 'व्हाट्सएप सूचना' : 'WhatsApp'}</span>
+                    </a>
+
+                    {isApproved && linkedBooking && onOpenLetter && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenLetter(linkedBooking)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition cursor-pointer shadow-2xs"
+                        title={language === 'hi' ? 'आधिकारिक आवंटन पत्र देखें अथवा प्रिंट करें' : 'View or print official confirmation letter'}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-slate-700" />
+                        <span>{language === 'hi' ? 'पत्र देखें' : 'View Letter'}</span>
+                      </button>
+                    )}
+
+                    {isApproved && linkedBooking && onOpenRecordCollection && (isAdmin || isOperator) && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenRecordCollection(linkedBooking)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer"
+                        title={language === 'hi' ? 'किराया व खर्च कलेक्शन दर्ज करें' : 'Record collection'}
+                      >
+                        <Receipt className="w-3.5 h-3.5 text-amber-700" />
+                        <span>{language === 'hi' ? 'कलेक्शन' : 'Collection'}</span>
+                      </button>
+                    )}
+                  </div>
 
                   {(isAdmin || isOperator) && isPending && (
                     <div className="flex items-center gap-2 self-end sm:self-auto">

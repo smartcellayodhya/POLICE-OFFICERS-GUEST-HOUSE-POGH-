@@ -949,6 +949,7 @@ function HomePageContent() {
                   setSelectedLetterBooking(b);
                   setIsLetterModalOpen(true);
                 }}
+                onOpenRecordCollection={handleOpenCollection}
               />
             </div>
           )}

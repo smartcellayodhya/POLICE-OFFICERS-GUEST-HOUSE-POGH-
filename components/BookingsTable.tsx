@@ -376,8 +376,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     } else if (current === 'CHECKED_OUT') {
       const confirmReset = window.confirm(
         language === 'hi'
-          ? `क्या आप ${stay.guestName} की स्थिति को पुनः आरक्षित (Confirmed) पर सेट करना चाहते हैं?`
-          : `Do you want to reset status for ${stay.guestName} back to Confirmed?`
+          ? `चेतावनी: क्या आप ${stay.guestName} की चेक-आउट हो चुकी बुकिंग (${stay.groupId}) को पुनः सक्रिय (Confirmed) करना चाहते हैं?\n\n(इससे कमरा दोबारा आरक्षित हो जाएगा)`
+          : `Warning: Do you want to reactivate the checked-out booking (${stay.groupId}) for ${stay.guestName}?\n\n(This will re-occupy the room)`
       );
       if (confirmReset) {
         onUpdateStatus(stay.primaryBooking, 'CONFIRMED', true);

@@ -318,8 +318,16 @@ export async function PUT(req: NextRequest) {
       const checkOutDate = request.check_out_date;
       const stayDates = request.stay_type === 'HOURLY' ? [checkInDate] : getStayDates(checkInDate, checkOutDate);
       
-      const groupId = generateBookingRef();
-      const finalDispatchNo = dispatchNo || generateDispatchNumber();
+      // 2. Fetch existing bookings to reliably generate next sequential booking reference and dispatch number
+      const { data: dbBookings } = await client
+        .from('pogh_bookings')
+        .select('group_id, dispatch_no, notes')
+        .order('id', { ascending: false })
+        .limit(2000);
+
+      const existingForRefs = (dbBookings || []) as Booking[];
+      const groupId = generateBookingRef(existingForRefs);
+      const finalDispatchNo = dispatchNo || generateDispatchNumber(existingForRefs);
       const guestReference = reference || request.reference || 'SSP SIR';
 
       // Compute suit amounts

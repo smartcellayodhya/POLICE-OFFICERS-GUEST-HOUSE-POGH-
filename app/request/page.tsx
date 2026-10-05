@@ -47,8 +47,15 @@ export default function BookingRequestPublicPage() {
   const [checkInTime, setCheckInTime] = useState('12:00 PM');
   const [checkOutTime, setCheckOutTime] = useState('12:00 PM');
 
+  const [stayType, setStayType] = useState<'STANDARD' | 'HOURLY'>('STANDARD');
+  const [hourlyHours, setHourlyHours] = useState<number>(4);
+
   const handleCheckInDateChange = (newCin: string) => {
     setCheckInDate(newCin);
+    if (stayType === 'HOURLY') {
+      setCheckOutDate(newCin);
+      return;
+    }
     if (!checkOutDate || checkOutDate <= newCin) {
       const d = new Date(newCin + 'T00:00:00');
       d.setDate(d.getDate() + 1);
@@ -111,11 +118,14 @@ export default function BookingRequestPublicPage() {
         mobile_number: cleanMobile.slice(-10),
         reference: reference === 'OTHER' ? customRef.trim() || 'OTHER' : reference,
         check_in_date: checkInDate,
-        check_out_date: checkOutDate,
+        check_out_date: stayType === 'HOURLY' ? checkInDate : checkOutDate,
         check_in_time: checkInTime.trim() || '12:00 PM',
         check_out_time: checkOutTime.trim() || '12:00 PM',
-        stay_type: 'STANDARD',
-        notes: notes.trim() || undefined,
+        stay_type: stayType,
+        notes: [
+          notes.trim(),
+          stayType === 'HOURLY' ? `अल्पकालिक प्रवास: ${hourlyHours} घंटे` : '',
+        ].filter(Boolean).join(' | ') || undefined,
       };
 
       const res = await apiSubmitBookingRequest(payload);
@@ -436,6 +446,72 @@ export default function BookingRequestPublicPage() {
                   </div>
                 </div>
 
+                {/* Stay Type Selector */}
+                <div className="pt-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    {isEn ? 'Stay Type' : 'प्रवास का प्रकार'}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStayType('STANDARD');
+                        const d = new Date(checkInDate + 'T00:00:00');
+                        d.setDate(d.getDate() + 1);
+                        setCheckOutDate(formatToISODate(d));
+                      }}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        stayType === 'STANDARD'
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>🏨 {isEn ? 'Full Day / Night' : 'पूर्ण दिवस / रात्रि'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStayType('HOURLY');
+                        setCheckOutDate(checkInDate);
+                      }}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        stayType === 'HOURLY'
+                          ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-2xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>⏱️ {isEn ? 'Short / Hourly Stay' : 'अल्पकालिक (घंटे अनुसार)'}</span>
+                    </button>
+                  </div>
+
+                  {stayType === 'HOURLY' && (
+                    <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-bold text-amber-900">
+                          {isEn ? 'Select Expected Hours:' : 'अपेक्षित प्रवास अवधि:'}
+                        </span>
+                        <span className="text-xs font-black text-amber-900">{hourlyHours} {isEn ? 'Hours' : 'घंटे'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {[2, 3, 4, 6, 8, 12].map((hrs) => (
+                          <button
+                            key={hrs}
+                            type="button"
+                            onClick={() => setHourlyHours(hrs)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                              hourlyHours === hrs
+                                ? 'bg-amber-600 text-white shadow-2xs'
+                                : 'bg-white text-slate-700 border border-amber-200 hover:bg-amber-100/60'
+                            }`}
+                          >
+                            {hrs} {isEn ? 'hrs' : 'घंटे'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* 4. Arrival Date & Time */}
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
@@ -471,14 +547,20 @@ export default function BookingRequestPublicPage() {
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       {isEn ? 'Check-Out Date' : 'प्रस्थान तिथि'} <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      type="date"
-                      required
-                      min={checkInDate}
-                      value={checkOutDate}
-                      onChange={(e) => setCheckOutDate(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
-                    />
+                    {stayType === 'HOURLY' ? (
+                      <div className="w-full px-3 py-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold flex items-center">
+                        <span>{formatToDisplayDate(checkInDate)} ({isEn ? 'Same Day' : 'उसी दिन'})</span>
+                      </div>
+                    ) : (
+                      <input
+                        type="date"
+                        required
+                        min={checkInDate}
+                        value={checkOutDate}
+                        onChange={(e) => setCheckOutDate(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">

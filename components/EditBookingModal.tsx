@@ -114,7 +114,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   };
 
   useEffect(() => {
-    if (booking) {
+    if (booking && isOpen) {
       setGuestName(booking.guest_name || '');
       setMobileNumber(booking.mobile_number || '');
       const savedRef = booking.reference || 'SSP SIR';
@@ -158,7 +158,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       setNotes(cleanNotesText(booking.notes));
       setApplyToAll(relatedBookings.length > 1);
     }
-  }, [booking, relatedBookings]);
+  }, [isOpen, booking?.id]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -224,7 +224,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       });
       return changed ? next : prev;
     });
-  }, [checkInDate, checkOutDate, existingBookings]);
+  }, [checkInDate, checkOutDate]);
 
   const bookingRef =
     (booking?.group_id) ||
