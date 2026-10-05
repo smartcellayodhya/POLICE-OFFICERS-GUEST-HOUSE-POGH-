@@ -27,7 +27,7 @@ export const ApproveRequestModal: React.FC<ApproveRequestModalProps> = ({
   const { language } = useLanguage();
 
   const [selectedSuits, setSelectedSuits] = useState<Record<string, boolean>>({
-    suit_1: true,
+    suit_1: false,
     suit_2: false,
     suit_3: false,
     suit_4: false,
@@ -47,29 +47,17 @@ export const ApproveRequestModal: React.FC<ApproveRequestModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Set default values when request opens
+  // Set clean default values when request opens: all rooms start unchecked so admin/operator allocates rooms
   useEffect(() => {
     if (request) {
       setReference(request.reference || 'SSP SIR');
       setDispatchNo(generateDispatchNumber(existingBookings));
-
-      // If user preferred suits in request, pre-select them
-      if (request.requested_suits && request.requested_suits.length > 0) {
-        const suitsMap: Record<string, boolean> = {
-          suit_1: false,
-          suit_2: false,
-          suit_3: false,
-          suit_4: false,
-        };
-        request.requested_suits.forEach((s) => {
-          const key = s.toLowerCase();
-          if (suitsMap[key] !== undefined) suitsMap[key] = true;
-        });
-        setSelectedSuits(suitsMap);
-      } else {
-        setSelectedSuits({ suit_1: true, suit_2: false, suit_3: false, suit_4: false });
-      }
-
+      setSelectedSuits({
+        suit_1: false,
+        suit_2: false,
+        suit_3: false,
+        suit_4: false,
+      });
       setErrorMsg('');
     }
   }, [request, existingBookings]);
@@ -102,6 +90,8 @@ export const ApproveRequestModal: React.FC<ApproveRequestModalProps> = ({
   };
 
   const handleSuitToggle = (suitKey: string) => {
+    const avail = getSuitAvailability(suitKey);
+    if (avail.isBooked) return; // Prevent selecting or toggling already booked rooms
     setSelectedSuits((prev) => ({
       ...prev,
       [suitKey]: !prev[suitKey],
@@ -115,15 +105,17 @@ export const ApproveRequestModal: React.FC<ApproveRequestModalProps> = ({
     }));
   };
 
-  // Calculation
-  const assignedSuitKeys = Object.keys(selectedSuits).filter((k) => selectedSuits[k]);
+  // Calculation: STRICTLY only count suits that are checked AND NOT booked by another guest
+  const assignedSuitKeys = Object.keys(selectedSuits).filter(
+    (k) => selectedSuits[k] && !getSuitAvailability(k).isBooked
+  );
   const totalDailyRent = assignedSuitKeys.reduce((sum, key) => sum + (suitRates[key] || 0), 0);
   const totalRentAmount = totalDailyRent * Math.max(1, stayNights);
 
   const handleApprove = async () => {
     setErrorMsg('');
     if (assignedSuitKeys.length === 0) {
-      setErrorMsg('कृपया कम से कम एक कमरा (Suit) आवंटित करें।');
+      setErrorMsg('कृपया कम से कम एक उपलब्ध कमरा (Suit) आवंटित करें।');
       return;
     }
 

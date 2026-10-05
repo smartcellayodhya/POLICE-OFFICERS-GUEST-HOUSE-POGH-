@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
       check_in_time: check_in_time.trim(),
       check_out_time: check_out_time.trim(),
       stay_type,
-      requested_suits,
+      requested_suits: [],
       number_of_guests: Number(number_of_guests) || 1,
       status: 'PENDING',
       notes: notes ? notes.trim() : null,
