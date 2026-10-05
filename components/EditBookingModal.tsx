@@ -21,6 +21,7 @@ import {
   findConflictingBooking,
   parseBookingMeta,
   getCurrentFormattedTime,
+  splitGuestNameHonorific,
 } from '@/lib/bookingUtils';
 import { formatToDisplayDate, calculateStayNights, getStayDates, formatToISODate } from '@/lib/dateUtils';
 import {
@@ -60,6 +61,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   onSave,
 }) => {
   const { language, t } = useLanguage();
+  const [nameHonorific, setNameHonorific] = useState('श्री');
   const [guestName, setGuestName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [reference, setReference] = useState('SSP SIR');
@@ -115,7 +117,9 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
   useEffect(() => {
     if (booking && isOpen) {
-      setGuestName(booking.guest_name || '');
+      const { title, cleanName } = splitGuestNameHonorific(booking.guest_name || '');
+      setNameHonorific(title || 'श्री');
+      setGuestName(cleanName || booking.guest_name || '');
       setMobileNumber(booking.mobile_number || '');
       const savedRef = booking.reference || 'SSP SIR';
       if (REFERENCES.includes(savedRef)) {
@@ -267,10 +271,15 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestName.trim()) {
+    const trimmedGuestName = guestName.trim();
+    if (!trimmedGuestName) {
       alert(language === 'hi' ? 'कृपया गेस्ट का नाम भरें।' : 'Please enter guest name.');
       return;
     }
+    const hasHonorificPrefix = /^(श्री|श्रीमती|सुश्री|डॉ०|डाॅ०|डा०|डॉक्टर|dr\.?|mrs\.?|ms\.?|mr\.?|shri)/i.test(trimmedGuestName);
+    const finalGuestName = nameHonorific && !hasHonorificPrefix
+      ? `${nameHonorific} ${trimmedGuestName}`
+      : trimmedGuestName;
     let cleanedMobile = mobileNumber.replace(/\D/g, '');
     if (cleanedMobile.length === 12 && cleanedMobile.startsWith('91')) {
       cleanedMobile = cleanedMobile.slice(2);
@@ -375,7 +384,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         : notes.trim();
 
       const updatedData: Partial<Booking> = {
-        guest_name: guestName.trim(),
+        guest_name: finalGuestName,
         mobile_number: cleanedMobile,
         reference: (reference === 'OTHER' && otherReferenceName.trim()) ? otherReferenceName.trim() : reference.trim(),
         check_in_time: checkInTime.trim(),
@@ -508,14 +517,28 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                 <User className="w-3.5 h-3.5 text-slate-500" />
                 {language === 'hi' ? 'अतिथि का नाम *' : 'Guest Name *'}
               </label>
-              <input
-                type="text"
-                required
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                placeholder={language === 'hi' ? 'अतिथि का नाम दर्ज करें' : 'Enter guest name'}
-                className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
-              />
+              <div className="flex gap-1.5">
+                <select
+                  value={nameHonorific}
+                  onChange={(e) => setNameHonorific(e.target.value)}
+                  className="w-24 px-2 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50 font-bold text-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition shrink-0 cursor-pointer"
+                  title={language === 'hi' ? 'उपाधि / शीर्षक चुनें' : 'Select title'}
+                >
+                  <option value="श्री">श्री</option>
+                  <option value="श्रीमती">श्रीमती</option>
+                  <option value="सुश्री">सुश्री</option>
+                  <option value="डॉ०">डॉ०</option>
+                  <option value="">(कोई नहीं)</option>
+                </select>
+                <input
+                  type="text"
+                  required
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder={language === 'hi' ? 'अतिथि का नाम दर्ज करें' : 'Enter guest name'}
+                  className="flex-1 min-w-0 px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
+                />
+              </div>
             </div>
 
             <div>

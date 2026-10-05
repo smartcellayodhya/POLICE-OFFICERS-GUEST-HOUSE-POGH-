@@ -2,13 +2,29 @@ import { Booking } from './types';
 import { formatToISODate } from './dateUtils';
 
 /**
- * Formats guest name cleanly for display without awkward duplicate honorifics.
+ * Splits a full raw name into { title, cleanName } using common honorifics.
+ */
+export function splitGuestNameHonorific(rawName: string): { title: string; cleanName: string } {
+  if (!rawName) return { title: 'श्री', cleanName: '' };
+  const trimmed = rawName.trim();
+  const match = trimmed.match(/^(श्रीमती|सुश्री|डॉ०|डाॅ०|डा०|डॉक्टर|Dr\.?|Mrs\.?|Ms\.?|Mr\.?|Shri|श्री|Prof\.?|Capt\.?|Col\.?)\s*(.*)$/i);
+  if (match) {
+    let t = match[1];
+    if (/^(श्रीमती|Mrs\.?)/i.test(t)) t = 'श्रीमती';
+    else if (/^(सुश्री|Ms\.?)/i.test(t)) t = 'सुश्री';
+    else if (/^(डॉ०|डाॅ०|डा०|डॉक्टर|Dr\.?)/i.test(t)) t = 'डॉ०';
+    else if (/^(श्री|Mr\.?|Shri)/i.test(t)) t = 'श्री';
+    return { title: t, cleanName: match[2]?.trim() || '' };
+  }
+  return { title: '', cleanName: trimmed };
+}
+
+/**
+ * Formats guest name cleanly for display without forcing 'श्री'.
  */
 export function formatGuestDisplayName(rawName: string): string {
   if (!rawName) return '';
-  const trimmed = rawName.trim();
-  const hasHonorific = /^(श्री|श्रीमती|सुश्री|डॉ०|डाॅ०|डा०|डॉक्टर|Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Shri|Prof\.?|Capt\.?|Col\.?)/i.test(trimmed);
-  return hasHonorific ? trimmed : `श्री ${trimmed}`;
+  return rawName.trim();
 }
 
 // Generate unique sequential reference number e.g. POGH-2026-003

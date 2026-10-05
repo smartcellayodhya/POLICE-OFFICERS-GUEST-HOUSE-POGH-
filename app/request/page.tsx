@@ -31,6 +31,7 @@ export default function BookingRequestPublicPage() {
   const [activeTab, setActiveTab] = useState<'request' | 'track'>('request');
 
   // Form State
+  const [nameHonorific, setNameHonorific] = useState('श्री');
   const [guestName, setGuestName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [designation, setDesignation] = useState('');
@@ -83,10 +84,15 @@ export default function BookingRequestPublicPage() {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!guestName.trim()) {
+    const trimmedGuestName = guestName.trim();
+    if (!trimmedGuestName) {
       setErrorMsg(isEn ? 'Please enter guest name.' : 'कृपया अतिथि का नाम दर्ज करें।');
       return;
     }
+    const hasHonorificPrefix = /^(श्री|श्रीमती|सुश्री|डॉ०|डाॅ०|डा०|डॉक्टर|dr\.?|mrs\.?|ms\.?|mr\.?|shri)/i.test(trimmedGuestName);
+    const finalGuestName = nameHonorific && !hasHonorificPrefix
+      ? `${nameHonorific} ${trimmedGuestName}`
+      : trimmedGuestName;
 
     const cleanMobile = mobileNumber.replace(/\D/g, '');
     if (cleanMobile.length < 10) {
@@ -112,7 +118,7 @@ export default function BookingRequestPublicPage() {
     setSubmitting(true);
     try {
       const payload: Partial<BookingRequest> = {
-        guest_name: guestName.trim(),
+        guest_name: finalGuestName,
         designation: designation.trim() || undefined,
         department: department.trim() || undefined,
         mobile_number: cleanMobile.slice(-10),
@@ -385,14 +391,28 @@ export default function BookingRequestPublicPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     {isEn ? 'Guest Name' : 'अतिथि का नाम'} <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    placeholder={isEn ? 'e.g. Rahul Yadav' : 'उदा. राहुल यादव'}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={nameHonorific}
+                      onChange={(e) => setNameHonorific(e.target.value)}
+                      className="w-24 px-2 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition shrink-0 cursor-pointer"
+                      title={isEn ? 'Select Title' : 'उपाधि / शीर्षक'}
+                    >
+                      <option value="श्री">श्री</option>
+                      <option value="श्रीमती">श्रीमती</option>
+                      <option value="सुश्री">सुश्री</option>
+                      <option value="डॉ०">डॉ०</option>
+                      <option value="">{isEn ? '(None)' : '(कोई नहीं)'}</option>
+                    </select>
+                    <input
+                      type="text"
+                      required
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      placeholder={isEn ? 'e.g. Rahul Yadav' : 'उदा. राहुल यादव'}
+                      className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 transition"
+                    />
+                  </div>
                 </div>
 
                 {/* 2. Mobile */}
